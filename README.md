@@ -8,6 +8,7 @@
 |----------|---------|
 | [Foundation](docs/foundation/) | The authoritative definition of KDSE |
 | [Evolution](docs/evolution/) | Evidence-driven methodology improvements |
+| [Audit](docs/audit/) | KDSE Audit System standards |
 | [000-what-is-kdse.md](docs/foundation/000-what-is-kdse.md) | What is KDSE? |
 | [001-why-kdse-exists.md](docs/foundation/001-why-kdse-exists.md) | Why KDSE exists |
 | [002-scope.md](docs/foundation/002-scope.md) | What KDSE is and is not |
