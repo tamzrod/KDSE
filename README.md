@@ -9,6 +9,7 @@
 | [Foundation](docs/foundation/) | The authoritative definition of KDSE |
 | [Evolution](docs/evolution/) | Evidence-driven methodology improvements |
 | [Audit](docs/audit/) | KDSE Audit System standards |
+| [Runtime](runtime/) | Official reference implementation |
 | [000-what-is-kdse.md](docs/foundation/000-what-is-kdse.md) | What is KDSE? |
 | [001-why-kdse-exists.md](docs/foundation/001-why-kdse-exists.md) | Why KDSE exists |
 | [002-scope.md](docs/foundation/002-scope.md) | What KDSE is and is not |
@@ -54,6 +55,7 @@ Knowledge → Architecture → Implementation → Verification → Evolution
 - **Verification Domain**: First-class knowledge domain for verification principles and processes
 - **Methodology Maturity**: KDSE evolves through defined maturity levels (Concept → Proven)
 - **Evidence-Driven Evolution**: Changes require evidence from real engineering applications
+- **KDSE Runtime**: Official reference implementation providing operational workflow (see [runtime/](runtime/))
 
 ## License
 
