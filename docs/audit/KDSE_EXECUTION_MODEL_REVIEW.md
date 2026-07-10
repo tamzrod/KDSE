@@ -1,401 +1,555 @@
-# KDSE Execution Model Architectural Review
+# KDSE Execution Model Review
 
 **Review Date:** 2026-07-10  
 **Reviewer:** Architecture Review Board  
-**Document Reviewed:** KDSE Execution Model (Phase 1.3)  
-**Documents Analyzed:** Foundation, Audit, Execution (all)
+**Evidence Source:** First Runtime Session (go-dnp3)  
+**Document Version:** 1.1  
 
 ---
 
 ## Executive Summary
 
-The KDSE Execution Model represents an attempt to operationalize the KDSE methodology for day-to-day engineering work. The review identifies significant **architectural concerns** regarding the relationship between the Execution Model and KDSE's stated scope.
+This review evaluates the KDSE Execution Model in light of evidence gathered from the first Runtime Session against an external repository (go-dnp3). The objective is not to expand KDSE, but to refine the Execution Model using real-world operational evidence.
 
-**Primary Finding:** The Execution Model primarily defines **practices and implementation patterns**, not **principles**. This creates tension with KDSE's foundational documents, which explicitly state that "principles are not practices" and that KDSE is not a methodology that prescribes how to perform work.
+KDSE evolves through evidence. The Runtime itself must follow this principle.
 
-**Secondary Finding:** The terminology used—particularly "Agent"—carries strong associations with AI agent systems, despite the documents explicitly disclaiming AI specificity. This creates conceptual confusion and potential scope violations.
+### Key Runtime Observations
 
-**Recommendation:** **Option C—Hybrid (Normative Principles + Informative Reference Process)**
+The first Runtime Session revealed the following architectural concerns:
 
-- Extract normative principles from the Execution Model into Foundation
-- Move implementation-specific content (Session Protocol, Agent Specification, specific Report formats) to Reference Implementations
-- Rewrite terminology to be technology-neutral
-- Use evidence from this review to drive Phase 1.4 evolution
+| Area | Finding | Severity | Action Required |
+|------|---------|----------|-----------------|
+| Assessment/Recommendation Coupling | Assessment and Recommendation are too tightly coupled | MEDIUM | Separate into distinct phases |
+| Lifecycle Awareness | Runtime recommends work regardless of repository phase | HIGH | Add phase-aware recommendation logic |
+| Assessment vs Compliance | "Compliance" implies complete, penalizes incomplete repositories | MEDIUM | Introduce "Assessment Score" terminology |
+| Technology Neutrality | "Agent", "Session", "Loop" terms carry AI associations | LOW | Use more neutral alternatives |
+| Recommendation Engine | Recommends lowest score, not highest-value action | MEDIUM | Reframe recommendation logic |
+| Runtime Responsibilities | Scope is unclear; may overstep boundaries | MEDIUM | Explicitly define boundaries |
+| Execution Boundaries | No clear boundaries defined | MEDIUM | Add explicit boundary documentation |
 
----
+### Recommended Refinements
 
-## 1. Does the Execution Model Define Engineering Principles or Implementation?
-
-### Finding: Implementation, Not Principles
-
-**Evidence from KDSE Foundation (003-core-principles.md):**
-
-> "Principles Are Not Practices. These principles are not practices. They do not prescribe: How to capture knowledge, How to document architecture, How to write code, How to perform verification, What tools to use."
-
-**Evidence from KDSE Scope (002-scope.md):**
-
-> "KDSE is not: A Documentation Framework, A Programming Methodology, An AI Methodology, A Testing Framework, A Project Management Framework"
-
-**Analysis of Execution Model Content:**
-
-| Execution Model Concept | Classification | KDSE Principle Alignment |
-|------------------------|----------------|------------------------|
-| Audit-First | Practice | Weak (no principle states audits must precede work) |
-| Evidence-Based | Practice | Weak (no principle mandates evidence for decisions) |
-| Human Approval Gate | Practice | None (no principle requires human approval) |
-| Continuous Reassessment | Practice | None (no principle states loops are required) |
-
-**Verdict:** The Execution Model defines operational practices for applying audits, not timeless principles. It answers "how to use KDSE" rather than "what KDSE is."
+1. **Decouple Assessment from Recommendation** — Separate the objective assessment phase from the recommendation derivation phase
+2. **Add Lifecycle Awareness** — Runtime recommendations must respect current engineering phase
+3. **Rename Compliance Score** — Introduce "Assessment Score" for repositories in development phases
+4. **Strengthen Technology Neutrality** — Replace "Agent" with "Executor", "Session" with "Engineering Session"
+5. **Reframe Recommendation Logic** — Recommend highest-value action permitted by current phase
+6. **Clarify Runtime Responsibilities** — Explicitly enumerate what Runtime may and may not do
+7. **Document Execution Boundaries** — Create clear allowed/not-allowed boundaries
 
 ---
 
-## 2. Technology and AI Independence Assessment
+## 1. Evidence Reviewed
 
-### Finding: Terminology Creates AI Association Risk
+### 1.1 Runtime Session Evidence
 
-**Evidence from KDSE Scope (002-scope.md):**
+The first Runtime Session was executed against an external repository (go-dnp3). Key observations from this session:
 
-> "KDSE is not an AI Methodology: KDSE does not prescribe AI tools, models, or integration patterns. AI systems may consume and produce KDSE artifacts, but KDSE remains AI-agnostic."
+| Observation | Source | Implication |
+|-------------|--------|-------------|
+| Runtime recommended implementation work | go-dnp3 Report | Lifecycle awareness gap |
+| Assessment and Recommendation produced simultaneously | EXECUTION_LOOP.md | Tight coupling issue |
+| "Compliance Score" used for incomplete repository | COMPLIANCE_AUDIT.md | Terminology concern |
+| Terminology: "Agent", "Session", "Loop" | docs/execution/* | Technology neutrality concern |
+| Recommendations based on lowest score | REPORT_SPEC.md | Recommendation logic concern |
 
-> "KDSE is not a Tool or Platform: KDSE does not prescribe or recommend specific tools, platforms, or technologies."
+### 1.2 Document Evidence
 
-**Execution Model Terminology Assessment:**
+The following documents were reviewed:
 
-| Term | Used In | AI Association Risk | Assessment |
-|------|---------|---------------------|------------|
-| Agent | AGENT_SPECIFICATION.md | HIGH | "Agent" is standard terminology for AI systems (OpenHands Agent, Claude Code, etc.) |
-| Session | SESSION_PROTOCOL.md | LOW | Generic term, acceptable |
-| Execution Loop | EXECUTION_LOOP.md | LOW | Generic term, acceptable |
-| Run KDSE | EXECUTION_LOOP.md | MEDIUM | "Run" implies execution engine |
-| Initialize | AGENT_SPECIFICATION.md | MEDIUM | State machine terminology |
-
-**Documented Dependencies (from Execution Model):**
-
-The Execution Model references:
-- Repository structures
-- Session IDs
-- Human decision inputs
-- Metrics systems
-
-**These are implementation concerns, not methodology requirements.**
-
-### Specific Concerns
-
-1. **"Agent" Terminology**: Despite explicit disclaimers ("not an AI system"), the term carries AI connotations. KDSE should not use terminology that implies AI-specific tooling.
-
-2. **Session Management**: The concept of bounded sessions with state machines is characteristic of agent frameworks.
-
-3. **Human-in-Loop Pattern**: This is an AI/automation pattern, not a methodology principle.
+| Document | Path | Classification | Status |
+|----------|------|----------------|--------|
+| EXECUTION_MODEL.md | runtime/ | Informative | Needs refinement |
+| ARCHITECTURE.md | runtime/ | Informative | Adequate |
+| SESSION_PROTOCOL.md | docs/execution/ | Informative | Needs refinement |
+| AGENT_SPECIFICATION.md | docs/execution/ | Informative | Needs terminology update |
+| EXECUTION_LOOP.md | docs/execution/ | Informative | Needs decoupling |
+| REPORT_FORMAT.md | docs/execution/ | Informative | Adequate |
+| COMPLIANCE_AUDIT.md | docs/audit/ | Normative | Terminology concern |
+| REPORT_SPEC.md | runtime/ | Informative | Adequate |
 
 ---
 
-## 3. Normative vs Reference Implementation Concept Analysis
+## 2. Strengths
 
-### Finding: Mixed Classification with Implementation Tendency
+The current Execution Model demonstrates several strengths that should be preserved:
 
-| Concept | Current Classification | Recommended Classification | Rationale |
-|---------|----------------------|----------------------------|-----------|
-| Audit-First Principle | Implicit practice | NORMATIVE | Worthy of principle elevation |
-| Evidence-Based Decisions | Implicit practice | NORMATIVE | Worthy of principle elevation |
-| Human Approval Requirement | Practice | REFERENCE | Tooling/implementation choice |
-| Session State Machine | Implementation | REFERENCE | Too specific for standard |
-| Agent Role | Implementation | REFERENCE | Terminology problematic |
-| Report Format | Implementation | REFERENCE | Template, not methodology |
-| Execution Loop | Implementation | REFERENCE | One possible pattern |
-| Decision Boundaries | Implementation | REFERENCE | Too prescriptive |
+### 2.1 Evidence-Based Philosophy
 
-**Normative Concepts (Should Remain in KDSE):**
+**Evidence:** All recommendations must trace to audit evidence (EXECUTION_MODEL.md, Principles section).
 
-These concepts represent timeless engineering truths that should be elevated to principle or guidance level:
+**Strength:** This aligns perfectly with KDSE's evidence-driven methodology. The Runtime produces recommendations that are grounded in documented findings.
 
-1. **Assessment Before Action**: Working from current state assessment (derived from Audit-First)
-2. **Evidence-Driven Work**: All improvements trace to documented evidence
-3. **Progress Measurement**: Maturity improvement should be measurable
+### 2.2 Human Authorization Requirement
 
-**Reference Implementation Concepts (Should Move):**
+**Evidence:** "No implementation without Operator approval" (SESSION_PROTOCOL.md, AWAITING_APPROVAL state).
 
-These are specific implementations that teams may adopt differently:
+**Strength:** The Runtime correctly preserves human decision-making authority. The Runtime recommends; humans approve.
 
-1. Session Protocol and State Machine
-2. Agent Specification
-3. KDSE Report Format
-4. Execution Loop specifics
+### 2.3 Standard-First Architecture
 
----
+**Evidence:** Runtime "References the KDSE Standard; does not redefine it" (ARCHITECTURE.md, Relationship section).
 
-## 4. Execution Principles vs Execution Implementations
+**Strength:** The Runtime is properly subordinate to the Standard, avoiding scope creep.
 
-### Finding: The Execution Model Defines Implementations
+### 2.4 Progress Measurement
 
-**Question:** Should KDSE define Execution Principles or Execution Implementations?
+**Evidence:** "Score improvements are the primary metric" (EXECUTION_MODEL.md, Principles section).
 
-**Evidence from KDSE Foundation:**
+**Strength:** The Runtime provides measurable progress tracking through compliance scores.
 
-KDSE defines:
-- What artifacts exist (Knowledge, Architecture, Implementation, Verification)
-- How artifacts relate (derivation, traceability, authority)
-- That engineering decisions should be traceable
-- That verification confirms alignment
+### 2.5 Repository Independence
 
-KDSE does NOT define:
-- How to run a compliance audit
-- How often to assess maturity
-- What triggers a new assessment
-- How to present findings
-- What constitutes a "session"
+**Evidence:** "Applies to any KDSE-compliant repository" (EXECUTION_LOOP.md, Loop Principles).
 
-**Analysis:**
-
-The Execution Model answers questions KDSE deliberately leaves open. This is appropriate as a **Reference Implementation**, not as **Standard Methodology**.
-
-**Evidence-Based Recommendation:**
-
-KDSE SHOULD define (as principles or guidance):
-- The value of periodic assessment
-- The importance of evidence-driven improvement
-- The principle of progress measurement
-
-KDSE SHOULD NOT define (these are implementations):
-- Specific session protocols
-- Report formats
-- State machines
-- Agent roles
+**Strength:** The Runtime is designed to work with any repository, not tied to specific technologies.
 
 ---
 
-## 5. 20-Year Technology Independence Assessment
+## 3. Weaknesses
 
-### Finding: Mixed Longevity
+The first Runtime Session revealed several weaknesses that require refinement:
 
-**Concepts with Long-Term Validity:**
+### 3.1 Assessment and Recommendation Coupling
 
-1. **Audit-First**: Will remain valid regardless of AI evolution
-2. **Evidence-Based Decisions**: Core engineering principle
-3. **Progress Measurement**: Fundamental to improvement
+**Evidence:** EXECUTION_LOOP.md shows Assessment and Recommendation as sequential steps in the same phase.
 
-**Concepts with Technology Dependency:**
+**Weakness:** The Runtime generates recommendations immediately after assessment without proper separation. This conflates objective observation (Assessment) with subjective prioritization (Recommendation).
 
-1. **Agent Role**: Strongly tied to AI agent paradigm (current generation)
-2. **Session Management**: Characteristic of automation frameworks
-3. **Execution Loop**: Pattern common to AI agent orchestration
-4. **KDSE Report**: Specific format tied to current documentation practices
+**Impact:** Recommendations may not be fully justified or may skip the derivation from assessment to recommendation.
 
-**Assessment:**
+### 3.2 Lifecycle Awareness Gap
 
-The normative principles (Audit-First, Evidence-Based) would remain valid in 20 years. The implementation specifics (Agent, Sessions, specific Report formats) would likely become obsolete or transform significantly.
+**Evidence:** go-dnp3 Runtime Session recommended implementation work even though the repository remains in the Architecture Phase.
 
-**Risk:** If KDSE standardizes the Agent concept, future technology shifts could make the standard obsolete. Reference Implementations can evolve independently.
+**Weakness:** The Runtime does not track or respect the current engineering phase. It recommends work regardless of whether the repository has completed Knowledge, Architecture, or is ready for Implementation.
+
+**Impact:** Recommendations may violate the Chain of Authority by suggesting work that bypasses required prerequisites.
+
+### 3.3 Compliance Terminology Concern
+
+**Evidence:** COMPLIANCE_AUDIT.md uses "Compliance Score" and "Compliance Level" throughout.
+
+**Weakness:** "Compliance" implies a complete state, which may unfairly penalize repositories in early development phases. A repository with no implementation (because it hasn't reached that phase) appears "non-compliant."
+
+**Impact:** Incomplete repositories appear worse than they are. The terminology creates confusion about what "compliance" means.
+
+### 3.4 Technology-Neutrality Concerns
+
+**Evidence:** The following terms are used throughout Execution documents:
+
+| Term | Document | AI Association |
+|------|----------|----------------|
+| Agent | AGENT_SPECIFICATION.md | HIGH — "Agent" is standard AI terminology |
+| Session | SESSION_PROTOCOL.md | MEDIUM — common in AI frameworks |
+| Execution Loop | EXECUTION_LOOP.md | LOW — acceptable term |
+| Run KDSE | EXECUTION_LOOP.md | MEDIUM — "Run" implies execution engine |
+
+**Weakness:** Despite disclaimers, these terms create strong AI associations that may violate KDSE's technology-neutral stance.
+
+**Impact:** Users may perceive KDSE as an AI-specific methodology rather than a technology-agnostic engineering framework.
+
+### 3.5 Recommendation Engine Logic
+
+**Evidence:** REPORT_SPEC.md Section 6 states: "Identify single highest-value next action."
+
+**Weakness:** The current model defines "highest-value" primarily by score impact, not by phase appropriateness. The Runtime recommends fixing the lowest-scoring dimension regardless of whether that work is appropriate for the current phase.
+
+**Impact:** Recommendations may suggest work that:
+- Bypasses required prerequisites (e.g., implementing before architecture exists)
+- Does not respect the Chain of Authority
+- Creates artificial progress that cannot be sustained
+
+### 3.6 Unclear Runtime Responsibilities
+
+**Evidence:** ARCHITECTURE.md lists "Runtime Responsibilities" but does not explicitly define what the Runtime must NOT do.
+
+**Weakness:** The boundaries of Runtime authority are implicit rather than explicit. This creates ambiguity about when the Runtime may be overstepping.
+
+**Impact:** Implementers may not understand when the Runtime is acting outside its scope.
+
+### 3.7 Execution Boundaries Not Documented
+
+**Evidence:** No document explicitly defines what the Runtime may or may not do.
+
+**Weakness:** Without explicit boundaries, the Runtime may inadvertently make engineering decisions or take actions that require human judgment.
+
+**Impact:** Risk of Runtime overstepping into autonomous decision-making.
 
 ---
 
-## 6. Terminology Recommendations
+## 4. Architectural Findings
 
-### Finding: Technology-Neutral Rewrites Needed
+### 4.1 Assessment/Recommendation Separation Required
 
-| Current Term | Issue | Recommended Alternative |
-|-------------|-------|------------------------|
-| Agent | AI connotations | **Participant** or **Executor** |
-| Run KDSE | Execution engine implication | **Apply KDSE** or **Assess with KDSE** |
-| Agent States | AI agent framework | **Participant States** or **Process Phases** |
-| Agent-Made Decisions | AI autonomy implication | **System-Determined** or **Process Decisions** |
-| Await Human Approval | AI pattern | **Require Authorization** |
+**Finding:** Assessment (objective observation) and Recommendation (subjective prioritization) should be separate Runtime phases.
 
-**Rationale:**
+**Current State:**
+```
+Assessment → Generate Report → Recommend Action
+```
 
-KDSE should use terminology that describes human processes, not tooling processes. "Participant" or "Executor" better describes a role a human or system plays, without implying AI-specific patterns.
+**Recommended State:**
+```
+Assessment → Analysis → Recommendation
+```
 
-**Note:** This is a naming issue, not a concept issue. The underlying ideas (orchestration, decision support, approval gates) are valid.
+**Rationale:** Assessment produces facts; Recommendation produces guidance based on those facts. These are distinct cognitive activities that should be separated in the Runtime.
+
+**Evidence:** The go-dnp3 session showed recommendations that were not clearly derived from assessment findings. Separation would strengthen the evidence chain.
+
+### 4.2 Lifecycle-Aware Recommendation Engine Required
+
+**Finding:** The Runtime should become lifecycle-aware, respecting the current engineering phase when making recommendations.
+
+**Current Behavior:** Runtime recommends based on lowest score without considering phase.
+
+**Required Behavior:** Runtime should recommend only actions permitted by the current phase:
+
+| Repository Phase | Allowed Recommendations |
+|-----------------|----------------------|
+| Research | Knowledge Development, Gap Analysis |
+| Knowledge Development | Knowledge Artifacts, Architecture Preparation |
+| Architecture | Architecture Artifacts, Knowledge Refinement |
+| Architecture Review | Approval, Knowledge Refinement |
+| Implementation Planning | Implementation Preparation |
+| Implementation | Implementation, Verification |
+| Verification | Verification, Evolution |
+| Maintenance | Evolution, Research |
+
+**Evidence:** The go-dnp3 session recommended implementation work for a repository in the Architecture Phase, violating the Chain of Authority.
+
+### 4.3 Assessment Score vs Compliance Score
+
+**Finding:** Replace "Compliance Score" with "Assessment Score" for repositories in development phases.
+
+**Rationale:** "Compliance" implies conformance to a standard. A repository in the Architecture Phase is not "non-compliant" for lacking Implementation—it simply hasn't reached that phase yet.
+
+**Proposed Terminology:**
+- **Assessment Score**: The result of evaluating current state against audit criteria
+- **Compliance Level**: Reserved for repositories that have completed all phases
+
+**Evidence:** The go-dnp3 repository received low scores for dimensions not yet applicable, creating an unfair assessment.
+
+### 4.4 Technology-Neutrality Refinements
+
+**Finding:** Replace AI-associated terminology with more neutral alternatives.
+
+| Current Term | Recommended Term | Justification |
+|--------------|------------------|---------------|
+| Agent | Executor | "Agent" strongly implies AI system |
+| Session | Engineering Session | "Session" common in AI frameworks |
+| Execution Loop | Assessment Cycle | More descriptive, less AI-specific |
+| Run KDSE | Execute KDSE | Neutral alternative |
+| Agent States | Process States | Descriptive without AI association |
+
+**Evidence:** KDSE scope explicitly states "KDSE is not an AI Methodology." Terminology should reflect this.
+
+### 4.5 Recommendation Logic Refinement
+
+**Finding:** Recommendations should be based on:
+1. Current Phase
+2. Missing Required Artifacts
+3. Chain of Authority
+4. Engineering Value
+
+Not simply: Lowest Score.
+
+**Current Logic:**
+```
+Identify gaps → Score each → Recommend fixing lowest score
+```
+
+**Recommended Logic:**
+```
+Identify phase → Identify required artifacts → 
+Identify gaps → Calculate value → 
+Recommend highest-value action permitted by phase
+```
+
+**Evidence:** The go-dnp3 session showed the Runtime recommending work that violated phase boundaries.
+
+### 4.6 Explicit Runtime Boundaries Required
+
+**Finding:** Runtime boundaries must be explicitly documented.
+
+**Recommended Boundaries:**
+
+| Allowed | Not Allowed |
+|---------|-------------|
+| Repository Discovery | Invent Architecture |
+| Assessment | Override Knowledge |
+| Knowledge Mapping | Skip Authority |
+| Gap Analysis | Implement without Approval |
+| Recommendations | Modify Methodology |
+| Verification | Make autonomous decisions |
+
+**Evidence:** The Runtime Architecture document (ARCHITECTURE.md) defines responsibilities but not explicit prohibitions.
 
 ---
 
-## 7. Normative vs Informative Document Classification
+## 5. Recommended Refinements
 
-### Finding: Current Documents Are Predominantly Informative
+### 5.1 Assessment/Recommendation Decoupling
+
+**Change:** Separate Assessment and Recommendation into distinct phases.
+
+**Files Affected:**
+- EXECUTION_MODEL.md
+- EXECUTION_LOOP.md
+- SESSION_PROTOCOL.md
+
+**Implementation:**
+```
+Current:
+Assessment → Reporting → Recommendation
+
+Proposed:
+Assessment → Analysis → Recommendation
+```
+
+**Rationale:** Assessment is objective (what exists); Recommendation is subjective (what should be done). Separation strengthens evidence chains.
+
+### 5.2 Lifecycle-Aware Recommendations
+
+**Change:** Add phase-awareness to the Recommendation Engine.
+
+**Files Affected:**
+- EXECUTION_MODEL.md
+- EXECUTION_LOOP.md
+- REPORT_SPEC.md
+
+**Implementation:** Recommendations must include phase context and explain why the recommended action is appropriate for the current phase.
+
+### 5.3 Assessment Score Terminology
+
+**Change:** Introduce "Assessment Score" as primary metric; reserve "Compliance Score" for complete repositories.
+
+**Files Affected:**
+- COMPLIANCE_AUDIT.md
+- REPORT_SPEC.md
+- AUDIT_SCORING.md
+
+**Implementation:** Add phase context to scores. A repository in the Architecture Phase is assessed only on Knowledge and Architecture dimensions, with Implementation/Verification treated as "Not Yet Applicable" rather than "Missing."
+
+### 5.4 Technology-Neutral Terminology
+
+**Change:** Replace AI-associated terms with neutral alternatives.
+
+**Files Affected:**
+- AGENT_SPECIFICATION.md (rename to EXECUTOR_SPECIFICATION.md)
+- docs/execution/README.md
+- docs/execution/SESSION_PROTOCOL.md
+- docs/execution/EXECUTION_LOOP.md
+- runtime/EXECUTION_MODEL.md
+- runtime/ARCHITECTURE.md
+
+**Implementation:** Systematic replacement across all Execution documents.
+
+### 5.5 Recommendation Logic Refinement
+
+**Change:** Reframe recommendations to be phase-aware and value-based.
+
+**Files Affected:**
+- EXECUTION_MODEL.md
+- REPORT_SPEC.md
+- EXECUTION_LOOP.md
+
+**Implementation:** Add phase context to all recommendations. Document why recommended action is appropriate for current phase.
+
+### 5.6 Runtime Boundaries Documentation
+
+**Change:** Add explicit boundaries document.
+
+**Files Affected:** Create new document RUNTIME_BOUNDARIES.md
+
+**Implementation:** Document what Runtime may and may not do, with explicit prohibitions.
+
+### 5.7 Normative vs Informative Classification
+
+**Change:** Formalize document classifications.
 
 | Document | Current | Recommended | Justification |
 |----------|---------|-------------|---------------|
-| README.md | Overview | KEEP AS IS | Meta-document, appropriate |
-| SESSION_PROTOCOL.md | Normative-like | **INFORMATIVE** | Too specific; practice, not principle |
-| AGENT_SPECIFICATION.md | Normative-like | **INFORMATIVE** | Terminology issues; reference only |
-| REPORT_FORMAT.md | Normative-like | **INFORMATIVE** | Template, not methodology |
-| EXECUTION_LOOP.md | Informative | **INFORMATIVE** | One possible pattern |
+| EXECUTION_MODEL.md | Implicit | **INFORMATIVE** | Reference implementation |
+| ARCHITECTURE.md | Implicit | **INFORMATIVE** | Reference implementation |
+| SESSION_PROTOCOL.md | Implicit | **INFORMATIVE** | Reference implementation |
+| AGENT_SPECIFICATION.md | Implicit | **INFORMATIVE** | Reference implementation |
+| EXECUTION_LOOP.md | Implicit | **INFORMATIVE** | Reference implementation |
+| REPORT_FORMAT.md | Implicit | **INFORMATIVE** | Reference implementation |
+| REPORT_SPEC.md | Implicit | **INFORMATIVE** | Reference implementation |
+| CONFORMANCE.md | Implicit | **INFORMATIVE** | Reference implementation |
 
-**Recommended Classification:**
-
-- **NORMATIVE**: Principles elevated from Execution Model to Foundation
-- **INFORMATIVE**: All current Execution Model documents (Reference Implementations)
-
-**Proposed Normative Additions to Foundation:**
-
-1. **Guidance: Assessment Before Action** - Working from assessment state, not assumptions
-2. **Guidance: Evidence-Driven Work** - Improvements based on documented evidence
-3. **Guidance: Progress Measurement** - Maturity improvement tracked through metrics
+**Rationale:** All Runtime documents are reference implementations, not KDSE requirements. KDSE requirements are defined in the Standard documents.
 
 ---
 
-## 8. Architecture Cleanliness Analysis
+## 6. Normative vs Informative Classification
 
-### Finding: Hybrid Model Would Produce Cleaner Architecture
+### 6.1 Current Classification Assessment
 
-**Current Architecture:**
+| Document | Location | Current Status | Classification Evidence |
+|----------|----------|----------------|------------------------|
+| FOUNDATION_AUDIT.md | docs/audit/ | Normative | Audit system standard |
+| COMPLIANCE_AUDIT.md | docs/audit/ | Normative | Audit system standard |
+| AUDIT_SCORING.md | docs/audit/ | Normative | Audit system standard |
+| 003-core-principles.md | docs/foundation/ | Normative | Foundation document |
+| 004-engineering-model.md | docs/foundation/ | Normative | Foundation document |
+| 006-chain-of-authority.md | docs/foundation/ | Normative | Foundation document |
+| 007-glossary.md | docs/foundation/ | Normative | Foundation document |
+| EXECUTION_MODEL.md | runtime/ | **Implicitly Informative** | References Standard |
+| ARCHITECTURE.md | runtime/ | **Implicitly Informative** | States "Reference" |
+| SESSION_PROTOCOL.md | docs/execution/ | **Implicitly Informative** | Shows "reference" |
+| AGENT_SPECIFICATION.md | docs/execution/ | **Implicitly Informative** | States "conceptual" |
+| EXECUTION_LOOP.md | docs/execution/ | **Implicitly Informative** | Shows "example" |
+| REPORT_FORMAT.md | docs/execution/ | **Implicitly Informative** | Shows "template" |
+| REPORT_SPEC.md | runtime/ | **Implicitly Informative** | States "specification" |
+| CONFORMANCE.md | runtime/ | **Implicitly Informative** | States "informative" |
 
-```
-┌─────────────────────────────────────────┐
-│            KDSE Foundation              │
-│  (Principles, Artifact Types, Authority)│
-└─────────────────────────────────────────┘
-          ↓ (Uses)
-┌─────────────────────────────────────────┐
-│          KDSE Audit System              │
-│  (Foundation, Compliance, Scoring)      │
-└─────────────────────────────────────────┘
-          ↓ (Extends)
-┌─────────────────────────────────────────┐
-│       KDSE Execution Model              │
-│  (Session, Agent, Loop, Reports)         │  ← Mixes principles and practices
-└─────────────────────────────────────────┘
-```
+### 6.2 Recommended Classification
 
-**Proposed Cleaner Architecture:**
+**Normative Documents (KDSE Standard):**
+- All Foundation documents (docs/foundation/)
+- All Audit documents (docs/audit/)
 
-```
-┌─────────────────────────────────────────┐
-│            KDSE Foundation              │
-│  (Principles, Artifact Types, Authority,│
-│   + NEW: Operational Guidance)          │
-└─────────────────────────────────────────┘
-          ↓ (Uses)
-┌─────────────────────────────────────────┐
-│          KDSE Audit System              │
-│  (Foundation, Compliance, Scoring)      │
-└─────────────────────────────────────────┘
-          ↓ (Example)
-┌─────────────────────────────────────────┐
-│      Reference Implementations           │
-│  (Session Protocol, Executor Spec,      │
-│   Example Report, Example Loop)         │
-└─────────────────────────────────────────┘
-```
+**Informative Documents (KDSE Runtime Reference):**
+- All Execution documents (docs/execution/)
+- All Runtime documents (runtime/)
 
-**Benefits of Reference Implementation Model:**
+### 6.3 Justification for Classification
 
-1. KDSE remains technology-neutral
-2. Implementations can evolve independently
-3. Teams can adapt practices to context
-4. KDSE doesn't become dated with technology
+**Normative Classification Criteria:**
+1. Defines principles that must be followed
+2. Establishes requirements for compliance
+3. Cannot be violated without methodology non-compliance
+4. Is technology-agnostic and timeless
 
----
+**Informative Classification Criteria:**
+1. Demonstrates how to apply the methodology
+2. Provides reference implementations
+3. Can be adapted to different contexts
+4. May become dated as technology evolves
 
-## Architectural Risks Summary
-
-| Risk | Severity | Description |
-|------|----------|-------------|
-| AI Methodology Confusion | HIGH | Terminology implies AI-specific approach |
-| Scope Creep | HIGH | Defines practices, not principles |
-| Premature Standardization | MEDIUM | Specific formats may not fit all contexts |
-| Technology Coupling | MEDIUM | Session/Agent patterns tied to current AI |
-| Obsolescence | MEDIUM | Specific implementations may become dated |
-| Terminology Drift | LOW | "Agent" creates conceptual confusion |
+**Analysis:**
+- Foundation and Audit documents define what KDSE is and requires → Normative
+- Execution and Runtime documents define how to apply KDSE → Informative
 
 ---
 
-## Recommendations
+## 7. Final Verdict
 
-### 1. Elevate Normative Principles
+### 7.1 Summary Assessment
 
-Extract and formalize the following as guidance in Foundation:
+The KDSE Execution Model is fundamentally sound but requires refinement based on evidence from the first Runtime Session. The core principles—evidence-based recommendations, human authorization, and standard-first architecture—are correct and should be preserved.
 
-- **Assessment Before Action**: Engineering work should proceed from documented current state, not assumptions
-- **Evidence-Driven Decisions**: All recommendations should trace to documented evidence
-- **Progress Measurement**: Improvement should be measurable and verified
+The identified weaknesses fall into three categories:
 
-### 2. Reclassify Execution Documents as Informative
+| Category | Severity | Count |
+|----------|----------|-------|
+| Terminology/Neutrality | LOW | 2 |
+| Process/Logic | MEDIUM | 4 |
+| Architecture/Boundaries | MEDIUM | 1 |
 
-Move all Execution Model documents to:
-```
-docs/reference-implementations/execution/
-```
+### 7.2 Recommended Actions
 
-Rename documents to reflect reference status:
-- `example-session-protocol.md`
-- `example-executor-specification.md`
-- `example-report-format.md`
-- `example-execution-loop.md`
+**Priority 1 (Immediate):**
+1. Add lifecycle awareness to recommendations
+2. Decouple Assessment from Recommendation
+3. Add Runtime boundaries documentation
 
-### 3. Rewrite Terminology
+**Priority 2 (Next Phase):**
+4. Update terminology for technology neutrality
+5. Reframe recommendation logic
+6. Formalize Normative/Informative classifications
 
-Replace problematic terms:
-- "Agent" → "Participant" or "Executor"
-- "Run KDSE" → "Apply KDSE"
-- "Agent States" → "Process States"
+**Priority 3 (Future):**
+7. Consider renaming "Compliance Score" to "Assessment Score"
 
-### 4. Add Scope Clarification
+### 7.3 Risk Assessment
 
-Add to 002-scope.md:
+| Risk | Probability | Impact | Mitigation |
+|------|-------------|--------|------------|
+| Terminology causes AI methodology confusion | MEDIUM | MEDIUM | Update to neutral terms |
+| Recommendations violate Chain of Authority | LOW | HIGH | Add lifecycle awareness |
+| Runtime oversteps into autonomous decisions | LOW | HIGH | Add explicit boundaries |
+| Incomplete repositories unfairly penalized | MEDIUM | MEDIUM | Add phase context to scores |
 
-> "KDSE provides guidance on assessment practices, but does not prescribe specific assessment workflows, report formats, or orchestration patterns. Teams may develop their own practices based on KDSE principles."
+### 7.4 Success Criteria Met
 
-### 5. Create Evidence for Future Evolution
+The refined Execution Model should be:
 
-Document this review as evidence for Phase 1.4 evolution:
-- Gap: Execution Model defines practices, not principles
-- Impact: Creates AI methodology confusion, scope creep
-- Recommendation: Reference Implementation model
+| Criterion | Status | Evidence |
+|-----------|--------|----------|
+| More deterministic | Achievable | Phase-aware recommendations |
+| More lifecycle-aware | Achievable | Phase context in recommendations |
+| More technology-neutral | Achievable | Terminology updates |
+| Better aligned with Chain of Authority | Achievable | Lifecycle-aware logic |
+| Capable of guiding any executor | Achievable | Neutral terminology |
 
----
+### 7.5 Conclusion
 
-## Final Verdict
+The KDSE Execution Model represents a solid foundation for operationalizing KDSE. The refinements identified in this review strengthen the model without redesigning its core principles.
 
-**Answer: C. Hybrid (Normative Principles + Informative Reference Process)**
+KDSE should emerge from this refinement with:
+- A stronger Runtime Architecture
+- Clearer boundaries and responsibilities
+- Better alignment with the Chain of Authority
+- Improved technology neutrality
+- Preserved evidence-driven philosophy
 
-### Rationale with KDSE Evidence:
-
-**Evidence 1: Scope Definition (002-scope.md)**
-
-> "KDSE is not an AI Methodology"
-
-The Execution Model's terminology ("Agent", "Session", "Execution Loop") creates strong AI methodology associations despite explicit disclaimers. This violates KDSE's technology-neutral stance.
-
-**Evidence 2: Principles Are Not Practices (003-core-principles.md)**
-
-> "Principles are not practices. They do not prescribe: How to capture knowledge, How to document architecture, How to write code, How to perform verification"
-
-The Execution Model prescribes how to perform verification (run audits), how to document findings (KDSE Report), and how to structure work (Sessions, Loops). This exceeds KDSE's scope.
-
-**Evidence 3: Authority Hierarchy (006-chain-of-authority.md)**
-
-> "KDSE defines: Artifact Types, Artifact Relationships, Artifact Authority, Traceability Requirements, Engineering Model, Core Principles"
-
-The Execution Model introduces new concepts ("Agent", "Session") not defined in the artifact hierarchy. These are implementation constructs, not methodology artifacts.
-
-**Evidence 4: Maturity Model (AUDIT_MATURITY.md)**
-
-> "Level 3 (Structured): What Is Missing: Validation through application, Measured outcomes, Continuous improvement"
-
-The Execution Model addresses "continuous improvement" as a practice pattern, but KDSE's maturity model shows this is achieved through evidence, not through specific implementation patterns.
-
-### What Should Be Normative:
-
-The valuable ideas in the Execution Model (audit-first, evidence-based, human approval) should be extracted as **operational guidance**, not as prescriptive standards.
-
-### What Should Be Reference:
-
-- Session Protocol
-- Agent/Participant Specification
-- Report Formats
-- Execution Loop patterns
+The Execution Model continues to follow KDSE's core principle: **KDSE evolves through evidence.** This review is itself evidence of that evolution.
 
 ---
 
-## Conclusion
+## 8. Document Classification Summary
 
-The KDSE Execution Model contains valuable operational guidance that helps teams apply KDSE in practice. However, its current form exceeds KDSE's scope by defining implementation patterns rather than principles.
-
-A **Hybrid model** preserves the valuable guidance as reference implementations while keeping KDSE technology-neutral and principle-focused. This aligns with KDSE's foundational commitment to being a methodology, not a framework.
-
-**Recommended Next Step:** Use this review as evidence for Phase 1.4 evolution, moving execution content to Reference Implementations and elevating principles to Foundation.
+| Document | Path | Classification | Justification |
+|----------|------|----------------|---------------|
+| EXECUTION_MODEL.md | runtime/ | **INFORMATIVE** | Reference implementation showing how to operate KDSE |
+| ARCHITECTURE.md | runtime/ | **INFORMATIVE** | Reference architecture for Runtime implementations |
+| SESSION_PROTOCOL.md | docs/execution/ | **INFORMATIVE** | Example protocol; not a requirement |
+| AGENT_SPECIFICATION.md | docs/execution/ | **INFORMATIVE** | Conceptual specification; one possible approach |
+| EXECUTION_LOOP.md | docs/execution/ | **INFORMATIVE** | Example loop pattern; not mandatory |
+| REPORT_FORMAT.md | docs/execution/ | **INFORMATIVE** | Template format; adaptable |
+| REPORT_SPEC.md | runtime/ | **INFORMATIVE** | Specification for reference reports |
+| CONFORMANCE.md | runtime/ | **INFORMATIVE** | Criteria for implementations; not KDSE requirements |
+| COMMANDS.md | runtime/ | **INFORMATIVE** | Command interface reference |
+| WORKFLOW.md | runtime/ | **INFORMATIVE** | Workflow diagrams; visual reference |
+| PROMPTS.md | runtime/ | **INFORMATIVE** | Example prompts; not requirements |
+| VERSIONING.md | runtime/ | **INFORMATIVE** | Version compatibility guidance |
 
 ---
 
-*Review completed: 2026-07-10*
-*This review is a temporary artifact pending integration into KDSE evolution documentation.*
+## Appendix A: Terminology Mapping
+
+| Current Term | Recommended Term | Scope |
+|--------------|------------------|-------|
+| Agent | Executor | All Execution documents |
+| Session | Engineering Session | All Execution documents |
+| Execution Loop | Assessment Cycle | All Execution documents |
+| Run KDSE | Execute KDSE | All Execution documents |
+| Agent States | Process States | All Execution documents |
+| Compliance Score | Assessment Score | Audit and Report documents |
+| Compliance Level | Assessment Level | Audit and Report documents |
+| Compliance Audit | Assessment Audit | Audit documents |
+
+---
+
+## Appendix B: Phase-Aware Recommendation Matrix
+
+| Repository Phase | Dimension Focus | Allowed Actions |
+|-----------------|-----------------|------------------|
+| Research | Knowledge | Discover, Analyze, Map Knowledge |
+| Knowledge Development | Knowledge | Create, Validate, Structure Knowledge |
+| Architecture | Knowledge, Architecture | Create Architecture, Derive from Knowledge |
+| Architecture Review | Architecture | Review, Approve, Refine |
+| Implementation Planning | Architecture | Prepare, Sequence, Resource |
+| Implementation | All | Create, Modify, Deploy |
+| Verification | All | Test, Validate, Verify |
+| Maintenance | All | Evolve, Refine, Retire |
+
+---
+
+*Review completed: 2026-07-10*  
+*Evidence source: First KDSE Runtime Session (go-dnp3)*  
+*This review refines the Execution Model using operational evidence while preserving KDSE's evidence-driven philosophy.*
