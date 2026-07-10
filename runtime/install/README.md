@@ -1,6 +1,6 @@
 # KDSE Runtime Installation Framework
 
-**Document Version:** 1.0  
+**Document Version:** 1.1  
 **Type:** Runtime Infrastructure  
 **Effective Date:** 2026-07-10
 
@@ -17,9 +17,9 @@ This framework provides deterministic scripts for installing, synchronizing, ver
 The installation framework manages the KDSE Runtime lifecycle:
 
 ```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   Install   │───▶│    Sync     │───▶│   Verify    │───▶│  Uninstall  │
-└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
++------------+    +------------+    +------------+    +------------+
+|   Install  |--> |    Sync    |--> |   Verify   |--> | Uninstall  |
++------------+    +------------+    +------------+    +------------+
 ```
 
 **Install** initializes the Runtime in a repository.  
@@ -29,32 +29,57 @@ The installation framework manages the KDSE Runtime lifecycle:
 
 ---
 
+## Engineering Command Interface
+
+After installation, the Runtime exposes the `kdse` command:
+
+```bash
+kdse status     # Check runtime health
+kdse update     # Update runtime
+kdse verify     # Verify installation
+kdse doctor     # Diagnose problems
+kdse run        # Start session
+kdse resume     # Resume session
+kdse history    # Show session history
+kdse report     # List reports
+kdse version    # Show version
+```
+
+See [RUNTIME_COMMAND_INTERFACE.md](../../docs/runtime/RUNTIME_COMMAND_INTERFACE.md) for full documentation.
+
+---
+
 ## Directory Structure
 
 ```
 runtime/install/
-├── README.md          # This file
-├── common.sh          # Shared utilities and functions
-├── install.sh         # Initialize KDSE Runtime
-├── sync.sh            # Synchronize with repository
-├── verify.sh          # Verify installation integrity
-└── uninstall.sh       # Remove KDSE Runtime
++-- README.md              # This file
++-- common.sh              # Shared utilities and functions
++-- install.sh             # Initialize KDSE Runtime
++-- sync.sh               # Synchronize with repository
++-- verify.sh             # Verify installation integrity
++-- uninstall.sh          # Remove KDSE Runtime
++-- kdse                  # Engineering command interface
++-- kdse-completion.sh    # Shell completion
 ```
 
 **Installed Structure:**
 
 ```
 .kdse/                     # Installation root
-├── manifest.json          # Installation metadata
-├── config.sh              # Runtime configuration
-├── reports/               # Session reports
-├── history/               # Session history
-├── runtime/               # Runtime state
-├── cache/                 # Cached data
-├── configuration/         # User configuration
-└── standards/
-    ├── normative/         # Core KDSE documents
-    └── informative/        # Reference documents
++-- manifest.json          # Installation metadata (current)
++-- manifest.yaml          # Legacy manifest (migrated, backed up)
++-- config.sh             # Runtime configuration
++-- kdse                   # Engineering command interface
++-- kdse-completion.sh     # Shell completion
++-- reports/               # Session reports
++-- history/               # Session history
++-- runtime/               # Runtime state
++-- cache/                 # Cached data
++-- configuration/          # User configuration
++-- standards/
+    +-- normative/         # Core KDSE documents
+    +-- informative/       # Reference documents
 ```
 
 ---

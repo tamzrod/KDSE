@@ -356,10 +356,60 @@ export KDSE_INSTALLED="$(get_timestamp)"
 # Platform
 export KDSE_PLATFORM="$(detect_platform)"
 
+# Command Path - Add KDSE to PATH
+export PATH="${install_path}:\$PATH"
+
+# Aliases for common commands
+alias kdse-status='${install_path}/kdse status'
+alias kdse-update='${install_path}/kdse update'
+alias kdse-verify='${install_path}/kdse verify'
+alias kdse-doctor='${install_path}/kdse doctor'
+alias kdse-run='${install_path}/kdse run'
+alias kdse-resume='${install_path}/kdse resume'
+
 EOF
     
     chmod +x "$config"
     log_info "Configuration generated"
+    return 0
+}
+
+#-------------------------------------------------------------------------------
+# Install KDSE Command
+#-------------------------------------------------------------------------------
+
+install_kdse_command() {
+    log_info "Installing KDSE command interface..."
+    
+    local install_path=$(get_install_path)
+    local kdse_script="${install_path}/kdse"
+    local source_script="${SCRIPT_DIR}/kdse"
+    
+    # Copy the kdse script
+    if [[ -f "$source_script" ]]; then
+        cp "$source_script" "$kdse_script" || {
+            log_error "Failed to copy kdse script"
+            return 1
+        }
+        chmod +x "$kdse_script"
+        log_info "KDSE command installed to: $kdse_script"
+    else
+        log_warning "KDSE command script not found in repository"
+        return 1
+    fi
+    
+    # Create convenience symlink in PATH if possible
+    local bin_dir="${KDSE_HOME}/bin"
+    if [[ -d "$bin_dir" || -w "$(dirname "$bin_dir")" ]]; then
+        ensure_directory "$bin_dir" || true
+        local symlink="${bin_dir}/kdse"
+        if [[ ! -L "$symlink" && ! -f "$symlink" ]]; then
+            ln -sf "$kdse_script" "$symlink" 2>/dev/null && {
+                log_info "KDSE command available as: $symlink"
+            } || true
+        fi
+    fi
+    
     return 0
 }
 
@@ -443,9 +493,15 @@ print_summary() {
     done
     echo "  manifest.json"
     echo "  config.sh"
+    echo "  kdse"
     echo ""
-    echo "To use KDSE Runtime, run:"
-    echo "  source ${install_path}/config.sh"
+    echo "Quick Start:"
+    echo "  ${install_path}/kdse status    # Check runtime health"
+    echo "  ${install_path}/kdse update    # Update runtime"
+    echo "  ${install_path}/kdse run       # Start session"
+    echo ""
+    echo "  Add to PATH for convenience:"
+    echo "  export PATH=\"${install_path}:\$PATH\""
     echo ""
     
     print_summary_footer
@@ -472,6 +528,7 @@ main() {
     install_informative_documents || exit $EXIT_ERROR
     generate_manifest || exit $EXIT_ERROR
     generate_configuration || exit $EXIT_ERROR
+    install_kdse_command || exit $EXIT_ERROR
     
     # Verify and report
     if verify_installation; then

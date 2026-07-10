@@ -1,0 +1,842 @@
+#!/usr/bin/env bash
+#===============================================================================
+# KDSE Runtime Engineering Command Interface
+#===============================================================================
+# Purpose: Provide deterministic engineering operations for KDSE Runtime
+# Design:  Deterministic, idempotent, no AI logic, no engineering decisions
+#===============================================================================
+
+set -euo pipefail
+
+#-------------------------------------------------------------------------------
+# Configuration
+#-------------------------------------------------------------------------------
+
+# KDSE home directory
+KDSE_HOME="${KDSE_HOME:-$HOME}"
+
+# Installation directory
+KDSE_DIR=".kdse"
+
+# Commands directory
+COMMANDS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+#-------------------------------------------------------------------------------
+# ANSI Colors
+#-------------------------------------------------------------------------------
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+#-------------------------------------------------------------------------------
+# Output Functions
+#-------------------------------------------------------------------------------
+
+output_info() {
+    echo -e "${BLUE}[INFO]${NC} $*"
+}
+
+output_success() {
+    echo -e "${GREEN}[OK]${NC} $*"
+}
+
+output_warning() {
+    echo -e "${YELLOW}[WARN]${NC} $*"
+}
+
+output_error() {
+    echo -e "${RED}[ERROR]${NC} $*" >&2
+}
+
+output_header() {
+    echo ""
+    echo -e "${BOLD}${CYAN}============================================================${NC}"
+    echo -e "${BOLD}${CYAN} KDSE Runtime${NC} - $1"
+    echo -e "${BOLD}${CYAN}============================================================${NC}"
+    echo ""
+}
+
+output_footer() {
+    echo -e "${BOLD}${CYAN}============================================================${NC}"
+    echo ""
+}
+
+#-------------------------------------------------------------------------------
+# Path Utilities
+#-------------------------------------------------------------------------------
+
+get_install_path() {
+    echo "${KDSE_HOME}/${KDSE_DIR}"
+}
+
+get_manifest_path() {
+    echo "$(get_install_path)/manifest.json"
+}
+
+get_legacy_manifest_path() {
+    echo "$(get_install_path)/manifest.yaml"
+}
+
+get_reports_path() {
+    echo "$(get_install_path)/reports"
+}
+
+get_history_path() {
+    echo "$(get_install_path)/history"
+}
+
+#-------------------------------------------------------------------------------
+# Manifest Detection (simplified for kdse command)
+#-------------------------------------------------------------------------------
+
+detect_manifest_format() {
+    local install_path=$(get_install_path)
+    
+    if [[ ! -d "$install_path" ]]; then
+        echo "none"
+        return
+    fi
+    
+    if [[ -f "${install_path}/manifest.json" ]] && grep -q '"kdse"' "${install_path}/manifest.json" 2>/dev/null; then
+        echo "json"
+        return
+    fi
+    
+    if [[ -f "${install_path}/manifest.yaml" ]] && grep -q 'kdse' "${install_path}/manifest.yaml" 2>/dev/null; then
+        echo "yaml"
+        return
+    fi
+    
+    echo "none"
+}
+
+manifest_exists() {
+    [[ "$(detect_manifest_format)" != "none" ]]
+}
+
+#-------------------------------------------------------------------------------
+# Manifest Reading
+#-------------------------------------------------------------------------------
+
+manifest_get() {
+    local key="$1"
+    local manifest=$(get_manifest_path)
+    
+    if [[ -f "$manifest" ]]; then
+        case "$key" in
+            version)
+                grep '"version"' "$manifest" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/'
+                ;;
+            installed)
+                grep '"installed"' "$manifest" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/'
+                ;;
+            repo)
+                grep '"repo"' "$manifest" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/'
+                ;;
+            branch)
+                grep '"branch"' "$manifest" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/'
+                ;;
+            last_sync)
+                grep '"last_sync"' "$manifest" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/'
+                ;;
+        esac
+        return
+    fi
+    
+    # Fallback to YAML
+    local yaml_manifest=$(get_legacy_manifest_path)
+    if [[ -f "$yaml_manifest" ]]; then
+        case "$key" in
+            version)
+                awk '/^[[:space:]]*version:/ {gsub(/["'\'']/, "", $2); print $2; exit}' "$yaml_manifest"
+                ;;
+            installed)
+                awk '/^[[:space:]]*installed:/ {gsub(/["'\'']/, "", $2); for(i=2;i<=NF;i++) printf "%s ", $i; print ""; exit}' "$yaml_manifest" | xargs
+                ;;
+            repo)
+                awk '/^[[:space:]]*repo:/ {gsub(/["'\'']/, "", $2); for(i=2;i<=NF;i++) printf "%s ", $i; print ""; exit}' "$yaml_manifest" | xargs
+                ;;
+            branch)
+                awk '/^[[:space:]]*branch:/ {gsub(/["'\'']/, "", $2); print $2; exit}' "$yaml_manifest"
+                ;;
+        esac
+    fi
+}
+
+#-------------------------------------------------------------------------------
+# Platform Detection
+#-------------------------------------------------------------------------------
+
+detect_platform() {
+    case "$(uname -s)" in
+        Linux*)  echo "linux" ;;
+        Darwin*) echo "macos" ;;
+        *)       echo "unknown" ;;
+    esac
+}
+
+#-------------------------------------------------------------------------------
+# Timestamp
+#-------------------------------------------------------------------------------
+
+get_timestamp() {
+    date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u +"%Y-%m-%d %H:%M:%S UTC"
+}
+
+#-------------------------------------------------------------------------------
+# Exit Codes
+#-------------------------------------------------------------------------------
+
+EXIT_OK=0
+EXIT_ERROR=1
+EXIT_NOT_INSTALLED=2
+EXIT_INVALID_ARGS=3
+
+#-------------------------------------------------------------------------------
+# Usage
+#-------------------------------------------------------------------------------
+
+usage() {
+    cat <<EOF
+${BOLD}KDSE Runtime${NC} - Engineering Command Interface
+
+${BOLD}USAGE:${NC}
+    kdse <command> [options]
+
+${BOLD}COMMANDS:${NC}
+    status          Show runtime health and status
+    update          Update runtime to latest version
+    verify          Verify runtime installation
+    doctor          Diagnose runtime problems
+    run             Start a new KDSE session
+    resume          Resume previous session
+    audit           Execute repository assessment
+    history         Show session history
+    report          List available reports
+    version         Show runtime version
+    install         Install runtime (if not installed)
+    uninstall       Remove runtime
+
+${BOLD}OPTIONS:${NC}
+    -h, --help      Show this help message
+    -v, --verbose   Verbose output
+    -q, --quiet     Quiet output (only errors)
+
+${BOLD}EXAMPLES:${NC}
+    kdse status         # Show runtime status
+    kdse update         # Update runtime
+    kdse verify         # Verify installation
+    kdse run            # Start new session
+
+EOF
+    exit $EXIT_OK
+}
+
+#-------------------------------------------------------------------------------
+# Command: status
+#-------------------------------------------------------------------------------
+
+cmd_status() {
+    output_header "Runtime Status"
+    
+    local install_path=$(get_install_path)
+    local format=$(detect_manifest_format)
+    
+    # Check if installed
+    if ! manifest_exists; then
+        output_error "Runtime is not installed"
+        echo ""
+        echo "Run 'kdse install' to install the runtime."
+        output_footer
+        return $EXIT_NOT_INSTALLED
+    fi
+    
+    # Get manifest values
+    local version=$(manifest_get "version" || echo "unknown")
+    local installed=$(manifest_get "installed" || echo "unknown")
+    local repo=$(manifest_get "repo" || echo "unknown")
+    local branch=$(manifest_get "branch" || echo "unknown")
+    local last_sync=$(manifest_get "last_sync" || echo "never")
+    
+    # Display status
+    echo -e "${BOLD}Installation:${NC}"
+    echo "  Path:        $install_path"
+    echo "  Format:      $format"
+    echo "  Version:     $version"
+    echo "  Installed:   $installed"
+    echo "  Last Sync:   $last_sync"
+    echo "  Repository:  $repo"
+    echo "  Branch:      $branch"
+    echo "  Platform:    $(detect_platform)"
+    echo ""
+    
+    # Check required directories
+    echo -e "${BOLD}Directories:${NC}"
+    local dirs=("reports" "history" "runtime" "cache" "configuration" "standards/normative" "standards/informative")
+    local all_present=1
+    for dir in "${dirs[@]}"; do
+        if [[ -d "${install_path}/${dir}" ]]; then
+            echo "  ✓ $dir/"
+        else
+            echo "  ✗ $dir/ (missing)"
+            all_present=0
+        fi
+    done
+    echo ""
+    
+    # Check for session state
+    local session_state="${install_path}/runtime/state.txt"
+    if [[ -f "$session_state" ]]; then
+        echo -e "${BOLD}Session State:${NC}"
+        echo "  Active session found"
+        echo ""
+    fi
+    
+    # Required action
+    echo -e "${BOLD}Required Action:${NC}"
+    if [[ "$format" == "yaml" ]]; then
+        echo "  Migration recommended (YAML -> JSON)"
+    elif [[ "$all_present" == "0" ]]; then
+        echo "  Run 'kdse verify' to diagnose"
+    else
+        echo "  None - runtime healthy"
+    fi
+    
+    output_footer
+    return $EXIT_OK
+}
+
+#-------------------------------------------------------------------------------
+# Command: version
+#-------------------------------------------------------------------------------
+
+cmd_version() {
+    if ! manifest_exists; then
+        output_error "Runtime is not installed"
+        return $EXIT_NOT_INSTALLED
+    fi
+    
+    local version=$(manifest_get "version" || echo "unknown")
+    local installed=$(manifest_get "installed" || echo "unknown")
+    
+    echo "KDSE Runtime"
+    echo "Version:    $version"
+    echo "Installed:  $installed"
+    echo "Interface:  1.0"
+    
+    return $EXIT_OK
+}
+
+#-------------------------------------------------------------------------------
+# Command: update
+#-------------------------------------------------------------------------------
+
+cmd_update() {
+    output_header "Runtime Update"
+    
+    if ! manifest_exists; then
+        output_error "Runtime is not installed"
+        echo ""
+        echo "Run 'kdse install' to install the runtime."
+        output_footer
+        return $EXIT_NOT_INSTALLED
+    fi
+    
+    output_info "Running synchronization..."
+    echo ""
+    
+    # Run sync script
+    if [[ -f "${COMMANDS_DIR}/sync.sh" ]]; then
+        source "${COMMANDS_DIR}/common.sh"
+        "${COMMANDS_DIR}/sync.sh"
+    else
+        output_error "Sync script not found"
+        output_footer
+        return $EXIT_ERROR
+    fi
+    
+    local exit_code=$?
+    
+    if [[ $exit_code -eq 0 ]]; then
+        output_success "Runtime updated successfully"
+    else
+        output_error "Runtime update failed"
+    fi
+    
+    output_footer
+    return $exit_code
+}
+
+#-------------------------------------------------------------------------------
+# Command: verify
+#-------------------------------------------------------------------------------
+
+cmd_verify() {
+    output_header "Runtime Verification"
+    
+    if ! manifest_exists; then
+        output_error "Runtime is not installed"
+        echo ""
+        echo "Run 'kdse install' to install the runtime."
+        output_footer
+        return $EXIT_NOT_INSTALLED
+    fi
+    
+    # Run verify script
+    if [[ -f "${COMMANDS_DIR}/verify.sh" ]]; then
+        source "${COMMANDS_DIR}/common.sh"
+        "${COMMANDS_DIR}/verify.sh" "$@"
+    else
+        output_error "Verify script not found"
+        output_footer
+        return $EXIT_ERROR
+    fi
+    
+    local exit_code=$?
+    output_footer
+    return $exit_code
+}
+
+#-------------------------------------------------------------------------------
+# Command: doctor
+#-------------------------------------------------------------------------------
+
+cmd_doctor() {
+    output_header "Runtime Diagnostics"
+    
+    local install_path=$(get_install_path)
+    local issues=0
+    local warnings=0
+    
+    # Check if installed
+    if ! manifest_exists; then
+        output_error "Runtime is not installed"
+        echo ""
+        echo "Recommendation: Run 'kdse install' to install the runtime."
+        echo ""
+        output_footer
+        return $EXIT_NOT_INSTALLED
+    fi
+    
+    echo -e "${BOLD}Checking Installation...${NC}"
+    
+    # Check directories
+    local dirs=("reports" "history" "runtime" "cache" "configuration")
+    for dir in "${dirs[@]}"; do
+        if [[ -d "${install_path}/${dir}" ]]; then
+            output_success "$dir/"
+        else
+            output_error "Missing directory: $dir/"
+            ((issues++))
+        fi
+    done
+    
+    # Check standards
+    if [[ -d "${install_path}/standards/normative" ]]; then
+        local norm_count=$(find "${install_path}/standards/normative" -name "*.md" 2>/dev/null | wc -l)
+        if [[ $norm_count -gt 0 ]]; then
+            output_success "Normative documents: $norm_count"
+        else
+            output_error "No normative documents found"
+            ((issues++))
+        fi
+    else
+        output_error "Standards directory missing"
+        ((issues++))
+    fi
+    
+    # Check manifest format
+    local format=$(detect_manifest_format)
+    if [[ "$format" == "yaml" ]]; then
+        output_warning "Legacy manifest format detected (YAML)"
+        echo "  Recommendation: Run 'kdse update' to migrate to JSON"
+        ((warnings++))
+    elif [[ "$format" == "json" ]]; then
+        output_success "Manifest format: JSON (current)"
+    fi
+    
+    # Check git repository
+    if [[ -d "${install_path}/.git" ]]; then
+        output_success "Git repository: present"
+    else
+        output_warning "Git repository: not found (sync may not work)"
+        ((warnings++))
+    fi
+    
+    # Check disk space
+    local available=$(df -h "${install_path}" 2>/dev/null | awk 'NR==2 {print $4}' || echo "unknown")
+    output_info "Disk space available: $available"
+    
+    echo ""
+    echo -e "${BOLD}Summary:${NC}"
+    echo "  Issues:   $issues"
+    echo "  Warnings: $warnings"
+    
+    if [[ $issues -gt 0 ]]; then
+        echo ""
+        output_error "Runtime has issues that need attention"
+        echo ""
+        echo "Recommendations:"
+        echo "  1. Run 'kdse update' to repair installation"
+        echo "  2. If issues persist, run 'kdse install --force'"
+    elif [[ $warnings -gt 0 ]]; then
+        echo ""
+        output_warning "Runtime has warnings but is functional"
+    else
+        echo ""
+        output_success "Runtime is healthy"
+    fi
+    
+    output_footer
+    
+    [[ $issues -gt 0 ]] && return $EXIT_ERROR || return $EXIT_OK
+}
+
+#-------------------------------------------------------------------------------
+# Command: install
+#-------------------------------------------------------------------------------
+
+cmd_install() {
+    output_header "Runtime Installation"
+    
+    if manifest_exists && [[ "${FORCE_INSTALL:-0}" != "1" ]]; then
+        output_warning "Runtime is already installed"
+        echo ""
+        echo "Use 'kdse update' to update, or 'kdse install --force' to reinstall."
+        output_footer
+        return $EXIT_OK
+    fi
+    
+    # Run install script
+    if [[ -f "${COMMANDS_DIR}/install.sh" ]]; then
+        source "${COMMANDS_DIR}/common.sh"
+        "${COMMANDS_DIR}/install.sh" "$@"
+    else
+        output_error "Install script not found"
+        output_footer
+        return $EXIT_ERROR
+    fi
+    
+    local exit_code=$?
+    output_footer
+    return $exit_code
+}
+
+#-------------------------------------------------------------------------------
+# Command: uninstall
+#-------------------------------------------------------------------------------
+
+cmd_uninstall() {
+    output_header "Runtime Uninstallation"
+    
+    if ! manifest_exists; then
+        output_warning "Runtime is not installed"
+        output_footer
+        return $EXIT_OK
+    fi
+    
+    # Run uninstall script
+    if [[ -f "${COMMANDS_DIR}/uninstall.sh" ]]; then
+        source "${COMMANDS_DIR}/common.sh"
+        "${COMMANDS_DIR}/uninstall.sh" "$@"
+    else
+        output_error "Uninstall script not found"
+        output_footer
+        return $EXIT_ERROR
+    fi
+    
+    local exit_code=$?
+    output_footer
+    return $exit_code
+}
+
+#-------------------------------------------------------------------------------
+# Command: history
+#-------------------------------------------------------------------------------
+
+cmd_history() {
+    output_header "Session History"
+    
+    local history_path=$(get_history_path)
+    
+    if [[ ! -d "$history_path" ]]; then
+        output_warning "History directory not found"
+        output_footer
+        return $EXIT_OK
+    fi
+    
+    local sessions=$(find "$history_path" -name "*.json" -o -name "*.md" 2>/dev/null | sort -r)
+    
+    if [[ -z "$sessions" ]]; then
+        output_info "No session history found"
+        echo ""
+        echo "Run 'kdse run' to start a new session."
+    else
+        echo -e "${BOLD}Recent Sessions:${NC}"
+        local count=0
+        while IFS= read -r session && [[ $count -lt 10 ]]; do
+            local basename=$(basename "$session")
+            local modified=$(stat -c %y "$session" 2>/dev/null | cut -d' ' -f1 || stat -f %Sm "$session" 2>/dev/null | cut -d' ' -f1 || echo "unknown")
+            echo "  $modified  $basename"
+            ((count++))
+        done <<< "$sessions"
+        echo ""
+        echo "Total sessions: $(echo "$sessions" | wc -l | tr -d ' ')"
+    fi
+    
+    output_footer
+    return $EXIT_OK
+}
+
+#-------------------------------------------------------------------------------
+# Command: report
+#-------------------------------------------------------------------------------
+
+cmd_report() {
+    output_header "Available Reports"
+    
+    local reports_path=$(get_reports_path)
+    
+    if [[ ! -d "$reports_path" ]]; then
+        output_warning "Reports directory not found"
+        output_footer
+        return $EXIT_OK
+    fi
+    
+    local reports=$(find "$reports_path" -type f \( -name "*.json" -o -name "*.md" -o -name "*.html" \) 2>/dev/null | sort -r)
+    
+    if [[ -z "$reports" ]]; then
+        output_info "No reports found"
+        echo ""
+        echo "Run 'kdse run' to generate reports."
+    else
+        echo -e "${BOLD}Reports:${NC}"
+        local count=0
+        while IFS= read -r report && [[ $count -lt 20 ]]; do
+            local basename=$(basename "$report")
+            local size=$(stat -c %s "$report" 2>/dev/null || stat -f %z "$report" 2>/dev/null || echo "0")
+            local size_str=""
+            if [[ $size -gt 1024 ]]; then
+                size_str=" ($(($size / 1024))KB)"
+            fi
+            echo "  $basename$size_str"
+            ((count++))
+        done <<< "$reports"
+        echo ""
+        echo "Total reports: $(echo "$reports" | wc -l | tr -d ' ')"
+    fi
+    
+    output_footer
+    return $EXIT_OK
+}
+
+#-------------------------------------------------------------------------------
+# Command: run
+#-------------------------------------------------------------------------------
+
+cmd_run() {
+    output_header "Start KDSE Session"
+    
+    if ! manifest_exists; then
+        output_error "Runtime is not installed"
+        echo ""
+        echo "Run 'kdse install' first."
+        output_footer
+        return $EXIT_NOT_INSTALLED
+    fi
+    
+    output_info "Session initialization..."
+    echo ""
+    
+    # Check if session already active
+    local state_file="$(get_install_path)/runtime/state.txt"
+    if [[ -f "$state_file" ]]; then
+        output_warning "An active session exists"
+        echo ""
+        echo "Use 'kdse resume' to continue the session, or close it first."
+        output_footer
+        return $EXIT_OK
+    fi
+    
+    # Create session state
+    local session_id="KDSE-$(date +%Y%m%d-%H%M%S)"
+    mkdir -p "$(get_install_path)/runtime"
+    echo "$session_id" > "$state_file"
+    echo "active" >> "$state_file"
+    echo "$(get_timestamp)" >> "$state_file"
+    
+    output_success "Session started: $session_id"
+    echo ""
+    echo -e "${BOLD}Session ID:${NC} $session_id"
+    echo -e "${BOLD}State:${NC}     active"
+    echo ""
+    echo "The Runtime will now execute the session workflow."
+    echo "Use 'kdse resume' to continue if interrupted."
+    
+    output_footer
+    return $EXIT_OK
+}
+
+#-------------------------------------------------------------------------------
+# Command: resume
+#-------------------------------------------------------------------------------
+
+cmd_resume() {
+    output_header "Resume KDSE Session"
+    
+    local state_file="$(get_install_path)/runtime/state.txt"
+    
+    if [[ ! -f "$state_file" ]]; then
+        output_warning "No active session found"
+        echo ""
+        echo "Use 'kdse run' to start a new session."
+        output_footer
+        return $EXIT_OK
+    fi
+    
+    local session_id=$(head -1 "$state_file")
+    local state=$(sed -n '2p' "$state_file")
+    local started=$(sed -n '3p' "$state_file")
+    
+    output_success "Session found: $session_id"
+    echo ""
+    echo -e "${BOLD}Session ID:${NC} $session_id"
+    echo -e "${BOLD}State:${NC}     $state"
+    echo -e "${BOLD}Started:${NC}   $started"
+    echo ""
+    echo "The Runtime will continue the session workflow."
+    
+    output_footer
+    return $EXIT_OK
+}
+
+#-------------------------------------------------------------------------------
+# Command: audit
+#-------------------------------------------------------------------------------
+
+cmd_audit() {
+    output_header "Repository Assessment"
+    
+    if ! manifest_exists; then
+        output_error "Runtime is not installed"
+        output_footer
+        return $EXIT_NOT_INSTALLED
+    fi
+    
+    output_info "Executing repository assessment..."
+    echo ""
+    output_info "This would execute the Compliance Audit against the repository."
+    echo ""
+    output_info "Assessment dimensions:"
+    echo "  - Knowledge"
+    echo "  - Process"
+    echo "  - Artifact"
+    echo "  - Verification"
+    echo "  - Traceability"
+    echo ""
+    output_info "Use 'kdse run' for a complete session including assessment."
+    
+    output_footer
+    return $EXIT_OK
+}
+
+#-------------------------------------------------------------------------------
+# Main
+#-------------------------------------------------------------------------------
+
+main() {
+    # Parse global options
+    VERBOSE=0
+    QUIET=0
+    
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -h|--help)
+                usage
+                ;;
+            -v|--verbose)
+                VERBOSE=1
+                shift
+                ;;
+            -q|--quiet)
+                QUIET=1
+                shift
+                ;;
+            -*)
+                output_error "Unknown option: $1"
+                echo "Run 'kdse --help' for usage."
+                exit $EXIT_INVALID_ARGS
+                ;;
+            *)
+                break
+                ;;
+        esac
+    done
+    
+    # Get command
+    local command="${1:-}"
+    shift || true
+    
+    # Route command
+    case "$command" in
+        status)
+            cmd_status "$@"
+            ;;
+        version)
+            cmd_version "$@"
+            ;;
+        update)
+            cmd_update "$@"
+            ;;
+        verify)
+            cmd_verify "$@"
+            ;;
+        doctor)
+            cmd_doctor "$@"
+            ;;
+        install)
+            cmd_install "$@"
+            ;;
+        uninstall)
+            cmd_uninstall "$@"
+            ;;
+        history)
+            cmd_history "$@"
+            ;;
+        report)
+            cmd_report "$@"
+            ;;
+        run)
+            cmd_run "$@"
+            ;;
+        resume)
+            cmd_resume "$@"
+            ;;
+        audit)
+            cmd_audit "$@"
+            ;;
+        "")
+            output_header "KDSE Runtime"
+            echo "KDSE Runtime - Engineering Command Interface"
+            echo ""
+            echo "Version: 1.0"
+            echo ""
+            echo "Run 'kdse --help' for usage."
+            echo "Run 'kdse status' to check runtime health."
+            output_footer
+            ;;
+        *)
+            output_error "Unknown command: $command"
+            echo "Run 'kdse --help' for usage."
+            exit $EXIT_INVALID_ARGS
+            ;;
+    esac
+}
+
+# Run
+main "$@"
