@@ -6,6 +6,14 @@ This glossary establishes canonical terminology for KDSE. Each term has exactly 
 
 ## A
 
+### Adoption
+
+The process by which a team establishes and practices KDSE. Adoption involves understanding principles, establishing governance, and applying KDSE to real decisions.
+
+### Architecture Decision Record (ADR)
+
+An artifact documenting a significant architectural decision. An ADR captures what was decided, why it was decided, what alternatives were considered, and what consequences the decision has.
+
 ### Artifact
 
 A tangible or intangible object created, maintained, or used during the engineering process.
@@ -17,6 +25,14 @@ In KDSE, artifacts are typed (Knowledge, Architecture, Implementation, Verificat
 The legitimate power to make decisions and the legitimacy to require compliance.
 
 In KDSE, authority flows downward through the artifact hierarchy. Higher-authority artifacts constrain and authorize lower-authority artifacts.
+
+### Authority Hierarchy
+
+The structure of authority in KDSE, from highest (Knowledge) to lowest (Implementation), with Verification reporting on alignment.
+
+### Authority Resolution
+
+The process of resolving conflicts between artifacts while maintaining the authority hierarchy. Authority resolution may involve correcting the lower artifact, clarifying the higher artifact, or adding intermediate knowledge.
 
 ## B
 
@@ -44,7 +60,7 @@ In KDSE, context is captured as knowledge and informs architectural decisions.
 
 ### Derivation
 
-The process by which lower-layer artifacts are created based on higher-layer artifacts.
+The process by which higher-authority artifacts produce lower-authority artifacts through analysis, decision-making, and documentation. Derivation transforms validated understanding into structural decisions.
 
 In KDSE, derivation is mandatory: Architecture derives from Knowledge; Implementation derives from Architecture.
 
@@ -98,6 +114,10 @@ An artifact of type Knowledge, capturing authoritative understanding.
 
 Knowledge artifacts are created during the Knowledge stage and persist throughout the system lifecycle.
 
+### Knowledge Owner
+
+The individual or role responsible for ensuring knowledge artifacts are created, maintained, validated, and evolved. The Knowledge Owner is responsible for the quality and authority of knowledge artifacts.
+
 ## M
 
 ### Methodology
@@ -113,6 +133,16 @@ KDSE is a methodology for software engineering.
 A requirement that specifies criteria for system operation rather than specific behavior.
 
 Examples include performance, security, reliability, and scalability requirements. Non-functional requirements are captured as Knowledge artifacts.
+
+## O
+
+### Obsolescence
+
+The state of knowledge when it no longer accurately represents the problem domain. Obsolete knowledge loses authority but is maintained for traceability.
+
+### Ownership
+
+The assignment of responsibility for an artifact or artifact type. Ownership determines who is responsible for creation, maintenance, evolution, and compliance.
 
 ## P
 
@@ -140,6 +170,10 @@ The area of expertise or application to which a system addresses.
 
 Understanding the problem domain is captured as Knowledge.
 
+### Provenance
+
+The origin and history of knowledge. Provenance includes the sources of knowledge, the validation process, and the changes the knowledge has undergone.
+
 ## R
 
 ### Requirement
@@ -160,11 +194,17 @@ The process of addressing a contradiction or gap between artifacts.
 
 Resolution may involve clarification at a higher layer or correction at a lower layer.
 
+## S
+
+### Structured Knowledge
+
+Engineering knowledge that has been validated, documented with dependencies and provenance, assigned ownership, and defined with explicit lifetime boundaries. Only structured knowledge can carry authority in KDSE.
+
 ## T
 
 ### Traceability
 
-The ability to follow the relationship between artifacts across the hierarchy.
+The ability to follow relationships between artifacts. Traceability enables understanding of how artifacts relate to each other and why they exist.
 
 In KDSE, every artifact below Knowledge must be traceable to authorized Knowledge artifacts. Traceability enables impact analysis and compliance verification.
 
@@ -173,6 +213,14 @@ In KDSE, every artifact below Knowledge must be traceable to authorized Knowledg
 The sequence of artifacts connecting two related artifacts.
 
 For example, an Implementation artifact traces to an Architecture artifact through an explicit relationship. The Architecture artifact traces to a Knowledge artifact.
+
+### Traceability Link
+
+An explicit relationship between two artifacts. Traceability links form the chains that traceability follows.
+
+### Traceability Verification
+
+The process of confirming that traceability links are complete, correct, consistent, and current.
 
 ## V
 

@@ -58,11 +58,11 @@ Verification artifacts confirm that implementation aligns with architecture, and
 
 **Rationale**: Verification without knowledge basis verifies nothing of engineering significance. Verification must confirm alignment with intended outcomes.
 
-### Principle 10: Change Flows Upward Before Flowing Down
+### Principle 10: Evolution Maintains Authority
 
-Changes to lower artifacts require understanding of higher artifacts. Changes originate from knowledge evolution, propagate through architecture review, and realize in implementation.
+Changes must flow through proper channels and maintain authority hierarchy. Changes to lower artifacts require understanding of higher artifacts. Changes originate from changed understanding, propagate through proper channels, and realize through authorized modification.
 
-**Rationale**: Bottom-up change without top-down understanding produces drift. Changes must be evaluated against the knowledge that authorized the current state.
+**Rationale**: Bottom-up change requests without proper channels produce drift. Authority remains with higher layers; lower layers request, higher layers decide. Evolution is planned change, not drift.
 
 ## Principles Are Not Practices
 
