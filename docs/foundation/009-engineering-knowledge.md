@@ -138,7 +138,7 @@ Unstructured knowledge cannot become authoritative because:
 
 - **Consistency is impossible**: Without defined structure, knowledge artifacts may be incomplete, contradictory, or ambiguous
 - **Understanding is uncertain**: Without validation and source attribution, the basis for knowledge is unclear
-- **Accountability is absent**: Without explicit owners and lifetimes, responsibility for knowledge is distributed and untraceable
+- **Accountability is absent**: Without explicit stewards and lifetimes, responsibility for knowledge is distributed and untraceable
 
 Structured knowledge enables authority because:
 
@@ -173,7 +173,7 @@ Structured knowledge is authoritative because:
 
 3. **It is traceable**: Authority requires accountability. Untraceable knowledge cannot be held accountable. Structure ensures traceability is maintained.
 
-4. **It has clear ownership**: Authority requires responsibility. Distributed responsibility creates diffusion. Structure ensures ownership is assigned.
+4. **It has clear stewardship**: Authority requires responsibility. Distributed responsibility creates diffusion. Structure ensures stewardship is assigned.
 
 ### Knowledge Authority and Artifact Hierarchy
 
@@ -230,7 +230,7 @@ This document introduces the following terms for glossary inclusion:
 
 ### Structured Knowledge
 
-Engineering knowledge that has been validated, documented with dependencies and provenance, assigned ownership, and defined with explicit lifetime boundaries. Only structured knowledge can carry authority in KDSE.
+Engineering knowledge that has been validated, documented with dependencies and provenance, assigned stewardship, and defined with explicit lifetime boundaries. Only structured knowledge can carry authority in KDSE.
 
 ### Validation
 
@@ -242,4 +242,4 @@ The origin and history of knowledge. Provenance includes the sources of knowledg
 
 ### Knowledge Artifact
 
-A structured knowledge unit that has been formally created, reviewed, approved, and assigned to an owner. Knowledge artifacts are the authoritative units of the Knowledge artifact type.
+A structured knowledge unit that has been formally created, reviewed, approved, and assigned to a steward. Knowledge artifacts are the authoritative units of the Knowledge artifact type.

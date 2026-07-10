@@ -53,13 +53,13 @@ The team establishes the KDSE foundation for their context.
 
 1. **Understand principles**: Study and discuss KDSE principles
 2. **Establish artifact types**: Define how artifact types apply to context
-3. **Assign ownership**: Designate owners for artifact types
+3. **Assign stewardship**: Designate stewards for artifact types
 4. **Define governance**: Establish how decisions are made and approved
 
 **Outcomes**:
 
 - Shared understanding of KDSE principles
-- Defined artifact types with owners
+- Defined artifact types with stewards
 - Governance model for decisions
 - Traceability expectations established
 
@@ -73,7 +73,7 @@ The team establishes the KDSE foundation for their context.
 
 **Exit Criteria**:
 
-- Artifact type owners are designated
+- Artifact type stewards are designated
 - Governance model is documented
 - Traceability expectations are established
 
@@ -86,13 +86,13 @@ The team creates their first structured knowledge artifact.
 1. **Identify knowledge**: Determine what understanding the team has about their problem domain
 2. **Validate knowledge**: Confirm that understanding is sound through review
 3. **Structure knowledge**: Document understanding with required elements
-4. **Assign ownership**: Designate owner for the knowledge artifact
+4. **Assign stewardship**: Designate steward for the knowledge artifact
 
 **Outcomes**:
 
 - First structured knowledge artifact
 - Validated understanding captured
-- Owner assigned
+- Steward assigned
 - Traceability path established
 
 **Duration**: 1-2 weeks for first artifact
@@ -107,7 +107,7 @@ The team creates their first structured knowledge artifact.
 
 - Knowledge artifact is reviewed and approved
 - Validation evidence is documented
-- Owner is assigned
+- Steward is assigned
 
 ### Stage 3: First Derivation
 
@@ -219,38 +219,38 @@ A team may adopt KDSE for specific concerns while using other approaches elsewhe
 
 ## Team Roles
 
-KDSE adoption requires specific roles.
+KDSE adoption requires specific roles. KDSE uses stewardship terminology rather than ownership terminology.
 
-### Knowledge Owner
+### Knowledge Steward
 
-The Knowledge Owner is responsible for:
+The Knowledge Steward is responsible for:
 
 - Ensuring knowledge artifacts are created and maintained
 - Validating that knowledge meets quality criteria
 - Resolving conflicts between knowledge artifacts
 - Governing knowledge evolution
 
-### Architecture Owner
+### Architecture Steward
 
-The Architecture Owner is responsible for:
+The Architecture Steward is responsible for:
 
 - Ensuring architecture derives from knowledge
 - Documenting architectural decisions
 - Maintaining architectural consistency
 - Governing architectural evolution
 
-### Implementation Lead
+### Implementation Steward
 
-The Implementation Lead is responsible for:
+The Implementation Steward is responsible for:
 
 - Ensuring implementation traces to architecture
 - Maintaining implementation-artifact alignment
 - Reporting deviations from architecture
 - Governing implementation decisions
 
-### Verification Lead
+### Verification Steward
 
-The Verification Lead is responsible for:
+The Verification Steward is responsible for:
 
 - Ensuring verification criteria trace to knowledge
 - Confirming implementation-architecture alignment
@@ -307,7 +307,7 @@ A small team can adopt KDSE with minimal formalization.
 - Shared understanding is essential
 - Informal governance may suffice
 
-**Approach**: Establish shared understanding, assign ownership, practice KDSE on team decisions.
+**Approach**: Establish shared understanding, assign stewardship, practice KDSE on team decisions.
 
 ### Medium Team Adoption (10-50)
 

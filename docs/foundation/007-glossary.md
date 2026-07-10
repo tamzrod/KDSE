@@ -10,6 +10,10 @@ This glossary establishes canonical terminology for KDSE. Each term has exactly 
 
 The process by which a team establishes and practices KDSE. Adoption involves understanding principles, establishing governance, and applying KDSE to real decisions.
 
+### Alignment
+
+The state of conformance between artifacts. Implementation aligns with Architecture when implementation follows architectural direction. Architecture aligns with Knowledge when architecture derives from and satisfies knowledge requirements.
+
 ### Architecture Decision Record (ADR)
 
 An artifact documenting a significant architectural decision. An ADR captures what was decided, why it was decided, what alternatives were considered, and what consequences the decision has.
@@ -18,7 +22,15 @@ An artifact documenting a significant architectural decision. An ADR captures wh
 
 A tangible or intangible object created, maintained, or used during the engineering process.
 
-In KDSE, artifacts are typed (Knowledge, Architecture, Implementation, Verification, Governance) with defined purposes, owners, lifetimes, and authority levels.
+In KDSE, artifacts are typed (Knowledge, Architecture, Implementation, Verification, Governance) with defined purposes, stewards, lifetimes, and authority levels.
+
+### Artifact Lifecycle
+
+The progression of artifacts through defined states. Artifact lifecycle manages artifact quality, review requirements, and authority levels through states such as Draft, Reviewed, Approved, and Superseded.
+
+### Artifact State
+
+The current position of an artifact within its lifecycle. Artifact state communicates readiness and authority level. States include Proposed, Draft, Reviewed, Approved, Reference, Canonical, Superseded, Deprecated, and Archived.
 
 ### Authority
 
@@ -43,6 +55,10 @@ The complete set of concepts, terms, and activities that constitute a discipline
 The KDSE Body of Knowledge encompasses all artifacts, principles, processes, and practices that define the discipline.
 
 ## C
+
+### Case Study
+
+An documented account of KDSE application that provides evidence of methodology effectiveness. Case studies validate KDSE; they do not define it.
 
 ### Change Management
 
@@ -84,7 +100,7 @@ Evolution is the fifth stage of the KDSE lifecycle and is continuous throughout 
 
 The system of rules, practices, and processes by which authority is exercised and decisions are made.
 
-In KDSE, Governance artifacts establish ownership, authority delegation, and process compliance requirements.
+In KDSE, Governance artifacts establish stewardship, authority delegation, and process compliance requirements.
 
 ## I
 
@@ -114,17 +130,15 @@ An artifact of type Knowledge, capturing authoritative understanding.
 
 Knowledge artifacts are created during the Knowledge stage and persist throughout the system lifecycle.
 
-### Knowledge Owner
+### Knowledge Steward
 
-The individual or role responsible for ensuring knowledge artifacts are created, maintained, validated, and evolved. The Knowledge Owner is responsible for the quality and authority of knowledge artifacts.
+The individual or role responsible for ensuring knowledge artifacts are created, maintained, validated, and evolved. The Knowledge Steward is responsible for the quality and authority of knowledge artifacts.
 
 ## M
 
-### Methodology
+### Methodology Maturity Model
 
-A systematic approach to a discipline, defining principles, processes, and practices.
-
-KDSE is a methodology for software engineering.
+A framework for assessing the development state of a methodology. KDSE defines six maturity levels: Concept, Defined, Structured, Usable, Validated, and Proven.
 
 ## N
 
@@ -139,10 +153,6 @@ Examples include performance, security, reliability, and scalability requirement
 ### Obsolescence
 
 The state of knowledge when it no longer accurately represents the problem domain. Obsolete knowledge loses authority but is maintained for traceability.
-
-### Ownership
-
-The assignment of responsibility for an artifact or artifact type. Ownership determines who is responsible for creation, maintenance, evolution, and compliance.
 
 ## P
 
@@ -196,9 +206,21 @@ Resolution may involve clarification at a higher layer or correction at a lower 
 
 ## S
 
+### Steward
+
+An individual or role responsible for artifact quality, maintenance, and evolution. Stewardship replaces ownership-oriented thinking in KDSE.
+
+### Stewardship
+
+The responsibility for artifacts that emphasizes care and maintenance over possession. Knowledge should be stewarded, not owned.
+
+### Stewardship Transfer
+
+The process of handing over artifact responsibility from one steward to another. Stewardship transfer requires documentation, knowledge transfer, acknowledgment, and stakeholder notification.
+
 ### Structured Knowledge
 
-Engineering knowledge that has been validated, documented with dependencies and provenance, assigned ownership, and defined with explicit lifetime boundaries. Only structured knowledge can carry authority in KDSE.
+Engineering knowledge that has been validated, documented with dependencies and provenance, assigned stewardship, and defined with explicit lifetime boundaries. Only structured knowledge can carry authority in KDSE.
 
 ## T
 
@@ -235,6 +257,18 @@ Verification artifacts document the results of verification activities. Verifica
 An artifact of type Verification, documenting verification activities and results.
 
 Verification artifacts include verification plans, test cases, test results, and reports.
+
+### Verification Domain
+
+The knowledge domain encompassing verification principles, processes, and criteria. The verification domain includes verification goals, evidence requirements, traceability, criteria, authority, and lifecycle.
+
+### Verification Criteria
+
+The standards by which verification is evaluated. Verification criteria include completeness, correctness, consistency, reproducibility, and independence.
+
+### Verification Steward
+
+The individual or role responsible for ensuring verification activities are properly planned, executed, and documented.
 
 ## W
 

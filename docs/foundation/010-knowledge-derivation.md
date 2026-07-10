@@ -63,7 +63,7 @@ Responsibility identification involves:
 2. **Allocating concerns**: Which responsibilities belong to which parts
 3. **Identifying interfaces**: How parts will communicate
 4. **Separating concerns**: Ensuring single responsibilities per component
-5. **Establishing ownership**: Assigning owners to responsibilities
+5. **Establishing stewardship**: Assigning stewards to responsibilities
 
 **Input**: Analyzed concepts from Stage 1
 **Output**: Responsibility model with identified system components

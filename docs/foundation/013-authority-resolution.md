@@ -28,7 +28,7 @@ Structured Knowledge
     │ Has authority because:
     │ - Validated understanding
     │ - Explicit provenance
-    │ - Clear ownership
+    │ - Clear stewardship
     ▼
 Architecture
     │
@@ -287,7 +287,7 @@ Obsolete knowledge must be identified and addressed.
 1. **Identify obsolescence**: Recognize that knowledge may be obsolete
 2. **Assess impact**: Determine what artifacts depend on this knowledge
 3. **Determine action**: Decide whether to update, replace, or retire the knowledge
-4. **Communicate change**: Inform affected artifact owners
+4. **Communicate change**: Inform affected artifact stewards
 5. **Update or retire**: Apply the decided action
 6. **Maintain traceability**: Ensure that obsolete knowledge remains traceable
 
@@ -325,7 +325,7 @@ Evolution involves:
 
 Authority enables evolution by providing:
 
-1. **Clear ownership**: Someone is responsible for each artifact
+1. **Clear stewardship**: Someone is responsible for each artifact
 2. **Clear relationships**: Dependencies between artifacts are understood
 3. **Clear rationale**: The reasons for current state are documented
 4. **Clear process**: How to change artifacts is defined
@@ -397,11 +397,11 @@ The contradiction is resolved by distinguishing between authority and change req
 
 When implementation requests architecture change, this is not implementation exercising authority over architecture. This is implementation communicating that it cannot comply with current architecture.
 
-The architecture owner then decides:
+The architecture steward then decides:
 
 - **Approve the change**: Modify architecture to accommodate implementation's constraints
 - **Deny the change**: Maintain architecture, require implementation to comply
-- **Request knowledge clarification**: Escalate to knowledge owner for clarification
+- **Request knowledge clarification**: Escalate to knowledge steward for clarification
 
 The key is that authority remains with higher layers. Lower layers request; higher layers decide.
 

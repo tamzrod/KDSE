@@ -110,6 +110,73 @@ KDSE evolves through open contribution. Changes are proposed, discussed, and ado
 
 KDSE evolution should be guided by evidence of effectiveness. Claims about KDSE benefits should be supported by observation and, where possible, measurement.
 
+## Evidence-Driven Evolution
+
+KDSE evolves only through evidence. The methodology must never evolve through opinion. Every addition to KDSE should answer: "What engineering problem required this concept?"
+
+### Evolution Requirements
+
+1. **Evidence Required**: Real engineering experience, audited application findings, demonstrated gaps, measured outcomes
+2. **Analysis Required**: Gap impact assessment, alternative approaches considered, integration evaluation
+3. **Justification Required**: Explicit problem statement, proposed solution rationale, expected benefits documented
+4. **Traceability Required**: Evidence source documented, finding recorded, improvement traced to finding
+
+### Evolution Anti-Patterns
+
+1. **Opinion-Driven**: Adding concepts because they seem useful
+2. **Theoretical Expansion**: Adding concepts without evidence
+3. **Over-Generalization**: Expanding scope beyond demonstrated need
+4. **Premature Formalization**: Formalizing concepts still under exploration
+
+## Methodology Maturity Model
+
+KDSE's own maturity is formally defined. The methodology operates at a defined maturity level and evolves through evidence toward higher maturity.
+
+### Maturity Levels
+
+| Level | Name | Characteristics |
+|-------|------|-----------------|
+| 1 | Concept | Principles defined, no practice |
+| 2 | Defined | Artifact types known, processes informal |
+| 3 | Structured | Formal processes, documented practices |
+| 4 | Usable | Practices applied consistently |
+| 5 | Validated | Outcomes measured, benefits demonstrated |
+| 6 | Proven | Repeated success across contexts |
+
+### KDSE Current Maturity
+
+KDSE currently operates at Level 3 (Structured):
+- ✅ Principles defined (10 core principles)
+- ✅ Artifact types defined (6 types)
+- ✅ Process framework established
+- ✅ Traceability framework documented
+- ✅ Adoption model provided
+- ⚠️ Consistent application not yet demonstrated
+- ⚠️ Outcomes not yet measured
+- ⚠️ External validation not yet complete
+
+## Case Study Philosophy
+
+Case studies do not define KDSE. Case studies validate KDSE.
+
+### Knowledge Flow
+
+```
+Methodology (Principles)
+        ↓
+Application (Practice)
+        ↓
+Evidence (Outcomes)
+        ↓
+Improved Methodology (Evolution)
+```
+
+### Case Study Requirements
+
+1. **Transparent Context**: Problem domain, constraints, team characteristics, success criteria
+2. **Traceable Process**: Methodology application documented, deviations noted
+3. **Measured Outcomes**: Results objectively reported, lessons learned extracted
+
 ## Long-Term Aspirations
 
 ### For Organizations

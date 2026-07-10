@@ -277,10 +277,10 @@ Traceability should be verified:
 
 Traceability verification is everyone's responsibility:
 
-- **Knowledge owners**: Verify that knowledge authorizes appropriate architecture
-- **Architecture owners**: Verify that architecture traces to knowledge
-- **Implementation leads**: Verify that implementation traces to architecture
-- **Verification leads**: Verify that verification criteria trace to knowledge
+- **Knowledge stewards**: Verify that knowledge authorizes appropriate architecture
+- **Architecture stewards**: Verify that architecture traces to knowledge
+- **Implementation stewards**: Verify that implementation traces to architecture
+- **Verification stewards**: Verify that verification criteria trace to knowledge
 
 ## Traceability and Authority
 

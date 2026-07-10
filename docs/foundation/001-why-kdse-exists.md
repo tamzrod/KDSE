@@ -17,7 +17,7 @@ Software projects accumulate knowledge through requirements gathering, design de
 
 When key personnel leave, knowledge departs with them. New team members reconstruct knowledge through archaeology, often incorrectly. The result is repeated mistakes, inconsistent implementations, and degraded system quality.
 
-**KDSE addresses this by establishing knowledge as a first-class artifact with defined ownership, versioning, and longevity requirements.**
+**KDSE addresses this by establishing knowledge as a first-class artifact with defined stewardship, versioning, and longevity requirements.**
 
 ## Architecture Drift
 
