@@ -99,6 +99,12 @@ pre_install_checks() {
     # Validate install path
     validate_install_path || exit $EXIT_ERROR
     
+    # Auto-detect and migrate legacy installations
+    auto_detect_and_migrate || {
+        log_error "Failed to process existing installation"
+        exit $EXIT_ERROR
+    }
+    
     # Check if already installed
     if manifest_exists && [[ "$FORCE_INSTALL" == "0" ]]; then
         log_warning "KDSE Runtime is already installed"
@@ -108,6 +114,34 @@ pre_install_checks() {
     
     log_info "Pre-installation checks passed"
     return 0
+}
+
+#-------------------------------------------------------------------------------
+# Auto-Detect and Migrate Legacy Installations
+#-------------------------------------------------------------------------------
+
+auto_detect_and_migrate() {
+    local format=$(detect_manifest_format)
+    
+    case "$format" in
+        json)
+            log_info "Detected installation format: JSON (current)"
+            return 0
+            ;;
+        yaml)
+            log_info "Detected installation format: YAML (legacy)"
+            log_info "Automatic migration will be performed..."
+            migrate_manifest_yaml_to_json || {
+                log_error "Migration failed"
+                return 1
+            }
+            return 0
+            ;;
+        none)
+            log_info "No existing KDSE installation detected"
+            return 0
+            ;;
+    esac
 }
 
 #-------------------------------------------------------------------------------
@@ -381,6 +415,7 @@ verify_installation() {
 
 print_summary() {
     local install_path=$(get_install_path)
+    local manifest_format=$(detect_manifest_format)
     
     print_summary_header "Installation Complete"
     
@@ -390,6 +425,16 @@ print_summary() {
     echo "Branch:           $KDSE_BRANCH"
     echo "Version:          $(get_git_version)"
     echo "Installed:        $(get_timestamp)"
+    echo ""
+    echo "Installation Format: $manifest_format"
+    
+    # Show migration info if applicable
+    if [[ "$manifest_format" == "yaml" ]]; then
+        echo ""
+        echo "Migration:        YES (YAML -> JSON)"
+        echo "Legacy manifest:  manifest.yaml (backed up)"
+    fi
+    
     echo ""
     echo "Directory Structure:"
     echo "  .kdse/"

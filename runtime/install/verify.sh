@@ -432,7 +432,7 @@ EOF
 #-------------------------------------------------------------------------------
 
 main() {
-    # Check if installed
+    # Check if installed - with legacy support
     if ! manifest_exists; then
         if [[ "$JSON_OUTPUT" == "1" ]]; then
             cat <<EOF
@@ -453,8 +453,21 @@ EOF
         exit $EXIT_NOT_INSTALLED
     fi
     
+    # Auto-detect and migrate legacy installations before verification
+    auto_detect_and_migrate || {
+        log_warning "Failed to migrate legacy installation, continuing with verification"
+    }
+    
     print_summary_header "KDSE Runtime Verification"
     echo ""
+    
+    # Show detection info
+    local format=$(detect_manifest_format)
+    echo "Detected Installation Format: $format"
+    if [[ "$MIGRATION_PERFORMED" == "1" ]]; then
+        echo "Migration Performed: YES (${MIGRATION_SOURCE_FORMAT} -> JSON)"
+        echo ""
+    fi
     
     # Run all checks
     check_directory_layout
@@ -467,6 +480,34 @@ EOF
     
     echo ""
     print_results
+}
+
+#-------------------------------------------------------------------------------
+# Auto-Detect and Migrate Legacy Installations
+#-------------------------------------------------------------------------------
+
+auto_detect_and_migrate() {
+    local format=$(detect_manifest_format)
+    
+    case "$format" in
+        json)
+            log_info "Detected installation format: JSON (current)"
+            return 0
+            ;;
+        yaml)
+            log_info "Detected installation format: YAML (legacy)"
+            log_info "Automatic migration will be performed..."
+            migrate_manifest_yaml_to_json || {
+                log_error "Migration failed"
+                return 1
+            }
+            return 0
+            ;;
+        none)
+            log_info "No existing KDSE installation detected"
+            return 0
+            ;;
+    esac
 }
 
 # Run

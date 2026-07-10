@@ -214,6 +214,8 @@ remove_installation() {
         ".git"
         "standards"
         "manifest.json"
+        "manifest.yaml"
+        "manifest.yaml.backup"
         "config.sh"
     )
     

@@ -86,12 +86,18 @@ done
 pre_sync_checks() {
     log_info "Running pre-synchronization checks..."
     
-    # Check if installed
+    # Check if installed - with legacy support
     if ! manifest_exists; then
         log_error "KDSE Runtime is not installed"
         log_info "Run install.sh first"
         exit $EXIT_NOT_INSTALLED
     fi
+    
+    # Auto-detect and migrate legacy installations
+    auto_detect_and_migrate || {
+        log_error "Failed to process existing installation"
+        exit $EXIT_ERROR
+    }
     
     # Load existing configuration
     load_config
@@ -104,6 +110,34 @@ pre_sync_checks() {
     
     log_info "Pre-synchronization checks passed"
     return 0
+}
+
+#-------------------------------------------------------------------------------
+# Auto-Detect and Migrate Legacy Installations
+#-------------------------------------------------------------------------------
+
+auto_detect_and_migrate() {
+    local format=$(detect_manifest_format)
+    
+    case "$format" in
+        json)
+            log_info "Detected installation format: JSON (current)"
+            return 0
+            ;;
+        yaml)
+            log_info "Detected installation format: YAML (legacy)"
+            log_info "Automatic migration will be performed..."
+            migrate_manifest_yaml_to_json || {
+                log_error "Migration failed"
+                return 1
+            }
+            return 0
+            ;;
+        none)
+            log_info "No existing KDSE installation detected"
+            return 0
+            ;;
+    esac
 }
 
 #-------------------------------------------------------------------------------
@@ -406,6 +440,7 @@ print_summary() {
     local install_path=$(get_install_path)
     local old_version=$(cd "$install_path" && git rev-parse HEAD^ --short 2>/dev/null | head -c 8 || echo "unknown")
     local new_version=$(get_git_version)
+    local manifest_format=$(detect_manifest_format)
     
     print_summary_header "Synchronization Complete"
     
@@ -414,6 +449,16 @@ print_summary() {
     echo "Previous Version:  $old_version"
     echo "Current Version:   $new_version"
     echo "Synchronized:      $(get_timestamp)"
+    echo ""
+    echo "Installation Format: $manifest_format"
+    
+    # Show migration info if applicable
+    if [[ "$MIGRATION_PERFORMED" == "1" ]]; then
+        echo ""
+        echo "Migration Performed: YES (${MIGRATION_SOURCE_FORMAT} -> JSON)"
+        echo "Legacy manifest backed up: manifest.yaml.backup"
+    fi
+    
     echo ""
     echo "Preserved Data:"
     echo "  reports/       - Session reports"

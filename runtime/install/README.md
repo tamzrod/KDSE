@@ -59,6 +59,32 @@ runtime/install/
 
 ---
 
+## Supported Installation Formats
+
+The Runtime supports multiple manifest formats for backward compatibility:
+
+| Format | File | Status | Notes |
+|--------|------|--------|-------|
+| JSON | `manifest.json` | Current | Primary format |
+| YAML | `manifest.yaml` | Legacy | Auto-migrated to JSON |
+
+### Automatic Migration
+
+When the Runtime detects a legacy YAML manifest, it automatically migrates to the current JSON format:
+
+1. **Detection**: Identifies legacy YAML manifest
+2. **Backup**: Creates `manifest.yaml.backup` for safety
+3. **Migration**: Converts to JSON while preserving metadata
+4. **Verification**: Confirms successful migration
+
+The migration process:
+- Preserves all user data (reports, history, runtime, cache, configuration)
+- Is idempotent (safe to run multiple times)
+- Requires no operator intervention
+- Records migration metadata in the manifest
+
+---
+
 ## Scripts
 
 ### install.sh
@@ -349,7 +375,7 @@ Ensure write access to `KDSE_HOME` directory.
 
 ## Version
 
-- **Framework Version:** 1.0
+- **Framework Version:** 1.1
 - **KDSE Standard Version:** Referenced from manifest
 - **Last Updated:** 2026-07-10
 
