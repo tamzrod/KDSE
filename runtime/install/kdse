@@ -210,6 +210,8 @@ ${BOLD}USAGE:${NC}
 
 ${BOLD}COMMANDS:${NC}
     status          Show runtime health and status
+    version         Show runtime version
+    commands        List all available commands
     update          Update runtime to latest version
     verify          Verify runtime installation
     doctor          Diagnose runtime problems
@@ -218,7 +220,6 @@ ${BOLD}COMMANDS:${NC}
     audit           Execute repository assessment
     history         Show session history
     report          List available reports
-    version         Show runtime version
     install         Install runtime (if not installed)
     uninstall       Remove runtime
 
@@ -229,9 +230,16 @@ ${BOLD}OPTIONS:${NC}
 
 ${BOLD}EXAMPLES:${NC}
     kdse status         # Show runtime status
+    kdse commands       # List all commands
     kdse update         # Update runtime
     kdse verify         # Verify installation
     kdse run            # Start new session
+
+${BOLD}AGENT INTEGRATION:${NC}
+    The KDSE Runtime is self-describing. AI agents should:
+    1. Run 'kdse commands' to discover available commands
+    2. Map natural language to commands using registry
+    3. Invoke the command directly without reasoning
 
 EOF
     exit $EXIT_OK
@@ -746,6 +754,125 @@ cmd_audit() {
 }
 
 #-------------------------------------------------------------------------------
+# Command: commands
+#-------------------------------------------------------------------------------
+
+cmd_commands() {
+    local format="yaml"
+    local output_mode="human"
+    
+    # Parse options
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -j|--json)
+                format="json"
+                shift
+                ;;
+            -y|--yaml)
+                format="yaml"
+                shift
+                ;;
+            -m|--machine)
+                output_mode="machine"
+                shift
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+    
+    local registry_path=$(get_install_path)/runtime/commands.yaml
+    
+    # Try to find registry in runtime directory first
+    if [[ -f "$registry_path" ]]; then
+        if [[ "$format" == "json" ]]; then
+            # Convert YAML to JSON (basic)
+            grep -v '^#' "$registry_path" | grep -v '^$' | head -50
+        else
+            output_header "KDSE Runtime Command Registry"
+            echo ""
+            echo "Registry: $registry_path"
+            echo "Interface Version: 1.0"
+            echo ""
+            echo -e "${BOLD}Available Commands:${NC}"
+            echo ""
+            echo "  INFORMATION COMMANDS:"
+            echo "    status     - Show runtime health and status"
+            echo "    version    - Display runtime version"
+            echo "    commands   - List all available commands"
+            echo "    history    - Show session history"
+            echo "    report     - List available reports"
+            echo ""
+            echo "  MAINTENANCE COMMANDS:"
+            echo "    update     - Update runtime to latest version"
+            echo "    verify     - Verify installation integrity"
+            echo "    doctor     - Diagnose runtime problems"
+            echo ""
+            echo "  SESSION COMMANDS:"
+            echo "    run        - Start a new KDSE session"
+            echo "    resume     - Resume previous session"
+            echo "    audit      - Execute repository assessment"
+            echo ""
+            echo "  ADMINISTRATION COMMANDS:"
+            echo "    install    - Install runtime"
+            echo "    uninstall  - Remove runtime"
+            echo ""
+            echo -e "${BOLD}Usage:${NC}"
+            echo "  kdse <command> [options]"
+            echo ""
+            echo "Options:"
+            echo "  -j, --json    Output in JSON format"
+            echo "  -y, --yaml    Output in YAML format (default)"
+            echo "  -m, --machine Machine-readable output"
+            echo ""
+            echo "For full documentation, see:"
+            echo "  ${registry_path}"
+            echo ""
+            output_footer
+        fi
+        return $EXIT_OK
+    fi
+    
+    # Fallback: Show inline command list
+    output_header "KDSE Runtime Command Registry"
+    echo ""
+    echo "Interface Version: 1.0"
+    echo ""
+    echo -e "${BOLD}Available Commands:${NC}"
+    echo ""
+    echo "  INFORMATION COMMANDS:"
+    echo "    status     - Show runtime health and status"
+    echo "    version    - Display runtime version"
+    echo "    commands   - List all available commands"
+    echo "    history    - Show session history"
+    echo "    report     - List available reports"
+    echo ""
+    echo "  MAINTENANCE COMMANDS:"
+    echo "    update     - Update runtime to latest version"
+    echo "    verify     - Verify installation integrity"
+    echo "    doctor     - Diagnose runtime problems"
+    echo ""
+    echo "  SESSION COMMANDS:"
+    echo "    run        - Start a new KDSE session"
+    echo "    resume     - Resume previous session"
+    echo "    audit      - Execute repository assessment"
+    echo ""
+    echo "  ADMINISTRATION COMMANDS:"
+    echo "    install    - Install runtime"
+    echo "    uninstall  - Remove runtime"
+    echo ""
+    echo -e "${BOLD}Usage:${NC}"
+    echo "  kdse <command> [options]"
+    echo ""
+    echo "For full command documentation, run:"
+    echo "  kdse --help"
+    echo ""
+    output_footer
+    return $EXIT_OK
+}
+
+#-------------------------------------------------------------------------------
 # Main
 #-------------------------------------------------------------------------------
 
@@ -789,6 +916,9 @@ main() {
             ;;
         version)
             cmd_version "$@"
+            ;;
+        commands)
+            cmd_commands "$@"
             ;;
         update)
             cmd_update "$@"

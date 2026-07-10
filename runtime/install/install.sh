@@ -414,6 +414,47 @@ install_kdse_command() {
 }
 
 #-------------------------------------------------------------------------------
+# Install Command Registry
+#-------------------------------------------------------------------------------
+
+install_command_registry() {
+    log_info "Installing command registry..."
+    
+    local install_path=$(get_install_path)
+    local runtime_dir="${install_path}/runtime"
+    local registry_dest="${runtime_dir}/commands.yaml"
+    local registry_src="${SCRIPT_DIR}/commands.yaml"
+    
+    # Ensure runtime directory exists
+    ensure_directory "$runtime_dir" || {
+        log_error "Failed to create runtime directory"
+        return 1
+    }
+    
+    # Copy the command registry
+    if [[ -f "$registry_src" ]]; then
+        cp "$registry_src" "$registry_dest" || {
+            log_error "Failed to copy command registry"
+            return 1
+        }
+        log_info "Command registry installed to: $registry_dest"
+    else
+        log_warning "Command registry not found in repository"
+        # Create a minimal registry
+        cat > "$registry_dest" <<'REGISTRY_EOF'
+# KDSE Runtime Command Registry
+# Minimal registry - full registry should be in repository
+version: "1.0"
+interface_version: "1.0"
+commands: []
+REGISTRY_EOF
+        log_info "Created minimal command registry"
+    fi
+    
+    return 0
+}
+
+#-------------------------------------------------------------------------------
 # Verify Installation
 #-------------------------------------------------------------------------------
 
@@ -494,11 +535,13 @@ print_summary() {
     echo "  manifest.json"
     echo "  config.sh"
     echo "  kdse"
+    echo "  runtime/commands.yaml  # Command registry (AI agent integration)"
     echo ""
     echo "Quick Start:"
-    echo "  ${install_path}/kdse status    # Check runtime health"
-    echo "  ${install_path}/kdse update    # Update runtime"
-    echo "  ${install_path}/kdse run       # Start session"
+    echo "  ${install_path}/kdse status      # Check runtime health"
+    echo "  ${install_path}/kdse commands    # List all commands"
+    echo "  ${install_path}/kdse update      # Update runtime"
+    echo "  ${install_path}/kdse run         # Start session"
     echo ""
     echo "  Add to PATH for convenience:"
     echo "  export PATH=\"${install_path}:\$PATH\""
@@ -529,6 +572,7 @@ main() {
     generate_manifest || exit $EXIT_ERROR
     generate_configuration || exit $EXIT_ERROR
     install_kdse_command || exit $EXIT_ERROR
+    install_command_registry || exit $EXIT_ERROR
     
     # Verify and report
     if verify_installation; then

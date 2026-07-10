@@ -1,0 +1,637 @@
+#===============================================================================
+# KDSE Runtime Command Registry
+#===============================================================================
+# Machine-readable registry of all KDSE Runtime engineering commands.
+# This file is auto-generated. Do not edit manually.
+#===============================================================================
+
+version: "1.0"
+interface_version: "1.0"
+generated: "2026-07-10T00:00:00Z"
+
+#-------------------------------------------------------------------------------
+# Commands
+#-------------------------------------------------------------------------------
+
+commands:
+
+  #---------------------------------------------------------------------------
+  # Information Commands
+  #---------------------------------------------------------------------------
+  
+  - name: status
+    aliases:
+      - "kdse status"
+      - "show status"
+      - "check status"
+    purpose: |
+      Display runtime health, version, and required action.
+    category: information
+    inputs:
+      - name: none
+        required: true
+        description: No input required
+    outputs:
+      - field: installation_path
+        type: string
+        description: Path to KDSE installation
+      - field: format
+        type: string
+        description: Manifest format (json/yaml)
+      - field: version
+        type: string
+        description: Runtime version
+      - field: installed
+        type: string
+        description: Installation timestamp
+      - field: last_sync
+        type: string
+        description: Last synchronization timestamp
+      - field: repo
+        type: string
+        description: Repository URL
+      - field: branch
+        type: string
+        description: Repository branch
+      - field: directories
+        type: object
+        description: Status of required directories
+      - field: required_action
+        type: string
+        description: Recommended next action
+    exit_codes:
+      - code: 0
+        meaning: Success - runtime healthy
+      - code: 2
+        meaning: Runtime not installed
+    examples:
+      - "kdse status"
+      - "Show KDSE status"
+      - "Check if KDSE is working"
+    natural_language_patterns:
+      - "status"
+      - "health"
+      - "check if installed"
+      - "is KDSE working"
+
+  - name: version
+    aliases:
+      - "kdse version"
+      - "show version"
+      - "kdse --version"
+    purpose: |
+      Display runtime version information.
+    category: information
+    inputs:
+      - name: none
+        required: true
+        description: No input required
+    outputs:
+      - field: runtime
+        type: string
+        description: "Runtime identifier"
+      - field: version
+        type: string
+        description: Runtime version
+      - field: installed
+        type: string
+        description: Installation timestamp
+      - field: interface
+        type: string
+        description: Command interface version
+    exit_codes:
+      - code: 0
+        meaning: Success
+      - code: 2
+        meaning: Runtime not installed
+    examples:
+      - "kdse version"
+      - "What version is KDSE?"
+      - "Show KDSE version"
+    natural_language_patterns:
+      - "version"
+      - "--version"
+
+  - name: commands
+    aliases:
+      - "kdse commands"
+      - "list commands"
+      - "show commands"
+    purpose: |
+      List all available KDSE Runtime commands.
+    category: information
+    inputs:
+      - name: format
+        required: false
+        type: string
+        description: "Output format: yaml (default) or json"
+    outputs:
+      - field: commands
+        type: array
+        description: List of available commands
+      - field: count
+        type: integer
+        description: Number of commands
+      - field: interface_version
+        type: string
+        description: Command interface version
+    exit_codes:
+      - code: 0
+        meaning: Success
+    examples:
+      - "kdse commands"
+      - "List all KDSE commands"
+      - "What can KDSE do?"
+    natural_language_patterns:
+      - "commands"
+      - "list commands"
+      - "what can KDSE do"
+      - "available commands"
+
+  - name: history
+    aliases:
+      - "kdse history"
+      - "show history"
+      - "session history"
+    purpose: |
+      Display session history.
+    category: information
+    inputs:
+      - name: none
+        required: true
+        description: No input required
+    outputs:
+      - field: sessions
+        type: array
+        description: List of session records
+      - field: total
+        type: integer
+        description: Total number of sessions
+    exit_codes:
+      - code: 0
+        meaning: Success
+      - code: 1
+        meaning: No history found
+    examples:
+      - "kdse history"
+      - "Show session history"
+    natural_language_patterns:
+      - "history"
+      - "past sessions"
+      - "previous sessions"
+
+  - name: report
+    aliases:
+      - "kdse report"
+      - "list reports"
+      - "show reports"
+    purpose: |
+      List available reports.
+    category: information
+    inputs:
+      - name: none
+        required: true
+        description: No input required
+    outputs:
+      - field: reports
+        type: array
+        description: List of available reports
+      - field: total
+        type: integer
+        description: Total number of reports
+    exit_codes:
+      - code: 0
+        meaning: Success
+      - code: 1
+        meaning: No reports found
+    examples:
+      - "kdse report"
+      - "Show reports"
+    natural_language_patterns:
+      - "report"
+      - "reports"
+      - "list reports"
+
+  #---------------------------------------------------------------------------
+  # Maintenance Commands
+  #---------------------------------------------------------------------------
+
+  - name: update
+    aliases:
+      - "kdse update"
+      - "sync"
+      - "kdse sync"
+    purpose: |
+      Update runtime to latest version from repository.
+    category: maintenance
+    inputs:
+      - name: none
+        required: true
+        description: No input required
+    outputs:
+      - field: previous_version
+        type: string
+        description: Version before update
+      - field: current_version
+        type: string
+        description: Version after update
+      - field: synchronized
+        type: string
+        description: Synchronization timestamp
+      - field: preserved_data
+        type: object
+        description: Data preserved during update
+    exit_codes:
+      - code: 0
+        meaning: Update successful
+      - code: 1
+        meaning: Update failed
+      - code: 2
+        meaning: Runtime not installed
+    examples:
+      - "kdse update"
+      - "Update KDSE"
+      - "Sync KDSE runtime"
+    natural_language_patterns:
+      - "update"
+      - "sync"
+      - "upgrade"
+      - "refresh"
+
+  - name: verify
+    aliases:
+      - "kdse verify"
+      - "verify installation"
+      - "check installation"
+    purpose: |
+      Verify runtime installation integrity.
+    category: maintenance
+    inputs:
+      - name: verbose
+        required: false
+        type: flag
+        description: Verbose output
+      - name: quiet
+        required: false
+        type: flag
+        description: Quiet mode (PASS/FAIL only)
+      - name: json
+        required: false
+        type: flag
+        description: JSON output format
+    outputs:
+      - field: passed
+        type: integer
+        description: Number of checks passed
+      - field: failed
+        type: integer
+        description: Number of checks failed
+      - field: warnings
+        type: integer
+        description: Number of warnings
+      - field: overall_status
+        type: string
+        description: PASSED or FAILED
+    exit_codes:
+      - code: 0
+        meaning: All checks passed
+      - code: 1
+        meaning: One or more checks failed
+      - code: 2
+        meaning: Runtime not installed
+    examples:
+      - "kdse verify"
+      - "Verify KDSE installation"
+    natural_language_patterns:
+      - "verify"
+      - "check"
+      - "test"
+
+  - name: doctor
+    aliases:
+      - "kdse doctor"
+      - "diagnose"
+      - "troubleshoot"
+    purpose: |
+      Diagnose runtime problems and recommend corrective action.
+    category: maintenance
+    inputs:
+      - name: none
+        required: true
+        description: No input required
+    outputs:
+      - field: issues
+        type: integer
+        description: Number of issues found
+      - field: warnings
+        type: integer
+        description: Number of warnings
+      - field: recommendations
+        type: array
+        description: List of recommended actions
+      - field: health_status
+        type: string
+        description: healthy or unhealthy
+    exit_codes:
+      - code: 0
+        meaning: No issues found
+      - code: 1
+        meaning: Issues found
+      - code: 2
+        meaning: Runtime not installed
+    examples:
+      - "kdse doctor"
+      - "Diagnose KDSE problems"
+      - "Troubleshoot KDSE"
+    natural_language_patterns:
+      - "doctor"
+      - "diagnose"
+      - "troubleshoot"
+      - "problems"
+      - "fix"
+
+  #---------------------------------------------------------------------------
+  # Session Commands
+  #---------------------------------------------------------------------------
+
+  - name: run
+    aliases:
+      - "kdse run"
+      - "start session"
+      - "run KDSE"
+    purpose: |
+      Start a new KDSE session.
+    category: session
+    inputs:
+      - name: none
+        required: true
+        description: No input required
+    outputs:
+      - field: session_id
+        type: string
+        description: Unique session identifier
+      - field: state
+        type: string
+        description: Session state (active)
+      - field: started
+        type: string
+        description: Session start timestamp
+    exit_codes:
+      - code: 0
+        meaning: Session started
+      - code: 1
+        meaning: Session already active
+      - code: 2
+        meaning: Runtime not installed
+    examples:
+      - "kdse run"
+      - "Start KDSE"
+      - "Run KDSE"
+    natural_language_patterns:
+      - "run"
+      - "start"
+      - "begin"
+
+  - name: resume
+    aliases:
+      - "kdse resume"
+      - "continue session"
+      - "continue"
+    purpose: |
+      Resume a previous or active session.
+    category: session
+    inputs:
+      - name: none
+        required: true
+        description: No input required
+    outputs:
+      - field: session_id
+        type: string
+        description: Resumed session identifier
+      - field: state
+        type: string
+        description: Current session state
+      - field: started
+        type: string
+        description: Session start timestamp
+    exit_codes:
+      - code: 0
+        meaning: Session found and resumed
+      - code: 2
+        meaning: No active session
+    examples:
+      - "kdse resume"
+      - "Resume KDSE"
+      - "Continue session"
+    natural_language_patterns:
+      - "resume"
+      - "continue"
+
+  - name: audit
+    aliases:
+      - "kdse audit"
+      - "assess"
+      - "run audit"
+    purpose: |
+      Execute repository assessment.
+    category: session
+    inputs:
+      - name: none
+        required: true
+        description: No input required
+    outputs:
+      - field: dimensions
+        type: array
+        description: Assessment dimensions
+      - field: status
+        type: string
+        description: Assessment status
+    exit_codes:
+      - code: 0
+        meaning: Success
+      - code: 2
+        meaning: Runtime not installed
+    examples:
+      - "kdse audit"
+      - "Run repository assessment"
+    natural_language_patterns:
+      - "audit"
+      - "assess"
+      - "assessment"
+
+  #---------------------------------------------------------------------------
+  # Administration Commands
+  #---------------------------------------------------------------------------
+
+  - name: install
+    aliases:
+      - "kdse install"
+      - "install KDSE"
+    purpose: |
+      Install or reinstall runtime.
+    category: administration
+    inputs:
+      - name: force
+        required: false
+        type: flag
+        description: Force reinstall
+      - name: repo
+        required: false
+        type: string
+        description: Repository URL
+      - name: branch
+        required: false
+        type: string
+        description: Branch name
+      - name: path
+        required: false
+        type: string
+        description: Installation path
+    outputs:
+      - field: installation_path
+        type: string
+        description: Path to installation
+      - field: version
+        type: string
+        description: Installed version
+      - field: installed
+        type: string
+        description: Installation timestamp
+    exit_codes:
+      - code: 0
+        meaning: Installation successful
+      - code: 1
+        meaning: Installation failed
+      - code: 2
+        meaning: Already installed (use --force)
+    examples:
+      - "kdse install"
+      - "Install KDSE"
+    natural_language_patterns:
+      - "install"
+      - "setup"
+
+  - name: uninstall
+    aliases:
+      - "kdse uninstall"
+      - "remove"
+      - "delete"
+    purpose: |
+      Remove runtime installation.
+    category: administration
+    inputs:
+      - name: force
+        required: false
+        type: flag
+        description: Force uninstall without confirmation
+      - name: keep_reports
+        required: false
+        type: flag
+        description: Keep reports directory
+      - name: keep_all
+        required: false
+        type: flag
+        description: Keep all user data
+    outputs:
+      - field: installation_path
+        type: string
+        description: Path that was removed
+      - field: removed
+        type: string
+        description: Removal timestamp
+      - field: preserved
+        type: object
+        description: Data that was preserved
+    exit_codes:
+      - code: 0
+        meaning: Uninstallation successful
+      - code: 1
+        meaning: Uninstallation failed
+      - code: 2
+        meaning: Runtime not installed
+    examples:
+      - "kdse uninstall"
+      - "Remove KDSE"
+    natural_language_patterns:
+      - "uninstall"
+      - "remove"
+      - "delete"
+
+#-------------------------------------------------------------------------------
+# Command Resolution Map
+#-------------------------------------------------------------------------------
+# Maps natural language patterns to commands for AI agent resolution.
+
+resolution_map:
+
+  update_kdse:
+    - "update KDSE"
+    - "Update KDSE"
+    - "update runtime"
+    - "sync KDSE"
+    command: update
+
+  check_status:
+    - "KDSE status"
+    - "kdse status"
+    - "check status"
+    - "status check"
+    command: status
+
+  run_session:
+    - "Run KDSE"
+    - "run KDSE"
+    - "start session"
+    - "start KDSE"
+    command: run
+
+  resume_session:
+    - "Resume KDSE"
+    - "resume KDSE"
+    - "continue session"
+    - "continue KDSE"
+    command: resume
+
+  verify_installation:
+    - "Verify KDSE"
+    - "verify KDSE"
+    - "verify installation"
+    - "check installation"
+    command: verify
+
+  diagnose:
+    - "KDSE doctor"
+    - "diagnose"
+    - "troubleshoot"
+    - "fix problems"
+    command: doctor
+
+  show_reports:
+    - "Show reports"
+    - "show reports"
+    - "list reports"
+    command: report
+
+  show_history:
+    - "Show history"
+    - "show history"
+    - "session history"
+    command: history
+
+#-------------------------------------------------------------------------------
+# Exit Codes Reference
+#-------------------------------------------------------------------------------
+
+exit_codes:
+  - code: 0
+    name: EXIT_OK
+    meaning: Success
+  - code: 1
+    name: EXIT_ERROR
+    meaning: General error
+  - code: 2
+    name: EXIT_NOT_INSTALLED
+    meaning: Runtime not installed
+  - code: 3
+    name: EXIT_INVALID_ARGS
+    meaning: Invalid arguments
