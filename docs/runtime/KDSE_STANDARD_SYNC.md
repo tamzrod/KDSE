@@ -552,6 +552,69 @@ Current: 1.3
 | Config invalid | Schema change | Update config |
 | Missing documents | Incomplete download | Retry sync |
 
+
+## KDSE Version Registry
+
+KDSE maintains a canonical version registry defining all released versions. This registry is the authoritative source for version information.
+
+### Version Registry Schema
+
+```yaml
+versions:
+  {version}:
+    release-date: "{ISO-8601 date}"
+    stability: "stable" | "deprecated" | "archived"
+    checksum: "sha256:{hash}"
+    breaking-from: ["version1", "version2"]
+    minimum-runtime: "{runtime version}"
+    release-notes: "{URL}"
+```
+
+### KDSE Version Registry
+
+As of KDSE 1.4:
+
+| Version | Release Date | Stability | Breaking Changes |
+|---------|-------------|-----------|------------------|
+| 1.0 | 2025-01-01 | archived | None |
+| 1.1 | 2025-06-01 | archived | None |
+| 1.2 | 2025-12-01 | deprecated | None |
+| 1.3 | 2026-04-01 | stable | None |
+| 1.4 | 2026-07-10 | stable | None |
+
+### Version Stability Levels
+
+| Level | Description | Sync Behavior |
+|-------|-------------|---------------|
+| stable | Production-ready, recommended | Allowed |
+| deprecated | Still functional, migration recommended | Allowed with warning |
+| archived | No longer maintained | Allowed with strong warning |
+
+### Version Compatibility
+
+| Runtime Version | Compatible KDSE Versions |
+|----------------|------------------------|
+| 1.0 | 1.0, 1.1, 1.2, 1.3, 1.4 |
+| 1.1 | 1.1, 1.2, 1.3, 1.4 |
+| 1.2 | 1.2, 1.3, 1.4 |
+
+### "Latest Stable" Definition
+
+"Latest stable" is defined as:
+1. Highest version number with stability = "stable"
+2. Not deprecated or archived
+3. Compatible with runtime version
+
+### Version Registry Access
+
+The version registry is available at:
+- KDSE Repository: `docs/runtime/version-registry.yaml`
+- KDSE Website: `https://kdse.example.com/versions/`
+
+Implementations MUST fetch version registry during sync to verify version existence.
+
+---
+
 ---
 
 ## Summary

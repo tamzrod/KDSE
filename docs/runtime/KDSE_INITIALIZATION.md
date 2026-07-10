@@ -455,6 +455,72 @@ kdse init --profile my-profile
 
 ---
 
+## Initialization Acceptance Criteria
+
+The initialization process is considered successful when ALL mandatory acceptance criteria are met.
+
+### Mandatory Acceptance Criteria
+
+These criteria MUST be met for initialization to succeed:
+
+| ID | Criterion | Verification Method | Failure Action |
+|----|-----------|-------------------|--------------|
+| AC-01 | `.kdse/` directory created | Check directory exists | Create directory |
+| AC-02 | `manifest.yaml` created | Check file exists | Create manifest |
+| AC-03 | `manifest.yaml` valid YAML | Parse YAML | Regenerate manifest |
+| AC-04 | `standards/` directory created | Check directory exists | Create directory |
+| AC-05 | All mandatory foundation documents installed | Check F-001 to F-015 | Install missing |
+| AC-06 | All mandatory audit documents installed | Check A-001 to A-005 | Install missing |
+| AC-07 | At least one standard document readable | Open and read file | Re-download standards |
+| AC-08 | `config.yaml` created with valid YAML | Parse YAML | Regenerate config |
+| AC-09 | All mandatory subdirectories created | Check structure | Create missing |
+
+### Verification Procedure
+
+After Phase 8 (Verification), the implementation MUST verify:
+
+```
+FOR EACH mandatory acceptance criterion:
+    1. Execute verification check
+    2. IF check fails:
+       a. Log failure with criterion ID
+       b. Execute recovery action
+       c. Re-verify
+    3. IF check still fails:
+       a. Report criterion ID and failure reason
+       b. STOP initialization with error
+    4. IF all mandatory criteria pass:
+       a. Report success
+       b. Proceed to completion
+```
+
+### Success Criteria Summary
+
+Initialization is successful when:
+
+- [ ] All mandatory directories created
+- [ ] All mandatory documents installed
+- [ ] manifest.yaml valid and complete
+- [ ] config.yaml valid and complete
+- [ ] No blocking errors
+
+### Error Reporting
+
+When initialization fails, the report MUST include:
+
+```
+Initialization Failed
+====================
+
+Failed Criterion: AC-XX [Criterion Name]
+Failure Reason: [Specific reason]
+Recovery Attempted: [What was tried]
+Recovery Result: [Success/Failure]
+
+Suggestion: [How to resolve]
+```
+
+---
 ## Summary
 
 KDSE Initialization transforms any repository into a KDSE-enabled workspace:
