@@ -4,6 +4,81 @@
 
 The Compliance Audit evaluates a repository that claims to follow KDSE. This audit type verifies that KDSE practices are properly implemented and provides evidence of compliance or gaps.
 
+## Assessment Score vs Compliance Score
+
+KDSE uses two related but distinct metrics to provide clear, phase-appropriate evaluation:
+
+### Assessment Score
+
+**Definition:** The result of evaluating current repository state against audit criteria, regardless of implementation maturity. Assessment Score is appropriate for all repositories and provides a neutral measure of current state.
+
+**When to Use:**
+- Repositories in Research or Knowledge Development phases
+- Repositories in Architecture phase
+- Any repository that has not yet reached Implementation phase
+- Early-stage evaluation of repository maturity
+
+**Interpretation:**
+An Assessment Score indicates where the repository currently stands against audit criteria, without implying that full compliance is required or expected.
+
+### Compliance Score
+
+**Definition:** The Assessment Score for repositories that have reached Implementation phase. Compliance Score implies that the repository SHOULD meet all criteria and is evaluated accordingly.
+
+**When to Use:**
+- Repositories with implementation artifacts present
+- Repositories that claim KDSE compliance
+- Mature repositories seeking validation
+
+**Interpretation:**
+A Compliance Score indicates how well the repository meets KDSE requirements. Higher scores indicate stronger compliance with established engineering practices.
+
+### Phase Context Guidelines
+
+| Repository Phase | Primary Metric | Secondary Metric |
+|-----------------|----------------|------------------|
+| Research | Assessment Score | None |
+| Knowledge Development | Assessment Score | None |
+| Architecture | Assessment Score | Phase context |
+| Implementation | Compliance Score | Assessment Score |
+| Verification | Compliance Score | Assessment Score |
+| Evolution | Compliance Score | Assessment Score |
+
+### Score Presentation Best Practices
+
+When presenting scores:
+
+1. **Early-phase repositories:** Display only Assessment Score with phase context
+2. **Implementation-phase repositories:** Display both Compliance Score (primary) and Assessment Score (context)
+3. **Always include:** Phase context to prevent misinterpretation
+
+**Example Presentation:**
+
+```
+Repository Phase: Architecture
+
+Assessment Score: 4.8/10 (Structured)
+Phase Context: Knowledge Development complete, Architecture in progress
+
+Note: This repository is in the Architecture phase. Assessment Score reflects
+current state against criteria. Compliance Score is not applicable until
+Implementation phase is reached.
+```
+
+### Why This Distinction Matters
+
+Without the Assessment Score / Compliance Score distinction:
+
+- A repository in the Architecture phase with no implementation appears "non-compliant"
+- Low scores create unfair impressions for repositories doing appropriate work for their phase
+- Phase-appropriate progress is not recognized
+
+With the distinction:
+
+- Scores accurately reflect phase-appropriate expectations
+- Repositories are evaluated against relevant criteria for their phase
+- Progress toward maturity is properly recognized
+
 ## Scope
 
 A Compliance Audit examines:
@@ -573,10 +648,10 @@ This audit must remain repository-independent:
 
 ## Version
 
-- **Document Version**: 1.1
+- **Document Version**: 1.2
 - **Effective Date**: 2026-07-10
-- **Standard Version**: KDSE Audit Standard 1.1
-- **Change Note**: Added verification evidence classification requirements to address KDSE-DEFECT-001
+- **Standard Version**: KDSE Audit Standard 1.2
+- **Change Note**: Added Assessment Score vs Compliance Score distinction to address KDSE-CASE-001 OBS-003
 
 ---
 

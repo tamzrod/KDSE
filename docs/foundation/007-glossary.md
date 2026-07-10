@@ -46,6 +46,10 @@ The structure of authority in KDSE, from highest (Knowledge) to lowest (Implemen
 
 The process of resolving conflicts between artifacts while maintaining the authority hierarchy. Authority resolution may involve correcting the lower artifact, clarifying the higher artifact, or adding intermediate knowledge.
 
+### Assessment Score
+
+The result of evaluating current repository state against audit criteria, regardless of phase. Assessment Score is appropriate for all repositories and provides a neutral measure of current state. For repositories in Research, Knowledge Development, or Architecture phases, Assessment Score is the primary metric.
+
 ## B
 
 ### Body of Knowledge (BoK)
@@ -65,6 +69,10 @@ An documented account of KDSE application that provides evidence of methodology 
 The process by which changes to artifacts are proposed, evaluated, approved, implemented, and documented.
 
 In KDSE, changes must respect the authority hierarchy. Changes to lower-layer artifacts do not automatically propagate, but changes to higher-layer artifacts may require corresponding lower-layer changes.
+
+### Compliance Score
+
+The Assessment Score for repositories that have reached Implementation phase. Compliance Score implies that the repository SHOULD meet all criteria and is evaluated accordingly. Use Compliance Score for repositories with implementation artifacts present. See also: Assessment Score.
 
 ### Context
 
@@ -310,6 +318,6 @@ Working memory in KDSE refers to intermediate artifacts and reasoning processes 
 
 ## Version
 
-- **Document Version**: 1.1
+- **Document Version**: 1.2
 - **Effective Date**: 2026-07-10
-- **Change Note**: Added verification evidence terminology (Verification State, Test Asset, Test Execution Evidence, Verified, Verified with Failures, Not Verified, Not Assessed) to address KDSE-DEFECT-001
+- **Change Note**: Added Assessment Score and Compliance Score terminology to address KDSE-CASE-001 OBS-003

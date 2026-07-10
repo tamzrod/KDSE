@@ -1,7 +1,8 @@
 # KDSE Execution Loop
 
-**Document Version:** 1.0  
-**Effective Date:** 2026-07-10
+**Document Version:** 1.1  
+**Effective Date:** 2026-07-10  
+**Change Note:** Added Phase 3.4 (Repository Phase Detection) and Phase 3.5 (Phase-Appropriate Recommendations) to address KDSE-CASE-001 OBS-001
 
 ---
 
@@ -224,6 +225,81 @@ For each recommendation, document:
 - KDSE Report generated
 - Recommendation documented
 - Human approval requested
+
+#### 3.4 Repository Phase Detection
+
+Before generating recommendations, determine the current repository phase to ensure recommendations respect the KDSE Chain of Authority.
+
+**Phase Detection Method:**
+
+| Phase Indicators | Repository Phase |
+|-------------------|------------------|
+| No knowledge artifacts identified | Research |
+| Knowledge artifacts exist, no architecture | Knowledge Development |
+| Knowledge and architecture artifacts present, no implementation | Architecture |
+| Implementation artifacts present, limited verification | Implementation |
+| Verification artifacts with test execution evidence present | Verification |
+| Ongoing maintenance and evolution activities | Evolution |
+
+**Phase Detection Process:**
+1. Inventory artifact types present in repository
+2. Assess relative maturity of each artifact type
+3. Identify highest-maturity artifact type
+4. Map to corresponding repository phase
+
+**Phase Context Recording:**
+Record detected phase in session state for:
+- Report generation (Section 4)
+- Recommendation filtering (Section 3.5)
+- Score presentation with phase context
+
+#### 3.5 Phase-Appropriate Recommendations
+
+Filter recommendations to include only phase-appropriate actions that respect the Chain of Authority.
+
+**Phase-Appropriate Action Matrix:**
+
+| Repository Phase | Appropriate Actions | Excluded/Deprioritized Actions |
+|------------------|--------------------|------------------------------|
+| Research | Discover, analyze, map problem domain | Architecture-specific work |
+| Knowledge Development | Create, validate, structure knowledge artifacts | Implementation-specific work |
+| Architecture | Create architecture, derive from knowledge | Implementation recommendations |
+| Implementation | Create implementation, maintain traceability | Verification-only recommendations |
+| Verification | Verify alignment, execute tests, document results | New implementation work |
+| Evolution | Evolve artifacts, maintain relevance, retire obsolete | Fundamental restructuring |
+
+**Recommendation Filtering Rules:**
+
+1. **Primary Filter:** Recommendations must target dimensions applicable to current phase
+2. **Secondary Filter:** Recommendations must not violate phase prerequisites
+3. **Tertiary Filter:** Recommendations should enable next phase progression
+
+**Example Filtering:**
+
+For a repository in Architecture phase with:
+- Knowledge artifacts present (mature)
+- Architecture artifacts present (developing)
+- No implementation artifacts
+
+**Appropriate recommendations:**
+- Create architecture artifacts deriving from knowledge
+- Review architecture against knowledge artifacts
+- Document architectural decisions
+
+**Excluded/deprioritized recommendations:**
+- Create implementation (Architecture phase prerequisite not met)
+- Execute verification tests (No implementation to verify)
+
+**Chain of Authority Compliance:**
+Recommendations that would violate the Chain of Authority must not be presented as primary recommendations. Implementation can only be recommended when:
+- Architecture artifacts exist and are mature
+- Implementation derives from and traces to Architecture
+
+**Exit Criteria:**
+- Repository phase detected and recorded
+- Recommendations filtered to phase-appropriate actions
+- Chain of Authority compliance verified
+- Phase context included in report
 
 ---
 

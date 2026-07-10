@@ -365,6 +365,14 @@ A scoring approach where scores are assigned based on direct observation of arti
 
 The method used to combine dimension scores into an overall score. Common methods include simple average, weighted average, minimum, and critical path.
 
+### Assessment Score
+
+The result of evaluating current repository state against audit criteria, regardless of phase. Assessment Score is appropriate for all repositories and provides a neutral measure of current state. For repositories in Research, Knowledge Development, or Architecture phases, Assessment Score is the primary metric.
+
+### Compliance Score
+
+The Assessment Score for repositories that have reached Implementation phase. Compliance Score implies that the repository SHOULD meet all criteria and is evaluated accordingly. Use Compliance Score for repositories with implementation artifacts present.
+
 ## Verification Evidence Classification
 
 ### Purpose
@@ -453,7 +461,7 @@ For each verification artifact category audited, document:
 
 ## Version
 
-- **Document Version**: 1.1
+- **Document Version**: 1.2
 - **Effective Date**: 2026-07-10
-- **Standard Version**: KDSE Audit Standard 1.1
-- **Change Note**: Added Verification Evidence Classification section to address KDSE-DEFECT-001
+- **Standard Version**: KDSE Audit Standard 1.2
+- **Change Note**: Added Assessment Score and Compliance Score terminology to Glossary Additions; addressing KDSE-CASE-001 OBS-003

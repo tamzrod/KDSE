@@ -1,8 +1,9 @@
 # KDSE Runtime Report Specification
 
-**Document Version:** 1.0  
+**Document Version:** 1.1  
 **Type:** Informative Reference Implementation  
-**Effective Date:** 2026-07-10
+**Effective Date:** 2026-07-10  
+**Change Note:** Added Repository Phase and Assessment vs Compliance Score distinction to address KDSE-CASE-001 OBS-003
 
 ---
 
@@ -189,6 +190,15 @@ For details, see:
 ```markdown
 ## Compliance Status
 
+### Repository Phase
+
+| Field | Value |
+|-------|-------|
+| Detected Phase | {phase} |
+| Phase Detection Date | {timestamp} |
+
+**Phase Context:** The detected phase is determined by the highest-maturity artifact type present. Phase context is used to filter recommendations and present appropriate metrics.
+
 ### Dimension Scores
 
 | Dimension | Score | Status |
@@ -208,6 +218,20 @@ For details, see:
 - ⚠️ Below target (1-2 points below)
 - ❌ Significantly below target (>2 points below)
 - 🎯 Target reached
+
+### Assessment vs Compliance Score
+
+Per [COMPLIANCE_AUDIT.md](../docs/audit/COMPLIANCE_AUDIT.md), KDSE distinguishes between:
+
+**Assessment Score:** Current state evaluation against criteria, appropriate for all repositories regardless of phase.
+
+**Compliance Score:** Assessment Score for repositories in Implementation phase or beyond, implying the repository SHOULD meet all criteria.
+
+**This Repository:**
+| Metric | Value | When to Use |
+|--------|-------|-------------|
+| Assessment Score | {X}/10 | All repositories |
+| Compliance Score | {X}/10 | Implementation+ only |
 
 ### Compliance Level
 

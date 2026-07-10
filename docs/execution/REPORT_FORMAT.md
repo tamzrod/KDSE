@@ -1,7 +1,8 @@
 # KDSE Report Format
 
-**Document Version:** 1.0  
-**Effective Date:** 2026-07-10
+**Document Version:** 1.1  
+**Effective Date:** 2026-07-10  
+**Change Note:** Added Repository Phase and Assessment vs Compliance Score distinction to address KDSE-CASE-001 OBS-003
 
 ---
 
@@ -159,6 +160,17 @@ The KDSE Report does not duplicate these documents—it references and synthesiz
 
 ```markdown
 ## Audit Summary
+
+### Repository Phase
+
+| Field | Value |
+|-------|-------|
+| Detected Phase | {phase} |
+| Primary Metric | {Assessment Score or Compliance Score} |
+
+**Phase Context:** Per [COMPLIANCE_AUDIT.md](../docs/audit/COMPLIANCE_AUDIT.md), the primary metric is:
+- **Assessment Score** for repositories in Research, Knowledge Development, or Architecture phases
+- **Compliance Score** for repositories in Implementation, Verification, or Evolution phases
 
 ### Dimension Scores
 
