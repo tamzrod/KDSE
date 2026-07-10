@@ -128,6 +128,8 @@ Confirm that implementation aligns with architecture and that architecture align
 - Execute verification against implementation
 - Document verification results
 - Identify and report misalignments
+- Determine root cause of identified misalignments
+- Classify misalignments by source artifact (Knowledge, Architecture, or Implementation)
 
 ### Why This Stage Comes Fourth
 

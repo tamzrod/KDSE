@@ -667,6 +667,7 @@ Avoid these patterns:
 | Skip Verification | Assuming improvement | Always verify results |
 | Over-Engineer | More work than value | Stop at diminishing returns |
 | Ignore Diminishing Returns | Continued effort without benefit | Complete when value < effort |
+| Multiple Concerns Per Change | Obscures root causes | Isolate changes to single concern |
 
 ---
 
@@ -700,6 +701,7 @@ Each phase has quality gates:
 - [ ] Traceability links established
 - [ ] Decisions documented
 - [ ] Deviations noted (if any)
+- [ ] Changes isolated to single engineering concern
 
 ### Phase 6 Quality Gate: Results Confirmed
 

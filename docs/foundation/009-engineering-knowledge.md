@@ -68,7 +68,7 @@ Validation methods include:
 
 - Peer review by domain experts
 - Testing against real-world scenarios
-- Comparison with established theory
+- Independent verification against authoritative sources
 - Analysis of historical data
 - Prototyping and experimentation
 
@@ -126,6 +126,9 @@ A structured knowledge artifact contains:
 1. **The understanding itself**: The core knowledge being captured
 2. **Validation evidence**: How this understanding was validated
 3. **Source attribution**: Where this understanding came from
+   - Governing standards, specifications, or reference documents (when applicable)
+   - Independent verification sources used for validation (when applicable)
+   - Implementation constraints derived from authoritative sources
 4. **Dependencies**: What other knowledge this understanding depends upon
 5. **Dependents**: What decisions depend upon this understanding
 6. **Lifetime**: When this understanding applies and when it becomes obsolete
