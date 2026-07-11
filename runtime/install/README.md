@@ -45,7 +45,25 @@ kdse report     # List reports
 kdse version    # Show version
 ```
 
-See [RUNTIME_COMMAND_INTERFACE.md](../../docs/runtime/RUNTIME_COMMAND_INTERFACE.md) for full documentation.
+### Debug Runtime Commands
+
+The Debug Runtime provides evidence-driven debugging:
+
+```bash
+kdse debug init <description>     # Start debugging session
+kdse debug collect <type> <content> [source] [tags]  # Collect evidence
+kdse debug hypothesis <desc> [confidence] [components]  # Create hypothesis
+kdse debug evaluate <hyp_id> <ev_id> <impact>  # Evaluate evidence
+kdse debug confidence [hyp_id]     # Check confidence
+kdse debug select [hyp_id]          # Select root cause
+kdse debug report                   # Generate report
+kdse debug next                     # Advance phase
+kdse debug state                    # Show current state
+kdse debug evidence                 # List evidence
+kdse debug hypotheses               # List hypotheses
+```
+
+See [COMMANDS.md](../COMMANDS.md) for full documentation.
 
 ---
 

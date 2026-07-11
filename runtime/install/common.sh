@@ -77,8 +77,36 @@ log_debug() {
 #-------------------------------------------------------------------------------
 
 # Get full installation path
-get_install_path() {
+# Uses intelligent path detection for local development and installed runtime
+detect_kdse_install_path() {
+    # If KDSE_HOME is explicitly set and the path exists, use it
+    if [[ -n "${KDSE_HOME:-}" && -d "${KDSE_HOME}/${KDSE_DIR}" ]]; then
+        echo "${KDSE_HOME}/${KDSE_DIR}"
+        return 0
+    fi
+    
+    # Check current directory
+    if [[ -f "${KDSE_DIR}/manifest.json" ]] || [[ -f "${KDSE_DIR}/manifest.yaml" ]]; then
+        echo "${KDSE_DIR}"
+        return 0
+    fi
+    
+    # Check parent directories (up to 3 levels)
+    local dir="$(pwd)"
+    for i in 1 2 3; do
+        if [[ -f "${dir}/${KDSE_DIR}/manifest.json" ]] || [[ -f "${dir}/${KDSE_DIR}/manifest.yaml" ]]; then
+            echo "${dir}/${KDSE_DIR}"
+            return 0
+        fi
+        dir="$(dirname "$dir")"
+    done
+    
+    # Fall back to default
     echo "${KDSE_HOME}/${KDSE_DIR}"
+}
+
+get_install_path() {
+    detect_kdse_install_path
 }
 
 # Get manifest path (current JSON format)
@@ -317,13 +345,13 @@ detect_manifest_format() {
     local yaml_manifest="${install_path}/${MANIFEST_YAML_FILE}"
     
     # Check JSON first (preferred format)
-    if [[ -f "$json_manifest" ]] && grep -q '"kdse"' "$json_manifest" 2>/dev/null; then
+    if [[ -f "$json_manifest" ]] && grep -q '"version"' "$json_manifest" 2>/dev/null; then
         echo "json"
         return
     fi
     
     # Check YAML (legacy format)
-    if [[ -f "$yaml_manifest" ]] && grep -q 'kdse' "$yaml_manifest" 2>/dev/null; then
+    if [[ -f "$yaml_manifest" ]] && grep -q 'version:' "$yaml_manifest" 2>/dev/null; then
         echo "yaml"
         return
     fi

@@ -678,6 +678,227 @@ Resume After: Architecture decision meeting (July 20)
 
 ---
 
+## Debug Commands
+
+The Debug Runtime provides evidence-driven debugging workflow with confidence-based root cause analysis.
+
+### Command Overview
+
+| Category | Commands | Description |
+|----------|----------|-------------|
+| Session | kdse debug init | Start a debugging session |
+| Evidence | kdse debug collect | Collect evidence with type, source, tags |
+| Hypothesis | kdse debug hypothesis | Create a hypothesis with initial confidence |
+| Evaluation | kdse debug evaluate | Evaluate evidence impact on hypothesis |
+| Assessment | kdse debug confidence | Check hypothesis confidence level |
+| Selection | kdse debug select | Select root cause (requires 90% confidence) |
+| Reporting | kdse debug report | Generate structured debug report |
+| Navigation | kdse debug next | Advance to next debugging phase |
+| Information | kdse debug state, evidence, hypotheses | View session state |
+
+### Debug Workflow State Machine
+
+```
+INITIAL → EVIDENCE_COLLECTION → HYPOTHESIS_GENERATION → 
+EVIDENCE_EVALUATION → CONFIDENCE_ASSESSMENT → 
+ROOT_CAUSE_SELECTED → IMPLEMENTING → VERIFICATION → 
+REGRESSION_TESTS → COMPLETED
+```
+
+### kdse debug init
+
+Starts a new debugging session.
+
+**Purpose:** Initialize evidence collection for a specific failure.
+
+**Inputs:**
+
+| Parameter | Required | Type | Description |
+|-----------|----------|------|-------------|
+| failure_description | Yes | String | Description of the failure to debug |
+| severity | No | String | Severity level (low, medium, high) |
+
+**Outputs:**
+
+| Output | Type | Description |
+|--------|------|-------------|
+| session_id | String | Unique debugging session ID |
+| state | String | Initial state (EVIDENCE_COLLECTION) |
+| timestamp | String | Session start time |
+
+**Example Usage:**
+```
+kdse debug init "Database connection timeout"
+```
+
+---
+
+### kdse debug collect
+
+Collects evidence about the failure.
+
+**Purpose:** Capture structured evidence with type, source, and tags.
+
+**Evidence Types:**
+
+| Type | Confidence Impact | Description |
+|------|-------------------|-------------|
+| exception | +20% | Error messages and stack traces |
+| test_failure | +15% | Test failure messages |
+| log | +10% | Log entries showing errors |
+| source | +10% | Source code issues |
+| config | +5% | Configuration problems |
+| state | +5% | Application state issues |
+| dependency | +5% | Dependency-related issues |
+
+**Inputs:**
+
+| Parameter | Required | Type | Description |
+|-----------|----------|------|-------------|
+| type | Yes | String | Evidence type (exception, log, source, etc.) |
+| content | Yes | String | Evidence content/message |
+| source | No | String | File:line reference |
+| tags | No | String | Comma-separated tags |
+
+**Example Usage:**
+```
+kdse debug collect exception "SQLite BusyError: database locked" "src/repo.py:42" "database,sqlite"
+```
+
+---
+
+### kdse debug hypothesis
+
+Creates a hypothesis about the root cause.
+
+**Purpose:** Form a testable explanation for the failure.
+
+**Inputs:**
+
+| Parameter | Required | Type | Description |
+|-----------|----------|------|-------------|
+| description | Yes | String | Hypothesis description |
+| confidence | No | Number | Initial confidence (default: 40%) |
+| components | No | String | Affected components |
+
+**Example Usage:**
+```
+kdse debug hypothesis "Nested repository calls cause database lock" 45 "BookRepo,AuthorRepo"
+```
+
+---
+
+### kdse debug evaluate
+
+Evaluates evidence impact on a hypothesis.
+
+**Purpose:** Update hypothesis confidence based on evidence.
+
+**Inputs:**
+
+| Parameter | Required | Type | Description |
+|-----------|----------|------|-------------|
+| hypothesis_id | Yes | String | Hypothesis ID (H-0001, etc.) |
+| evidence_id | Yes | String | Evidence ID (E-0001, etc.) |
+| impact | Yes | String | "supporting" or "contradicting" |
+
+**Confidence Changes:**
+
+| Impact | Change |
+|--------|--------|
+| Supporting | +Evidence Type Value |
+| Contradicting | -25% |
+
+**Example Usage:**
+```
+kdse debug evaluate H-0001 E-0001 supporting
+```
+
+---
+
+### kdse debug confidence
+
+Checks hypothesis confidence levels.
+
+**Purpose:** Determine if root cause selection is possible.
+
+**Inputs:**
+
+| Parameter | Required | Type | Description |
+|-----------|----------|------|-------------|
+| hypothesis_id | No | String | Specific hypothesis (shows all if omitted) |
+
+**Confidence Thresholds:**
+
+| Threshold | Action |
+|-----------|--------|
+| ≥90% | Root cause can be selected |
+| 70-89% | Gather more evidence |
+| <70% | Re-evaluate hypotheses |
+
+**Example Usage:**
+```
+kdse debug confidence
+[H-0001] Nested repository calls - 85%
+[H-0002] Network timeout - 45%
+```
+
+---
+
+### kdse debug select
+
+Selects the root cause hypothesis.
+
+**Purpose:** Lock in the root cause for implementation.
+
+**Preconditions:**
+- At least one hypothesis must have ≥90% confidence
+- Operator approval required for lower confidence selections
+
+**Example Usage:**
+```
+kdse debug select H-0001
+```
+
+---
+
+### kdse debug report
+
+Generates a structured debug report.
+
+**Purpose:** Document the debugging investigation.
+
+**Report Contents:**
+- Session metadata
+- Failure description
+- All collected evidence
+- All hypotheses with confidence scores
+- Selected root cause (if any)
+- Confidence threshold used
+
+**Output Format:** JSON (`.kdse/debug/reports/`)
+
+**Example Usage:**
+```
+kdse debug report
+```
+
+---
+
+### kdse debug next
+
+Advances to the next debugging phase.
+
+**Purpose:** Progress through the debugging state machine.
+
+**Example Usage:**
+```
+kdse debug next
+[INFO] Phase: HYPOTHESIS_GENERATION
+```
+
+---
+
 ## Command Reference Summary
 
 | Command | Required | State Change | Human Only |
@@ -696,6 +917,14 @@ Resume After: Architecture decision meeting (July 20)
 | Approve | Yes | Pending → Implementing | Yes |
 | Reject | Yes | Pending → Reporting | Yes |
 | Defer | Yes | Pending → Paused | Yes |
+| kdse debug init | No | → EVIDENCE_COLLECTION | No |
+| kdse debug collect | No | None | No |
+| kdse debug hypothesis | No | None | No |
+| kdse debug evaluate | No | None | No |
+| kdse debug confidence | No | None | No |
+| kdse debug select | No | → ROOT_CAUSE_SELECTED | Yes |
+| kdse debug report | No | None | No |
+| kdse debug next | No | Advance phase | No |
 
 ---
 

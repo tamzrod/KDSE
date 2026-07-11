@@ -114,6 +114,38 @@ maintenance:
     category: administration
 
 #-------------------------------------------------------------------------------
+# Debug Commands
+#-------------------------------------------------------------------------------
+debug:
+  - name: kdse debug
+    description: Start evidence-driven debugging session
+    category: debugging
+    required: false
+    ai_enabled: true
+    workflow: Evidence Collection → Hypothesis Generation → Evidence Evaluation → Confidence Assessment → Root Cause Selection → Implementation → Verification
+
+  - name: kdse verify
+    description: Investigate verification failures
+    category: debugging
+    required: false
+    ai_enabled: true
+    reuses: debug_engine
+
+  - name: kdse repair
+    description: Investigate and fix issues
+    category: debugging
+    required: false
+    ai_enabled: true
+    reuses: debug_engine
+
+  - name: kdse audit
+    description: Investigate audit findings
+    category: debugging
+    required: false
+    ai_enabled: true
+    reuses: debug_engine
+
+#-------------------------------------------------------------------------------
 # Command Resolution Map
 #-------------------------------------------------------------------------------
 resolution_map:

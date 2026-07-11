@@ -60,6 +60,24 @@
       "entrypoint": "Session Protocol",
       "phases": ["All"],
       "dependencies": []
+    },
+    "debugging": {
+      "description": "Evidence-driven debugging workflow",
+      "entrypoint": "kdse debug init",
+      "phases": ["Evidence Collection", "Hypothesis Generation", "Evidence Evaluation", "Confidence Assessment", "Root Cause Selection", "Implementation", "Verification", "Regression Tests"],
+      "dependencies": []
+    },
+    "evidence_collection": {
+      "description": "Structured evidence collection",
+      "entrypoint": "kdse debug collect",
+      "phases": ["Capture", "Classify", "Store"],
+      "dependencies": ["debugging"]
+    },
+    "root_cause_analysis": {
+      "description": "Confidence-driven root cause analysis",
+      "entrypoint": "kdse debug select",
+      "phases": ["Hypothesis", "Evidence Evaluation", "Confidence Scoring", "Selection"],
+      "dependencies": ["debugging", "evidence_collection"]
     }
   },
   "commands": {
@@ -90,6 +108,19 @@
       "kdse update",
       "kdse verify",
       "kdse uninstall"
+    ],
+    "debugging": [
+      "kdse debug init",
+      "kdse debug collect",
+      "kdse debug hypothesis",
+      "kdse debug evaluate",
+      "kdse debug confidence",
+      "kdse debug select",
+      "kdse debug report",
+      "kdse debug next",
+      "kdse debug state",
+      "kdse debug evidence",
+      "kdse debug hypotheses"
     ]
   },
   "principles": {
@@ -215,6 +246,16 @@
         "id": "audit-standards",
         "path": "docs/audit/COMPLIANCE_AUDIT.md",
         "loading_order": 11
+      },
+      {
+        "id": "debug-runtime",
+        "path": "runtime/DEBUG_RUNTIME.md",
+        "loading_order": 12
+      },
+      {
+        "id": "debug-adr",
+        "path": ".kdse/architecture/ADR-007-DEBUG_RUNTIME.md",
+        "loading_order": 13
       }
     ]
   },

@@ -6,7 +6,7 @@
 #===============================================================================
 
 version: "1.0"
-manifest_version: "2.0"
+manifest_version: "2.1"
 generated: "2026-07-11"
 
 #-------------------------------------------------------------------------------
@@ -145,4 +145,29 @@ optional_knowledge:
     loading_order: 11
     description: |
       Compliance audit criteria.
+    checksum_required: false
+
+  - id: debug-runtime
+    name: Debug Runtime
+    version: "1.0"
+    source: runtime/DEBUG_RUNTIME.md
+    loading_order: 12
+    description: |
+      Evidence-driven debugging workflow and architecture.
+    capabilities:
+      - debugging
+      - root-cause-analysis
+      - evidence-collection
+    checksum_required: false
+
+  - id: debug-adr
+    name: Debug Runtime ADR
+    version: "1.0"
+    source: .kdse/architecture/ADR-007-DEBUG_RUNTIME.md
+    loading_order: 13
+    description: |
+      Architecture decision record for Debug Runtime.
+    capabilities:
+      - debugging
+      - architecture
     checksum_required: false

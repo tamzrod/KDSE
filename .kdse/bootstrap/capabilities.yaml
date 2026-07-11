@@ -83,6 +83,43 @@ capabilities:
       - All
     status: available
 
+  - name: debugging
+    description: Evidence-driven debugging with confidence-based root cause selection
+    entrypoint: "Debug Runtime"
+    dependencies:
+      - assessment
+    knowledge_required:
+      - debug-runtime
+      - debug-adr
+    phases:
+      - Knowledge
+      - Implementation
+    status: available
+
+  - name: evidence_collection
+    description: Systematic collection of debugging evidence
+    entrypoint: "Evidence Collector"
+    dependencies:
+      - debugging
+    knowledge_required:
+      - debug-runtime
+    phases:
+      - Implementation
+    status: available
+
+  - name: root_cause_analysis
+    description: Confidence-driven root cause identification
+    entrypoint: "Root Cause Selector"
+    dependencies:
+      - debugging
+      - evidence_collection
+    knowledge_required:
+      - debug-runtime
+    phases:
+      - Implementation
+      - Verification
+    status: available
+
 #-------------------------------------------------------------------------------
 # Capability Metadata
 #-------------------------------------------------------------------------------

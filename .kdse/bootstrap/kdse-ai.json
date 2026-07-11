@@ -46,6 +46,24 @@
       "description": "Feedback collection",
       "status": "unavailable",
       "dependencies": []
+    },
+    "debugging": {
+      "description": "Evidence-driven debugging with confidence-based root cause selection",
+      "status": "available",
+      "dependencies": ["assessment"],
+      "workflow": "Evidence Collection → Hypothesis Generation → Evidence Evaluation → Confidence Assessment → Root Cause Selection → Implementation → Verification"
+    },
+    "evidence_collection": {
+      "description": "Systematic collection of debugging evidence",
+      "status": "available",
+      "dependencies": ["debugging"],
+      "evidence_types": ["exception", "test_failure", "log", "source", "state", "config", "dependency"]
+    },
+    "root_cause_analysis": {
+      "description": "Confidence-driven root cause identification",
+      "status": "available",
+      "dependencies": ["debugging", "evidence_collection"],
+      "confidence_threshold": 90
     }
   },
   "commands": {

@@ -172,6 +172,33 @@ optional_knowledge:
       - compliance
     checksum_required: false
 
+  - id: debug-runtime
+    name: Debug Runtime
+    version: "1.0"
+    source: "runtime/DEBUG_RUNTIME.md"
+    priority: 2
+    loading_order: 12
+    description: |
+      Evidence-driven debugging workflow with confidence-based root cause analysis.
+      Includes state machine, evidence types, hypothesis management, and loop detection.
+    capabilities:
+      - debugging
+      - evidence_collection
+      - root_cause_analysis
+    checksum_required: false
+
+  - id: debug-adr
+    name: Debug Runtime ADR
+    version: "1.0"
+    source: ".kdse/architecture/ADR-007-DEBUG_RUNTIME.md"
+    priority: 3
+    loading_order: 13
+    description: |
+      Architecture Decision Record for Debug Runtime feature.
+    capabilities:
+      - debugging
+    checksum_required: false
+
 #-------------------------------------------------------------------------------
 # Capability Definitions
 #-------------------------------------------------------------------------------
@@ -239,6 +266,33 @@ capabilities:
     dependencies: []
     required_knowledge: []
 
+  - name: debugging
+    description: Evidence-driven debugging workflow
+    phase: Runtime
+    entrypoint: "kdse debug init"
+    dependencies: []
+    required_knowledge:
+      - debug-runtime
+
+  - name: evidence_collection
+    description: Structured evidence collection with types and tags
+    phase: Runtime
+    entrypoint: "kdse debug collect"
+    dependencies:
+      - debugging
+    required_knowledge:
+      - debug-runtime
+
+  - name: root_cause_analysis
+    description: Confidence-driven root cause analysis
+    phase: Runtime
+    entrypoint: "kdse debug select"
+    dependencies:
+      - debugging
+      - evidence_collection
+    required_knowledge:
+      - debug-runtime
+
 #-------------------------------------------------------------------------------
 # Command Registry Summary
 #-------------------------------------------------------------------------------
@@ -274,6 +328,19 @@ commands:
     - kdse update
     - kdse verify
     - kdse uninstall
+
+  debugging:
+    - kdse debug init
+    - kdse debug collect
+    - kdse debug hypothesis
+    - kdse debug evaluate
+    - kdse debug confidence
+    - kdse debug select
+    - kdse debug report
+    - kdse debug next
+    - kdse debug state
+    - kdse debug evidence
+    - kdse debug hypotheses
 
 #-------------------------------------------------------------------------------
 # Workflow Entrypoints

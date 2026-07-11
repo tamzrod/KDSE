@@ -204,7 +204,7 @@ check_manifest() {
     fi
     
     # Check manifest is valid JSON
-    if ! grep -q '"kdse"' "$manifest" 2>/dev/null; then
+    if ! grep -q '"version"' "$manifest" 2>/dev/null; then
         record_check "Manifest" "FAIL" "Invalid manifest format"
         return 0
     fi

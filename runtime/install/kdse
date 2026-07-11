@@ -4,6 +4,8 @@
 #===============================================================================
 # Purpose: Provide deterministic engineering operations for KDSE Runtime
 # Design:  Deterministic, idempotent, no AI logic, no engineering decisions
+#
+# IMPORTANT: Every command automatically loads Runtime Context via context.sh
 #===============================================================================
 
 set -euo pipefail
@@ -12,7 +14,7 @@ set -euo pipefail
 # Configuration
 #-------------------------------------------------------------------------------
 
-# KDSE home directory
+# KDSE home directory (can be overridden with KDSE_HOME env var)
 KDSE_HOME="${KDSE_HOME:-$HOME}"
 
 # Installation directory
@@ -20,6 +22,53 @@ KDSE_DIR=".kdse"
 
 # Commands directory
 COMMANDS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+#-------------------------------------------------------------------------------
+# Path Detection
+#-------------------------------------------------------------------------------
+
+# Detect the KDSE installation path
+# Priority: 1. KDSE_HOME/KDSE_DIR, 2. Current directory/.kdse, 3. Parent directories
+detect_kdse_path() {
+    # If KDSE_HOME is explicitly set, use it
+    if [[ -n "${KDSE_HOME:-}" && -d "${KDSE_HOME}/${KDSE_DIR}" ]]; then
+        echo "${KDSE_HOME}/${KDSE_DIR}"
+        return 0
+    fi
+    
+    # Check current directory
+    if [[ -d "${KDSE_DIR}/manifest.json" ]] || [[ -d "${KDSE_DIR}/manifest.yaml" ]]; then
+        echo "${KDSE_DIR}"
+        return 0
+    fi
+    
+    # Check parent directories (up to 3 levels)
+    local dir="$(pwd)"
+    for i in 1 2 3; do
+        if [[ -f "${dir}/${KDSE_DIR}/manifest.json" ]] || [[ -f "${dir}/${KDSE_DIR}/manifest.yaml" ]]; then
+            echo "${dir}/${KDSE_DIR}"
+            return 0
+        fi
+        dir="$(dirname "$dir")"
+    done
+    
+    # Fall back to KDSE_HOME
+    echo "${KDSE_HOME}/${KDSE_DIR}"
+}
+
+get_install_path() {
+    detect_kdse_path
+}
+
+#-------------------------------------------------------------------------------
+# Runtime Context Manager
+#-------------------------------------------------------------------------------
+# Source the context manager for automatic context loading
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "${SCRIPT_DIR}/context.sh" ]]; then
+    source "${SCRIPT_DIR}/context.sh"
+fi
 
 #-------------------------------------------------------------------------------
 # ANSI Colors
@@ -70,10 +119,6 @@ output_footer() {
 # Path Utilities
 #-------------------------------------------------------------------------------
 
-get_install_path() {
-    echo "${KDSE_HOME}/${KDSE_DIR}"
-}
-
 get_manifest_path() {
     echo "$(get_install_path)/manifest.json"
 }
@@ -102,12 +147,15 @@ detect_manifest_format() {
         return
     fi
     
-    if [[ -f "${install_path}/manifest.json" ]] && grep -q '"kdse"' "${install_path}/manifest.json" 2>/dev/null; then
-        echo "json"
-        return
+    if [[ -f "${install_path}/manifest.json" ]]; then
+        # Check for KDSE manifest by looking for version key
+        if grep -q '"version"' "${install_path}/manifest.json" 2>/dev/null; then
+            echo "json"
+            return
+        fi
     fi
     
-    if [[ -f "${install_path}/manifest.yaml" ]] && grep -q 'kdse' "${install_path}/manifest.yaml" 2>/dev/null; then
+    if [[ -f "${install_path}/manifest.yaml" ]] && grep -q 'version:' "${install_path}/manifest.yaml" 2>/dev/null; then
         echo "yaml"
         return
     fi
@@ -271,6 +319,16 @@ cmd_status() {
     local branch=$(manifest_get "branch" || echo "unknown")
     local last_sync=$(manifest_get "last_sync" || echo "never")
     
+    # Get context values
+    local ctx_version=""
+    local ctx_fingerprint=""
+    local ctx_status=""
+    if declare -f context_get &>/dev/null; then
+        ctx_version=$(context_get "version" || echo "")
+        ctx_fingerprint=$(context_get "fingerprint" || echo "")
+        ctx_status=$(context_get "status" || echo "")
+    fi
+    
     # Display status
     echo -e "${BOLD}Installation:${NC}"
     echo "  Path:        $install_path"
@@ -281,6 +339,18 @@ cmd_status() {
     echo "  Repository:  $repo"
     echo "  Branch:      $branch"
     echo "  Platform:    $(detect_platform)"
+    echo ""
+    
+    # Display Runtime Context
+    echo -e "${BOLD}Runtime Context:${NC}"
+    if [[ -n "$ctx_version" ]]; then
+        echo -e "  Context Status:    ${GREEN}${ctx_status}${NC}"
+        echo "  Context Version:   $ctx_version"
+        echo "  Fingerprint:      ${ctx_fingerprint:0:16}..."
+    else
+        echo -e "  ${YELLOW}Not initialized${NC}"
+        echo "  Run any kdse command to auto-initialize"
+    fi
     echo ""
     
     # Check required directories
@@ -398,6 +468,12 @@ cmd_verify() {
     # Run verify script
     if [[ -f "${COMMANDS_DIR}/verify.sh" ]]; then
         source "${COMMANDS_DIR}/common.sh"
+        
+        # Override get_install_path to use our detect_kdse_path function
+        get_install_path() {
+            detect_kdse_path
+        }
+        
         "${COMMANDS_DIR}/verify.sh" "$@"
     else
         output_error "Verify script not found"
@@ -531,6 +607,20 @@ cmd_install() {
     fi
     
     local exit_code=$?
+    
+    # Bootstrap Runtime Context after successful installation
+    if [[ $exit_code -eq 0 ]]; then
+        echo ""
+        output_info "Initializing Runtime Context..."
+        if [[ -f "${COMMANDS_DIR}/context.sh" ]]; then
+            source "${COMMANDS_DIR}/context.sh"
+            bootstrap_context 2>/dev/null || true
+            output_success "Runtime Context initialized"
+        else
+            output_warning "Context manager not found - run 'kdse context' to initialize"
+        fi
+    fi
+    
     output_footer
     return $exit_code
 }
@@ -736,6 +826,12 @@ cmd_audit() {
         return $EXIT_NOT_INSTALLED
     fi
     
+    # Runtime Context is already loaded by main()
+    local ctx_status=$(context_get "status" 2>/dev/null || echo "UNKNOWN")
+    
+    echo -e "${BOLD}Runtime Context:${NC} ${GREEN}$ctx_status${NC}"
+    echo ""
+    
     output_info "Executing repository assessment..."
     echo ""
     output_info "This would execute the Compliance Audit against the repository."
@@ -751,6 +847,150 @@ cmd_audit() {
     
     output_footer
     return $EXIT_OK
+}
+
+#-------------------------------------------------------------------------------
+# Command: debug
+#-------------------------------------------------------------------------------
+
+cmd_debug() {
+    output_header "KDSE Debug Runtime"
+    
+    # Check if debug engine exists
+    local debug_engine="${SCRIPT_DIR}/../debug/engine.sh"
+    if [[ ! -f "$debug_engine" ]]; then
+        output_error "Debug engine not found"
+        echo ""
+        echo "Debug Runtime is not available."
+        echo "This feature requires Phase 3 implementation."
+        output_footer
+        return $EXIT_ERROR
+    fi
+    
+    # Source the debug engine
+    source "$debug_engine"
+    
+    # Check for subcommand
+    local subcommand="${1:-}"
+    shift 2>/dev/null || true
+    
+    if [[ -z "$subcommand" ]]; then
+        # Show debug status
+        echo -e "${BOLD}Debug Runtime Status:${NC}"
+        echo ""
+        
+        # Check for active session
+        local session_dir="${KDSE_DEBUG_DIR:-.kdse/debug}/sessions"
+        if [[ -d "$session_dir" ]]; then
+            local active_sessions=$(find "$session_dir" -name "session.json" -type f 2>/dev/null | wc -l)
+            echo "Active sessions: $active_sessions"
+            echo ""
+            
+            if [[ "$active_sessions" -gt 0 ]]; then
+                echo "Recent sessions:"
+                find "$session_dir" -name "session.json" -type f 2>/dev/null | head -5 | while read -r session_file; do
+                    local session_id=$(grep '"session_id"' "$session_file" | sed 's/.*: *"\([^"]*\)".*/\1/')
+                    local state=$(grep '"state"' "$session_file" | sed 's/.*: *"\([^"]*\)".*/\1/')
+                    echo "  - $session_id [$state]"
+                done
+                echo ""
+            fi
+        else
+            echo "No debug sessions found."
+            echo ""
+        fi
+        
+        echo -e "${BOLD}Usage:${NC}"
+        echo "  kdse debug init <failure_description>    Start new debugging session"
+        echo "  kdse debug status                        Show debug status"
+        echo "  kdse debug help                          Show debug engine help"
+        echo ""
+        echo "  For full debug workflow, use:"
+        echo "    source runtime/debug/engine.sh"
+        echo "    debug_init \"your failure description\""
+        echo ""
+        
+        output_footer
+        return $EXIT_OK
+    fi
+    
+    # For commands that need session state, try to restore from last session
+    case "$subcommand" in
+        collect|evaluate|confidence|select|report|complete|next|state|evidence|hypotheses|hypothesis|new)
+            # Find most recent session
+            local session_dir="${KDSE_DEBUG_DIR:-.kdse/debug}/sessions"
+            if [[ -d "$session_dir" ]]; then
+                local latest_session=$(find "$session_dir" -name "session.json" -type f -exec stat --format='%Y %n' {} \; 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2)
+                if [[ -n "$latest_session" && -f "$latest_session" ]]; then
+                    # Load session state from file
+                    SESSION_DIR=$(dirname "$latest_session")
+                    SESSION_ID=$(grep '"session_id"' "$latest_session" | sed 's/.*: *"\([^"]*\)".*/\1/')
+                    CURRENT_STATE=$(grep '"state"' "$latest_session" | sed 's/.*: *"\([^"]*\)".*/\1/' | head -1)
+                    SESSION_STARTED=$(grep '"started_at"' "$latest_session" | sed 's/.*: *"\([^"]*\)".*/\1/')
+                fi
+            fi
+            # Load configuration for hypothesis/evidence operations
+            if declare -f load_config &>/dev/null; then
+                load_config
+            fi
+            ;;
+    esac
+    
+    # Pass through to debug engine
+    case "$subcommand" in
+        init)
+            debug_init "$@"
+            ;;
+        collect|collect-evidence)
+            debug_collect_evidence "$@"
+            ;;
+        hypothesis|new)
+            debug_new_hypothesis "$@"
+            ;;
+        evaluate)
+            debug_evaluate "$@"
+            ;;
+        confidence|check)
+            debug_check_confidence "$@"
+            ;;
+        select|root-cause)
+            debug_select_root_cause "$@"
+            ;;
+        loop)
+            debug_check_loop "$@"
+            ;;
+        report)
+            debug_generate_report "$@"
+            ;;
+        complete|finish)
+            debug_complete "$@"
+            ;;
+        next|phase)
+            debug_next_phase "$@"
+            ;;
+        state)
+            echo "Current state: ${CURRENT_STATE:-INITIAL}"
+            echo "Session ID: ${SESSION_ID:-none}"
+            ;;
+        evidence|list-evidence)
+            debug_list_evidence "$@"
+            ;;
+        hypotheses|list-hypotheses)
+            debug_list_hypotheses "$@"
+            ;;
+        help|--help|-h)
+            debug_help
+            ;;
+        *)
+            output_error "Unknown debug command: $subcommand"
+            echo "Run 'kdse debug help' for usage."
+            output_footer
+            return $EXIT_INVALID_ARGS
+            ;;
+    esac
+    
+    output_footer
+    return $?
 }
 
 #-------------------------------------------------------------------------------
@@ -873,6 +1113,127 @@ cmd_commands() {
 }
 
 #-------------------------------------------------------------------------------
+# Command: context
+#-------------------------------------------------------------------------------
+
+cmd_context() {
+    output_header "Runtime Context"
+    
+    if ! declare -f ensure_runtime_context &>/dev/null; then
+        output_error "Context manager not available"
+        echo ""
+        echo "Ensure the Runtime Context Manager is installed."
+        output_footer
+        return 1
+    fi
+    
+    ensure_runtime_context
+    
+    echo ""
+    echo -e "${BOLD}Current Runtime Context:${NC}"
+    echo ""
+    
+    local ctx_version=$(context_get "version" || echo "N/A")
+    local ctx_fingerprint=$(context_get "fingerprint" || echo "N/A")
+    local ctx_repository=$(context_get "repository" || echo "N/A")
+    local ctx_branch=$(context_get "branch" || echo "N/A")
+    local ctx_session=$(context_get "session" || echo "N/A")
+    local ctx_status=$(context_get "status" || echo "N/A")
+    
+    echo -e "${BOLD}Runtime:${NC}"
+    echo "  Version:    $ctx_version"
+    echo "  Fingerprint: ${ctx_fingerprint:0:24}..."
+    echo -e "  Status:     ${GREEN}${ctx_status}${NC}"
+    echo ""
+    
+    echo -e "${BOLD}Session:${NC}"
+    echo "  Repository: $ctx_repository"
+    echo "  Branch:     $ctx_branch"
+    echo "  Session:    $ctx_session"
+    echo ""
+    
+    echo -e "${BOLD}Context File:${NC}"
+    echo "  Path: $KDSE_CONTEXT"
+    if [[ -f "$KDSE_CONTEXT" ]]; then
+        echo "  Size: $(wc -c < "$KDSE_CONTEXT") bytes"
+        echo -e "  ${GREEN}✓ Exists${NC}"
+    else
+        echo -e "  ${RED}✗ Missing${NC}"
+    fi
+    echo ""
+    
+    output_footer
+    return $EXIT_OK
+}
+
+#-------------------------------------------------------------------------------
+# Command: knowledge
+#-------------------------------------------------------------------------------
+
+cmd_knowledge() {
+    output_header "Runtime Knowledge"
+    
+    local bootstrap_dir="${KDSE_DIR}/bootstrap"
+    
+    echo -e "${BOLD}Knowledge Manifest:${NC}"
+    echo "  Path: ${bootstrap_dir}/knowledge.yaml"
+    if [[ -f "${bootstrap_dir}/knowledge.yaml" ]]; then
+        local required_count
+        required_count=$(grep -c "^  - id:" "${bootstrap_dir}/knowledge.yaml" 2>/dev/null || echo "0")
+        echo -e "  ${GREEN}✓ Exists${NC}"
+        echo "  Required documents: $required_count"
+    else
+        echo -e "  ${RED}✗ Missing${NC}"
+    fi
+    echo ""
+    
+    echo -e "${BOLD}Capability Registry:${NC}"
+    echo "  Path: ${bootstrap_dir}/capabilities.yaml"
+    if [[ -f "${bootstrap_dir}/capabilities.yaml" ]]; then
+        local cap_count
+        cap_count=$(grep -c "^  - name:" "${bootstrap_dir}/capabilities.yaml" 2>/dev/null || echo "0")
+        echo -e "  ${GREEN}✓ Exists${NC}"
+        echo "  Capabilities: $cap_count"
+    else
+        echo -e "  ${RED}✗ Missing${NC}"
+    fi
+    echo ""
+    
+    echo -e "${BOLD}Command Registry:${NC}"
+    echo "  Path: ${bootstrap_dir}/commands.yaml"
+    if [[ -f "${bootstrap_dir}/commands.yaml" ]]; then
+        echo -e "  ${GREEN}✓ Exists${NC}"
+    else
+        echo -e "  ${RED}✗ Missing${NC}"
+    fi
+    echo ""
+    
+    echo -e "${BOLD}Runtime Limitations:${NC}"
+    echo "  Path: ${bootstrap_dir}/limitations.yaml"
+    if [[ -f "${bootstrap_dir}/limitations.yaml" ]]; then
+        local lim_count
+        lim_count=$(grep -c "^  - id:" "${bootstrap_dir}/limitations.yaml" 2>/dev/null || echo "0")
+        echo -e "  ${GREEN}✓ Exists${NC}"
+        echo "  Limitations: $lim_count"
+    else
+        echo -e "  ${RED}✗ Missing${NC}"
+    fi
+    echo ""
+    
+    echo -e "${BOLD}AI Context:${NC}"
+    echo "  Path: ${bootstrap_dir}/kdse-ai.json"
+    if [[ -f "${bootstrap_dir}/kdse-ai.json" ]]; then
+        echo -e "  ${GREEN}✓ Exists${NC}"
+    else
+        echo -e "  ${RED}✗ Missing${NC}"
+    fi
+    echo ""
+    
+    output_footer
+    return $EXIT_OK
+}
+
+#-------------------------------------------------------------------------------
 # Main
 #-------------------------------------------------------------------------------
 
@@ -909,6 +1270,13 @@ main() {
     local command="${1:-}"
     shift || true
     
+    # Ensure Runtime Context is loaded before any command (except install)
+    if [[ "$command" != "install" && "$command" != "" ]]; then
+        if declare -f ensure_runtime_context &>/dev/null; then
+            ensure_runtime_context 2>/dev/null || true
+        fi
+    fi
+    
     # Route command
     case "$command" in
         status)
@@ -919,6 +1287,12 @@ main() {
             ;;
         commands)
             cmd_commands "$@"
+            ;;
+        context)
+            cmd_context "$@"
+            ;;
+        knowledge)
+            cmd_knowledge "$@"
             ;;
         update)
             cmd_update "$@"
@@ -949,6 +1323,9 @@ main() {
             ;;
         audit)
             cmd_audit "$@"
+            ;;
+        debug)
+            cmd_debug "$@"
             ;;
         "")
             output_header "KDSE Runtime"
