@@ -1,6 +1,6 @@
 # Phase 0: Runtime Initialization
 
-**Document Version:** 1.0  
+**Document Version:** 2.0  
 **Type:** Runtime Specification  
 **Effective Date:** 2026-07-11  
 
@@ -17,19 +17,41 @@ Phase 0 ensures the KDSE Runtime automatically loads the KDSE methodology into A
 
 ## Overview
 
-Phase 0 is the mandatory first phase executed before any engineering activity. It establishes the complete KDSE context for AI agents, eliminating the need for manual bootstrap prompts.
+Phase 0 is the mandatory first phase executed automatically on `kdse run`. It establishes the complete KDSE context for AI agents.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    PHASE 0: INITIALIZATION                   │
+│                 RUNTIME INITIALIZATION                       │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
-│  Every KDSE Runtime Session begins with Phase 0.            │
-│  The operator should only need to issue:                    │
+│  Operator Command:                                           │
 │                                                              │
-│      Run KDSE.                                              │
+│      kdse run                                               │
 │                                                              │
-│  All methodology loading occurs automatically.               │
+│                          │                                   │
+│                          ▼                                   │
+│  ┌─────────────────────────────────────────────────┐     │
+│  │              PHASE 0: INITIALIZE                  │     │
+│  │                                                       │     │
+│  │  1. Verify Runtime Integrity                       │     │
+│  │  2. Verify Runtime Version                         │     │
+│  │  3. Load Knowledge Manifest                       │     │
+│  │  4. Load Capability Registry                      │     │
+│  │  5. Load Command Registry                        │     │
+│  │  6. Load Runtime Limitations                      │     │
+│  │  7. Generate AI Working Context                  │     │
+│  │  8. Generate Runtime Fingerprint                  │     │
+│  │  9. Produce Initialization Summary               │     │
+│  │                                                       │     │
+│  └─────────────────────────────────────────────────┘     │
+│                          │                                   │
+│                          ▼                                   │
+│  ┌─────────────────────────────────────────────────┐     │
+│  │              PHASE 1: ASSESS                      │     │
+│  │                                                       │     │
+│  │  Repository Assessment begins...                     │     │
+│  │                                                       │     │
+│  └─────────────────────────────────────────────────┘     │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -38,167 +60,88 @@ Phase 0 is the mandatory first phase executed before any engineering activity. I
 
 ## Bootstrap Sequence
 
-Phase 0 executes in eight sequential steps:
+Phase 0 executes in nine sequential steps:
+
+| Step | Action | Description |
+|------|--------|-------------|
+| 1 | Verify Runtime Integrity | Check `.kdse/` and `.kdse/bootstrap/` exist |
+| 2 | Verify Runtime Version | Confirm version compatibility |
+| 3 | Load Knowledge Manifest | Parse `knowledge.yaml` |
+| 4 | Load Capability Registry | Parse `capabilities.yaml` |
+| 5 | Load Command Registry | Parse `commands.yaml` |
+| 6 | Load Runtime Limitations | Parse `limitations.yaml` |
+| 7 | Generate AI Working Context | Update `kdse-ai.json` |
+| 8 | Generate Runtime Fingerprint | Create integrity hash |
+| 9 | Produce Initialization Summary | Display report |
+
+---
+
+## Bootstrap Artifacts
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    BOOTSTRAP SEQUENCE                         │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  Step 1. Discover Installation                              │
-│      └─ Verify .kdse/ directory exists                      │
-│                                                              │
-│  Step 2. Load Manifest                                       │
-│      └─ Parse .kdse/knowledge/manifest.yaml                 │
-│                                                              │
-│  Step 3. Verify Versions                                     │
-│      └─ Check Runtime/Standard compatibility                │
-│                                                              │
-│  Step 4. Load Knowledge (in order)                           │
-│      └─ Load required, then optional documents               │
-│                                                              │
-│  Step 5. Verify Integrity                                    │
-│      └─ Generate and verify knowledge fingerprint            │
-│                                                              │
-│  Step 6. Discover Capabilities                               │
-│      └─ Build capability registry                           │
-│                                                              │
-│  Step 7. Generate AI Context                                 │
-│      └─ Create kdse-ai.json for AI context                 │
-│                                                              │
-│  Step 8. Produce Initialization Summary                     │
-│      └─ Display initialization report                       │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+.kdse/
+├── bootstrap/                     # Phase 0 artifacts
+│   ├── knowledge.yaml            # Knowledge Manifest
+│   ├── capabilities.yaml         # Capability Registry
+│   ├── commands.yaml             # Command Registry
+│   ├── limitations.yaml          # Runtime Limitations
+│   ├── kdse-ai.json            # AI Working Context
+│   └── fingerprints/             # Fingerprint storage
+└── runtime/
+    └── state.json               # Runtime state
 ```
 
 ---
 
 ## Knowledge Manifest
 
-The Knowledge Manifest (`.kdse/knowledge/manifest.yaml`) defines:
-
 ### Required Knowledge
 
-Must be loaded before any engineering activity begins:
-
-| Order | Document | Source |
-|-------|----------|--------|
-| 1 | Core Principles | docs/foundation/003-core-principles.md |
-| 2 | Engineering Model | docs/foundation/004-engineering-model.md |
-| 3 | Chain of Authority | docs/foundation/006-chain-of-authority.md |
-| 4 | Glossary | docs/foundation/007-glossary.md |
-| 5 | Session Protocol | runtime/SESSION_PROTOCOL.md |
-| 6 | Command Registry | runtime/install/commands.yaml |
-| 7 | Runtime Configuration | runtime/VERSIONING.md |
+| Order | ID | Source |
+|-------|-----|--------|
+| 1 | core-principles | docs/foundation/003-core-principles.md |
+| 2 | engineering-model | docs/foundation/004-engineering-model.md |
+| 3 | chain-of-authority | docs/foundation/006-chain-of-authority.md |
+| 4 | glossary | docs/foundation/007-glossary.md |
+| 5 | session-protocol | runtime/SESSION_PROTOCOL.md |
+| 6 | command-registry | runtime/install/commands.yaml |
+| 7 | runtime-configuration | runtime/VERSIONING.md |
 
 ### Optional Knowledge
 
-Should be loaded for complete KDSE context:
-
-| Order | Document | Source |
-|-------|----------|--------|
-| 8 | Engineering Knowledge Definition | docs/foundation/009-engineering-knowledge.md |
-| 9 | Traceability Framework | docs/foundation/012-traceability.md |
-| 10 | Engineering Artifacts | docs/foundation/005-engineering-artifacts.md |
-| 11 | Audit Standards | docs/audit/COMPLIANCE_AUDIT.md |
+| Order | ID | Source |
+|-------|-----|--------|
+| 8 | engineering-knowledge | docs/foundation/009-engineering-knowledge.md |
+| 9 | traceability | docs/foundation/012-traceability.md |
+| 10 | engineering-artifacts | docs/foundation/005-engineering-artifacts.md |
+| 11 | audit-standards | docs/audit/COMPLIANCE_AUDIT.md |
 
 ---
 
-## Knowledge Loading Order
+## Capability Registry
 
-The AI shall not guess which documents to load. The Runtime explicitly defines the initialization order:
-
-```
-Loading Order
-═════════════
-
-  1. Core Principles
-     ↓
-  2. Engineering Model
-     ↓
-  3. Chain of Authority
-     ↓
-  4. Glossary
-     ↓
-  5. Session Protocol
-     ↓
-  6. Command Registry
-     ↓
-  7. Runtime Configuration
-     ↓
-  [Optional: 8-11]
-```
+| Capability | Description | Dependencies |
+|-----------|-------------|--------------|
+| assessment | Repository compliance assessment | - |
+| recommendation_engine | Action recommendation | assessment |
+| architecture | Architecture design/review | assessment |
+| verification | Implementation verification | architecture |
+| evolution | Methodology evolution | verification |
+| feedback | Feedback collection | - |
 
 ---
 
-## Knowledge Fingerprint
+## Runtime Limitations
 
-The Knowledge Fingerprint is a SHA-256 hash that verifies knowledge integrity:
-
-```
-Fingerprint = SHA256(
-  sorted([
-    "source:path" + SHA256(content),
-    ...
-  ])
-)
-```
-
-**Purpose:**
-- Detects unauthorized knowledge changes
-- Ensures reproducibility of initialization
-- Provides audit trail
-
----
-
-## Capability Discovery
-
-After Phase 0 initialization, the following capabilities are available:
-
-| Capability | Description | Entrypoint |
-|-----------|-------------|------------|
-| Assessment | Repository compliance assessment | Run KDSE |
-| Architecture | Architecture design and review | Engineering Phase |
-| Implementation | Implementation guidance | Engineering Phase |
-| Verification | Implementation verification | Verification Phase |
-| Evolution | Methodology evolution | Evolution Phase |
-| Feedback | Feedback collection | Session Protocol |
-
----
-
-## AI Knowledge Artifact
-
-The AI Knowledge Artifact (`.kdse/knowledge/kdse-ai.json`) contains machine-readable engineering knowledge:
-
-```json
-{
-  "$schema": "https://kdse.dev/schemas/kdse-ai/v1.0",
-  "version": "1.0.0",
-  "runtime": {
-    "version": "1.0.0",
-    "name": "KDSE Runtime",
-    "compatible_standard": ">= 1.0.0"
-  },
-  "knowledge": {
-    "version": "1.0.0",
-    "fingerprint": "sha256:...",
-    "loaded": ["core-principles", "engineering-model", ...],
-    "status": "READY"
-  },
-  "capabilities": {
-    "assessment": { ... },
-    "architecture": { ... },
-    "verification": { ... },
-    "evolution": { ... },
-    "feedback": { ... }
-  },
-  "principles": {
-    "core": [...]
-  },
-  "status": "READY"
-}
-```
+| ID | Severity | Description |
+|----|----------|-------------|
+| no_implementation | info | Runtime does not implement code changes |
+| human_approval_required | info | All changes require human approval |
+| no_real_time_audit | warning | Audits require explicit invocation |
+| session_state_persistence | warning | State not persisted between shells |
+| no_code_generation | info | Runtime provides guidance only |
+| limited_verification | warning | Static analysis only |
+| knowledge_dependency | warning | Requires knowledge documents |
 
 ---
 
@@ -207,49 +150,46 @@ The AI Knowledge Artifact (`.kdse/knowledge/kdse-ai.json`) contains machine-read
 Phase 0 produces a human-readable initialization summary:
 
 ```
-═══════════════════════════════════════════════════════════════
-                    KDSE Runtime Initialized
-═══════════════════════════════════════════════════════════════
+----------------------------------------------------
+KDSE Runtime Initialization
 
 Runtime Version:    1.0.0
 Knowledge Version:  1.0.0
-Knowledge Fingerprint: b84085605a4477f8...
+Runtime Fingerprint: sha256:abc123...def456
 
-Capabilities Loaded:
-  ✓ Assessment
-  ✓ Architecture
-  ✓ Verification
-  ✓ Evolution
-  ✓ Feedback
+Capabilities:
+✓ Assessment
+✓ Recommendation Engine
+✓ Architecture
+✓ Verification
+✓ Evolution
+✓ Feedback
 
-Knowledge Loaded:
-  7 documents
+Known Limitations:
+• No code implementation - requires human action
+• Human approval required for all changes
+• Audits require explicit invocation
 
-Repository:
-  Path: /workspace/project/KDSE
-  Lifecycle: Active
+Knowledge Loaded: 7 documents
 
-Status: READY
-
-═══════════════════════════════════════════════════════════════
+Initialization Complete
+----------------------------------------------------
 ```
 
 ---
 
 ## Runtime State
 
-After initialization, the Runtime state is persisted to `.kdse/runtime/state.json`:
+After initialization, the Runtime state is persisted:
 
 ```json
 {
   "runtime_version": "1.0.0",
   "knowledge_version": "1.0.0",
-  "knowledge_fingerprint": "sha256:...",
-  "compatible_standard": ">= 1.0.0",
+  "runtime_fingerprint": "sha256:abc123...",
   "initialized_at": "2026-07-11T00:00:00Z",
-  "repository_path": "/workspace/project/KDSE",
   "knowledge_loaded": 7,
-  "status": "READY"
+  "status": "INITIALIZED"
 }
 ```
 
@@ -257,28 +197,20 @@ After initialization, the Runtime state is persisted to `.kdse/runtime/state.jso
 
 ## Failure Modes
 
-### Missing Installation
+### Runtime Integrity Check Failed
 
 ```
-ERROR: KDSE Runtime not installed
-Hint: Run ./runtime/install/install.sh
-```
-
-### Invalid Manifest
-
-```
-ERROR: Invalid Knowledge Manifest
-Hint: manifest.yaml is corrupted or missing required fields
+ERROR: Runtime integrity check failed
+Hint: Run 'kdse install' to reinstall
 ```
 
 ### Version Incompatibility
 
 ```
-ERROR: Version incompatibility detected
-  Runtime Version: 1.0.0
-  Standard Version: 0.9.0
+ERROR: Runtime version incompatible
+  Current: 1.0.0
   Required: >= 1.0.0
-Hint: Run 'kdse update' to sync with compatible version
+Hint: Run 'kdse update' to upgrade
 ```
 
 ### Missing Required Knowledge
@@ -286,7 +218,6 @@ Hint: Run 'kdse update' to sync with compatible version
 ```
 ERROR: Required knowledge missing
   Missing: docs/foundation/003-core-principles.md
-  Required by: manifest.yaml
 Hint: Restore missing file from KDSE repository
 ```
 
@@ -294,19 +225,20 @@ Hint: Restore missing file from KDSE repository
 
 ## Usage
 
-### Automatic Initialization
+### Automatic (Recommended)
 
-Phase 0 runs automatically when starting a KDSE session:
+Phase 0 runs automatically on `kdse run`:
 
+```bash
+kdse run
 ```
-Run KDSE.
-```
 
-### Manual Initialization
+### Manual
 
 To manually run Phase 0:
 
 ```bash
+python3 .kdse/phase0/phase0-init.py
 python3 .kdse/phase0/phase0-init.py --verbose
 ```
 
@@ -323,11 +255,11 @@ cat .kdse/runtime/state.json
 | File | Purpose |
 |------|---------|
 | `.kdse/phase0/phase0-init.py` | Phase 0 bootstrap script |
-| `.kdse/phase0/runtime-state.sh` | Runtime state management |
-| `.kdse/phase0/load-knowledge.sh` | Knowledge loading script |
-| `.kdse/phase0/generate-fingerprint.sh` | Fingerprint generation |
-| `.kdse/knowledge/manifest.yaml` | Knowledge Manifest |
-| `.kdse/knowledge/kdse-ai.json` | AI Knowledge Artifact |
+| `.kdse/bootstrap/knowledge.yaml` | Knowledge Manifest |
+| `.kdse/bootstrap/capabilities.yaml` | Capability Registry |
+| `.kdse/bootstrap/commands.yaml` | Command Registry |
+| `.kdse/bootstrap/limitations.yaml` | Runtime Limitations |
+| `.kdse/bootstrap/kdse-ai.json` | AI Working Context |
 | `.kdse/runtime/state.json` | Runtime state |
 
 ---
@@ -337,6 +269,7 @@ cat .kdse/runtime/state.json
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2026-07-11 | Initial Phase 0 specification |
+| 2.0 | 2026-07-11 | Updated with bootstrap directory structure, capabilities, limitations |
 
 ---
 

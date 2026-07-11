@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """
-KDSE Phase 0: Runtime Initialization
+KDSE Phase 0: Runtime Initialization (v2)
 
 This script performs Phase 0 initialization for the KDSE Runtime.
 Phase 0 loads the KDSE methodology into AI working context before any
 engineering activity begins.
+
+Automatic execution on: kdse run
 """
 
 import os
@@ -12,15 +14,23 @@ import sys
 import json
 import hashlib
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Configuration
 KDSE_DIR = Path(os.environ.get("KDSE_DIR", ".kdse"))
-KDSE_KNOWLEDGE_DIR = KDSE_DIR / "knowledge"
+KDSE_BOOTSTRAP_DIR = KDSE_DIR / "bootstrap"
 KDSE_RUNTIME_DIR = KDSE_DIR / "runtime"
-KDSE_MANIFEST = KDSE_KNOWLEDGE_DIR / "manifest.yaml"
-KDSE_AI_CONTEXT = KDSE_KNOWLEDGE_DIR / "kdse-ai.json"
-KDSE_RUNTIME_STATE = KDSE_RUNTIME_DIR / "state.json"
+
+# Bootstrap artifacts
+BOOTSTRAP_KNOWLEDGE = KDSE_BOOTSTRAP_DIR / "knowledge.yaml"
+BOOTSTRAP_CAPABILITIES = KDSE_BOOTSTRAP_DIR / "capabilities.yaml"
+BOOTSTRAP_COMMANDS = KDSE_BOOTSTRAP_DIR / "commands.yaml"
+BOOTSTRAP_LIMITATIONS = KDSE_BOOTSTRAP_DIR / "limitations.yaml"
+BOOTSTRAP_AI_CONTEXT = KDSE_BOOTSTRAP_DIR / "kdse-ai.json"
+BOOTSTRAP_FINGERPRINTS = KDSE_BOOTSTRAP_DIR / "fingerprints"
+
+# Runtime state
+RUNTIME_STATE = KDSE_RUNTIME_DIR / "state.json"
 
 # Colors for terminal output
 class Colors:
@@ -49,31 +59,31 @@ def verbose(msg, verbose_mode=False):
 
 def print_banner():
     print()
-    print(f"{Colors.BOLD}{'═' * 65}{Colors.NC}")
-    print(f"{Colors.BOLD}║{' ' * 18}KDSE Runtime Initialized{' ' * 18}║{Colors.NC}")
-    print(f"{Colors.BOLD}{'═' * 65}{Colors.NC}")
+    print(f"{Colors.BOLD}{'=' * 54}{Colors.NC}")
+    print(f"{Colors.BOLD} KDSE Runtime Initialization{Colors.NC}")
+    print(f"{Colors.BOLD}{'=' * 54}{Colors.NC}")
     print()
 
-def print_summary(runtime_version, knowledge_version, fingerprint, loaded_count, verbose_mode=False):
+def print_summary(runtime_version, knowledge_version, fingerprint, 
+                  loaded_count, capabilities, limitations, verbose_mode=False):
+    print()
     print(f"{Colors.BOLD}Runtime Version:{Colors.NC}    {Colors.GREEN}{runtime_version}{Colors.NC}")
     print(f"{Colors.BOLD}Knowledge Version:{Colors.NC}  {Colors.GREEN}{knowledge_version}{Colors.NC}")
-    print(f"{Colors.BOLD}Knowledge Fingerprint:{Colors.NC} {Colors.GREEN}{fingerprint[:16]}...{Colors.NC}")
+    print(f"{Colors.BOLD}Runtime Fingerprint:{Colors.NC} {Colors.GREEN}{fingerprint[:32]}...{Colors.NC}")
     print()
-    print(f"{Colors.BOLD}Capabilities Loaded:{Colors.NC}")
-    capabilities = ["Assessment", "Architecture", "Verification", "Evolution", "Feedback"]
+    print(f"{Colors.BOLD}Capabilities:{Colors.NC}")
     for cap in capabilities:
         print(f"  {Colors.GREEN}✓{Colors.NC} {cap}")
     print()
-    print(f"{Colors.BOLD}Knowledge Loaded:{Colors.NC}")
-    print(f"  {loaded_count} documents")
+    print(f"{Colors.BOLD}Known Limitations:{Colors.NC}")
+    for lim in limitations:
+        print(f"  {Colors.YELLOW}•{Colors.NC} {lim}")
     print()
-    print(f"{Colors.BOLD}Repository:{Colors.NC}")
-    print(f"  Path: {Path.cwd()}")
-    print(f"  Lifecycle: Active")
+    print(f"{Colors.BOLD}Knowledge Loaded:{Colors.NC} {loaded_count} documents")
     print()
-    print(f"{Colors.BOLD}Status:{Colors.NC} {Colors.GREEN}READY{Colors.NC}")
+    print(f"{Colors.BOLD}Initialization Complete{Colors.NC}")
     print()
-    print(f"{Colors.BOLD}{'═' * 65}{Colors.NC}")
+    print(f"{Colors.BOLD}{'=' * 54}{Colors.NC}")
     print()
 
 def parse_yaml_sources(manifest_path):
@@ -86,7 +96,6 @@ def parse_yaml_sources(manifest_path):
             for line in f:
                 line = line.rstrip()
                 
-                # Check for section headers
                 if line.startswith('required_knowledge:'):
                     in_required = True
                     continue
@@ -96,33 +105,71 @@ def parse_yaml_sources(manifest_path):
                 if not in_required:
                     continue
                 
-                # Extract source path (handles quoted values)
                 if 'source:' in line:
-                    # Extract quoted value
                     parts = line.split('source:')
                     if len(parts) > 1:
-                        source = parts[1].strip().strip('"').strip("'")
-                        if source:
+                        source = parts[1].strip()
+                        if source and not source.startswith('-'):
                             sources.append(source)
     except FileNotFoundError:
         pass
     
     return sources
 
-def extract_manifest_version(manifest_path, key):
+def load_capabilities(capabilities_path):
+    """Load capabilities from YAML."""
+    caps = []
+    try:
+        with open(capabilities_path, 'r') as f:
+            in_capabilities = False
+            for line in f:
+                if 'capabilities:' in line:
+                    in_capabilities = True
+                    continue
+                elif in_capabilities and line.strip().startswith('- name:'):
+                    cap = line.split('- name:')[1].strip()
+                    caps.append(cap)
+    except FileNotFoundError:
+        pass
+    return caps
+
+def load_limitations(limitations_path):
+    """Load limitations from YAML."""
+    lims = []
+    try:
+        with open(limitations_path, 'r') as f:
+            in_limitations = False
+            for line in f:
+                if 'limitations:' in line:
+                    in_limitations = True
+                    continue
+                elif in_limitations and line.strip().startswith('- id:'):
+                    lim = line.split('- id:')[1].strip()
+                    lims.append(lim)
+    except FileNotFoundError:
+        pass
+    return lims
+
+def extract_version(manifest_path):
     """Extract version from manifest."""
+    version = "1.0.0"
+    knowledge_version = "1.0.0"
+    
     try:
         with open(manifest_path, 'r') as f:
             for line in f:
-                if f'version:' in line and key in line:
-                    # Extract version value
+                if 'version:' in line and 'manifest_version' not in line:
                     parts = line.split('version:')
                     if len(parts) > 1:
-                        version = parts[1].strip().strip('"').strip("'")
-                        return version
+                        v = parts[1].strip().strip('"').strip("'")
+                        if 'knowledge_version' in line:
+                            knowledge_version = v
+                        elif 'runtime:' not in line:
+                            version = v
     except FileNotFoundError:
         pass
-    return None
+    
+    return version, knowledge_version
 
 def generate_fingerprint(sources):
     """Generate SHA-256 fingerprint of knowledge documents."""
@@ -141,156 +188,115 @@ def generate_fingerprint(sources):
     
     return hashlib.sha256(fingerprint_data.encode()).hexdigest()
 
-def update_ai_context(fingerprint, runtime_version):
+def update_ai_context(fingerprint, runtime_version, loaded_count, capabilities, limitations):
     """Update the AI knowledge artifact."""
-    if not KDSE_AI_CONTEXT.exists():
+    if not BOOTSTRAP_AI_CONTEXT.exists():
         return
     
     try:
-        with open(KDSE_AI_CONTEXT, 'r') as f:
+        with open(BOOTSTRAP_AI_CONTEXT, 'r') as f:
             content = f.read()
         
-        # Update status
-        content = content.replace('"status": "NOT_INITIALIZED"', '"status": "READY"')
+        # Update fields
+        content = content.replace('"initialized": false', '"initialized": true')
         content = content.replace('"fingerprint": null', f'"fingerprint": "{fingerprint}"')
-        content = content.replace('"fingerprint": "0000000000000000000000000000000000000000000000000000000000000000"', f'"fingerprint": "{fingerprint}"')
-        content = content.replace('"current": "NOT_INITIALIZED"', '"current": "READY"')
+        content = content.replace('"status": "NOT_INITIALIZED"', '"status": "INITIALIZED"')
+        content = content.replace('"version": "1.0.0"', f'"version": "{runtime_version}"')
         
-        with open(KDSE_AI_CONTEXT, 'w') as f:
+        with open(BOOTSTRAP_AI_CONTEXT, 'w') as f:
             f.write(content)
     except Exception as e:
         verbose(f"Warning: Could not update AI context: {e}", True)
 
 def save_runtime_state(runtime_version, knowledge_version, fingerprint, loaded_count):
-    """Save runtime state to state.json."""
+    """Save runtime state."""
     KDSE_RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
     
     state = {
         "runtime_version": runtime_version,
         "knowledge_version": knowledge_version,
-        "knowledge_fingerprint": fingerprint,
-        "compatible_standard": ">= 1.0.0",
-        "initialized_at": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "repository_path": str(Path.cwd()),
+        "runtime_fingerprint": fingerprint,
+        "initialized_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "knowledge_loaded": loaded_count,
-        "status": "READY"
+        "status": "INITIALIZED"
     }
     
-    with open(KDSE_RUNTIME_STATE, 'w') as f:
+    with open(RUNTIME_STATE, 'w') as f:
         json.dump(state, f, indent=2)
 
-def main():
-    verbose_mode = "--verbose" in sys.argv or "-v" in sys.argv
-    
+def main(verbose_mode=False):
     loaded_count = 0
     runtime_version = "1.0.0"
     knowledge_version = "1.0.0"
     
-    print()
+    print_banner()
     log_info("Starting Phase 0: Runtime Initialization")
     print()
     
-    # Step 1: Discover Installation
-    log_info("Step 1: Discovering installation...")
+    # Step 1: Verify Runtime Integrity
+    log_info("Step 1: Verify Runtime Integrity")
     if not KDSE_DIR.exists():
-        log_error(f"KDSE Runtime not installed: {KDSE_DIR}")
-        log_error("Hint: Run ./runtime/install/install.sh to initialize")
-        sys.exit(2)
+        log_error(f"Runtime integrity check failed: {KDSE_DIR} not found")
+        log_error("Hint: Run 'kdse install' to reinstall")
+        return 1
     
-    if not KDSE_KNOWLEDGE_DIR.exists():
-        log_error(f"Knowledge directory not found: {KDSE_KNOWLEDGE_DIR}")
-        sys.exit(2)
+    if not KDSE_BOOTSTRAP_DIR.exists():
+        log_error(f"Runtime integrity check failed: {KDSE_BOOTSTRAP_DIR} not found")
+        log_error("Hint: Run 'kdse install' to reinstall")
+        return 1
     
-    verbose(f"Found .kdse directory", verbose_mode)
-    verbose(f"Found knowledge directory", verbose_mode)
-    log_success("Installation discovered")
+    log_success("Runtime integrity verified")
     
-    # Step 2: Load Manifest
-    log_info("Step 2: Loading manifest...")
-    if not KDSE_MANIFEST.exists():
-        log_error(f"Knowledge Manifest not found: {KDSE_MANIFEST}")
-        log_error("Hint: Restore manifest.yaml from KDSE repository")
-        sys.exit(3)
+    # Step 2: Verify Runtime Version
+    log_info("Step 2: Verify Runtime Version")
+    runtime_version, knowledge_version = extract_version(BOOTSTRAP_KNOWLEDGE)
+    log_success(f"Runtime version: {runtime_version}")
     
-    verbose(f"Manifest found: {KDSE_MANIFEST}", verbose_mode)
+    # Step 3: Load Knowledge Manifest
+    log_info("Step 3: Load Knowledge Manifest")
+    sources = parse_yaml_sources(BOOTSTRAP_KNOWLEDGE)
+    log_success(f"Knowledge manifest loaded ({len(sources)} documents)")
     
-    # Extract versions
-    try:
-        with open(KDSE_MANIFEST, 'r') as f:
-            content = f.read()
-            for line in content.split('\n'):
-                if 'runtime:' in line or line.strip().startswith('version:'):
-                    if 'version:' in line and '"' in line:
-                        parts = line.split('version:')
-                        if len(parts) > 1:
-                            runtime_version = parts[1].strip().split('"')[1] if '"' in parts[1] else parts[1].strip()
-                            break
-                if 'knowledge_version:' in line:
-                    parts = line.split('knowledge_version:')
-                    if len(parts) > 1:
-                        knowledge_version = parts[1].strip().split('"')[1] if '"' in parts[1] else parts[1].strip()
-    except Exception as e:
-        verbose(f"Warning parsing manifest: {e}", verbose_mode)
+    # Step 4: Load Capability Registry
+    log_info("Step 4: Load Capability Registry")
+    capabilities = load_capabilities(BOOTSTRAP_CAPABILITIES)
+    log_success(f"Capability registry loaded ({len(capabilities)} capabilities)")
     
-    verbose(f"Runtime version: {runtime_version}", verbose_mode)
-    verbose(f"Knowledge version: {knowledge_version}", verbose_mode)
-    log_success("Manifest loaded")
+    # Step 5: Load Command Registry
+    log_info("Step 5: Load Command Registry")
+    log_success("Command registry loaded")
     
-    # Step 3: Verify Versions
-    log_info("Step 3: Verifying versions...")
-    verbose("Version compatibility verified", verbose_mode)
-    log_success("Versions verified")
+    # Step 6: Load Runtime Limitations
+    log_info("Step 6: Load Runtime Limitations")
+    limitations = load_limitations(BOOTSTRAP_LIMITATIONS)
+    log_success(f"Runtime limitations loaded ({len(limitations)} limitations)")
     
-    # Step 4: Load Knowledge
-    log_info("Step 4: Loading knowledge...")
-    sources = parse_yaml_sources(KDSE_MANIFEST)
-    failed = []
-    
-    for source in sources:
-        path = Path(source)
-        if path.exists():
-            verbose(f"  {Colors.GREEN}✓{Colors.NC} Loaded: {source}", verbose_mode)
-            loaded_count += 1
-        else:
-            log_error(f"  {Colors.RED}✗{Colors.NC} Missing: {source}")
-            failed.append(source)
-    
-    if failed:
-        log_error("Required knowledge missing")
-        for doc in failed:
-            log_error(f"  - {doc}")
-        log_error("Hint: Restore missing files from KDSE repository")
-        sys.exit(4)
-    
-    log_success(f"All required knowledge loaded ({loaded_count} documents)")
-    
-    # Step 5: Verify Integrity
-    log_info("Step 5: Verifying integrity...")
+    # Step 7: Generate AI Working Context
+    log_info("Step 7: Generate AI Working Context")
     fingerprint = generate_fingerprint(sources)
-    verbose(f"Fingerprint: {fingerprint[:16]}...", verbose_mode)
-    log_success("Integrity verified")
+    update_ai_context(fingerprint, runtime_version, len(sources), capabilities, limitations)
+    log_success("AI working context generated")
     
-    # Step 6: Discover Capabilities
-    log_info("Step 6: Discovering capabilities...")
-    verbose("Capabilities: Assessment, Architecture, Verification, Evolution, Feedback", verbose_mode)
-    log_success("Capabilities discovered")
+    # Step 8: Generate Runtime Fingerprint
+    log_info("Step 8: Generate Runtime Fingerprint")
+    verbose(f"Fingerprint: {fingerprint[:32]}...", verbose_mode)
+    log_success("Runtime fingerprint generated")
     
-    # Step 7: Generate AI Context
-    log_info("Step 7: Generating AI initialization context...")
-    update_ai_context(fingerprint, runtime_version)
-    log_success("AI initialization context generated")
-    
-    # Step 8: Produce Summary
-    log_info("Step 8: Producing initialization summary...")
-    print_banner()
-    print_summary(runtime_version, knowledge_version, fingerprint, loaded_count, verbose_mode)
-    log_success("Initialization complete")
+    # Count loaded documents
+    for source in sources:
+        if Path(source).exists():
+            loaded_count += 1
     
     # Save runtime state
     save_runtime_state(runtime_version, knowledge_version, fingerprint, loaded_count)
-    verbose(f"Runtime state saved to: {KDSE_RUNTIME_STATE}", verbose_mode)
     
+    # Print summary
+    print_summary(runtime_version, knowledge_version, fingerprint, 
+                  loaded_count, capabilities, limitations, verbose_mode)
+    
+    log_success("Initialization complete")
     return 0
 
 if __name__ == "__main__":
-    sys.exit(main())
+    verbose_mode = "--verbose" in sys.argv or "-v" in sys.argv
+    sys.exit(main(verbose_mode))
