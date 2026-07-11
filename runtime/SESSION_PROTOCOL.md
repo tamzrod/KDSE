@@ -237,6 +237,31 @@ Proceed to session completion.
 3. Update artifact references
 4. Maintain evidence trail
 
+### 4.4 Artifact Verification (REQUIRED)
+
+**Purpose:** Verify artifacts exist before reporting completion
+
+Per [ARTIFACT_VERIFICATION.md](ARTIFACT_VERIFICATION.md), the Runtime MUST verify artifacts exist and are properly tracked before reporting "IMPLEMENTATION COMPLETE".
+
+**Actions:**
+1. Verify expected files exist at specified paths
+2. Verify files are tracked by Git (or intentionally untracked)
+3. Verify commands exist if commands were reported
+4. Verify documentation exists if documentation was reported
+5. Verify Git working tree is consistent
+
+**Outcomes:**
+| Verification | Status Report |
+|--------------|---------------|
+| All checks pass | `IMPLEMENTATION COMPLETE` |
+| Any check fails | `IMPLEMENTATION INCOMPLETE` |
+
+**If Verification Fails:**
+1. Report "IMPLEMENTATION INCOMPLETE"
+2. Identify missing or incorrect artifacts
+3. Remain in Implementation phase
+4. Recommend corrective actions
+
 ---
 
 ## Phase 5: Verification
@@ -274,6 +299,28 @@ Progress = (Current Score - Baseline Score) / (Target Score - Baseline Score) ×
 1. Update Runtime Report
 2. Include new recommendations (if applicable)
 3. Record metrics
+
+### 5.4 Artifact Verification (REQUIRED)
+
+**Purpose:** Verify artifacts persist after verification
+
+Per [ARTIFACT_VERIFICATION.md](ARTIFACT_VERIFICATION.md), the Runtime MUST verify artifacts still exist and working tree is consistent before reporting "VERIFICATION COMPLETE".
+
+**Actions:**
+1. Re-verify all expected files still exist
+2. Confirm no new untracked files introduced issues
+3. Verify Git working tree remains consistent
+
+**Outcomes:**
+| Verification | Status Report |
+|--------------|---------------|
+| All checks pass | `VERIFICATION COMPLETE` |
+| Any check fails | `VERIFICATION INCOMPLETE` |
+
+**If Verification Fails:**
+1. Report "VERIFICATION INCOMPLETE"
+2. Identify issues with artifacts
+3. Re-run verification or return to implementation
 
 ---
 

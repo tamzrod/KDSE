@@ -557,6 +557,69 @@ commands:
       - "remove"
       - "delete"
 
+  #---------------------------------------------------------------------------
+  # Artifact Verification Commands
+  #---------------------------------------------------------------------------
+
+  - name: verify-artifacts
+    aliases:
+      - "kdse verify-artifacts"
+      - "verify artifacts"
+      - "check artifacts"
+      - "artifact verification"
+    purpose: |
+      Verify expected artifacts exist and are properly tracked by Git.
+    category: artifact_verification
+    inputs:
+      - name: session_id
+        required: false
+        type: string
+        description: Session to verify (default: current session)
+      - name: verbose
+        required: false
+        type: flag
+        description: Show detailed verification output
+      - name: json
+        required: false
+        type: flag
+        description: Output in JSON format
+    outputs:
+      - field: verification_status
+        type: string
+        description: PASSED or FAILED
+      - field: files_verified
+        type: integer
+        description: Number of files verified
+      - field: files_failed
+        type: integer
+        description: Number of files failed
+      - field: git_tracking
+        type: object
+        description: Git tracking verification results
+      - field: working_tree
+        type: string
+        description: Working tree consistency status
+      - field: failed_artifacts
+        type: array
+        description: List of failed artifacts with reasons
+    exit_codes:
+      - code: 0
+        meaning: All artifacts verified
+      - code: 1
+        meaning: One or more artifacts failed verification
+      - code: 2
+        meaning: Runtime not installed or no session
+    examples:
+      - "kdse verify-artifacts"
+      - "Verify artifacts"
+      - "Check if artifacts exist"
+    natural_language_patterns:
+      - "verify artifacts"
+      - "verify the implementation"
+      - "check if files exist"
+      - "artifact verification"
+      - "verify artifacts are tracked"
+
 #-------------------------------------------------------------------------------
 # Command Resolution Map
 #-------------------------------------------------------------------------------
@@ -617,6 +680,15 @@ resolution_map:
     - "show history"
     - "session history"
     command: history
+
+  verify_artifacts:
+    - "Verify artifacts"
+    - "verify artifacts"
+    - "check artifacts"
+    - "artifact verification"
+    - "verify implementation"
+    - "check if files exist"
+    command: verify-artifacts
 
 #-------------------------------------------------------------------------------
 # Exit Codes Reference

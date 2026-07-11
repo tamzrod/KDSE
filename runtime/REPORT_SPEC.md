@@ -79,11 +79,16 @@ The Runtime Report summarizes KDSE assessment results for the operator. It prese
 │     - Rationale                                            │
 │     - Expected Impact                                       │
 │                                                             │
-│  7. Required Approval                                       │
+│  7. Artifact Verification                                   │
+│     - Verification Status                                   │
+│     - Verified Artifacts                                    │
+│     - Implementation Status                                 │
+│                                                             │
+│  8. Required Approval                                       │
 │     - Decision Options                                      │
 │     - Deadline (if any)                                     │
 │                                                             │
-│  8. Session State                                           │
+│  9. Session State                                           │
 │     - Current Phase                                         │
 │     - Progress                                              │
 │     - Next Steps                                            │
@@ -388,7 +393,51 @@ After implementing:
 
 ---
 
-### 7. Required Approval
+### 7. Artifact Verification
+
+```markdown
+## Artifact Verification
+
+### Verification Status
+
+Per [ARTIFACT_VERIFICATION.md](ARTIFACT_VERIFICATION.md), the Runtime verifies artifacts before reporting completion.
+
+| Check | Result |
+|-------|--------|
+| File Existence | {✅/❌} ({count}/{total}) |
+| Git Tracking | {✅/❌} ({count}/{total}) |
+| Command Registration | {✅/❌} ({count}/{total}) |
+| Documentation Presence | {✅/❌} ({count}/{total}) |
+| Working Tree Consistency | {✅/❌} |
+
+### Verification Outcome
+
+**Status:** {IMPLEMENTATION COMPLETE | IMPLEMENTATION INCOMPLETE | VERIFICATION COMPLETE | VERIFICATION INCOMPLETE}
+
+### Verified Artifacts
+
+| Artifact | Path | Verified | Notes |
+|----------|------|----------|-------|
+| {name} | {path} | {✅/❌} | {optional notes} |
+
+### If Verification Failed
+
+**Missing Artifacts:**
+- {list of missing files}
+
+**Untracked Files:**
+- {list of files not tracked by Git}
+
+**Recommended Actions:**
+1. {corrective action 1}
+2. {corrective action 2}
+```
+
+**Note:** This section is required when the Runtime has completed an implementation or verification phase. It confirms artifacts actually exist before reporting completion.
+
+---
+
+### 8. Required Approval
 
 ```markdown
 ## Required Approval
@@ -442,7 +491,7 @@ By approving, you acknowledge:
 
 ---
 
-### 8. Session State
+### 9. Session State
 
 ```markdown
 ## Session State
@@ -554,6 +603,7 @@ Before finalizing a Runtime Report:
 - [ ] Findings prioritized by severity
 - [ ] Recommendation justified with evidence
 - [ ] Expected impact calculated
+- [ ] Artifact Verification completed (if applicable)
 - [ ] Approval request clear
 - [ ] Session state accurate
 - [ ] References to Standard documents included
@@ -598,6 +648,20 @@ Critical findings: 1 | High findings: 3
 **Action:** Create structured knowledge artifacts for core requirements
 
 **Expected Impact:** +1.2 points (5.2 → 6.4)
+
+## Artifact Verification
+
+### Verification Status
+
+| Check | Result |
+|-------|--------|
+| File Existence | ✅ (3/3) |
+| Git Tracking | ✅ (3/3) |
+| Command Registration | N/A |
+| Documentation Presence | ✅ (2/2) |
+| Working Tree Consistency | ✅ |
+
+**Status:** IMPLEMENTATION COMPLETE
 
 ## Required Approval
 

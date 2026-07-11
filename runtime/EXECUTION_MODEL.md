@@ -82,8 +82,24 @@ The Runtime Execution Model references the KDSE Standard:
      │ Implemented          │ New recommendation
      ▼                      │
 ┌─────────────┐              │
-│  Verifying  │──────────────┘
+│Artifact     │◀─────────────┘
+│Verification │   (if failed)
 └────┬────┘
+     │
+     │ Verification Passed
+     ▼
+┌─────────────┐
+│  Verifying  │
+└────┬────┘
+     │
+     │ Re-assessment complete
+     ▼
+┌─────────────┐
+│Artifact     │◀─────────────┐
+│Verification │   (if failed)│
+└────┬────┘              │
+     │                   │
+     │ Verification Passed
      │
      ├──────────────┐
      │              │
@@ -208,12 +224,23 @@ The Runtime awaits Operator authorization before proceeding with implementation.
 The Runtime facilitates implementation of the approved action.
 
 **Entry:** Approval received  
-**Exit:** Implementation complete  
+**Exit:** Artifact Verification Passed  
 **Activities:**
 - Execute approved action
 - Maintain traceability
 - Document decisions
 - Update artifacts
+
+**Artifact Verification:**
+After implementation, the Runtime MUST verify artifacts per [ARTIFACT_VERIFICATION.md](ARTIFACT_VERIFICATION.md):
+- Expected files exist
+- Files are tracked by Git (or intentionally untracked)
+- Commands exist if commands were reported
+- Documentation exists if documentation was reported
+- Git working tree is consistent
+
+**If Verification Passes:** Proceed to Verifying state  
+**If Verification Fails:** Report "IMPLEMENTATION INCOMPLETE", remain in Implementation
 
 **Constraints:**
 - Must follow authority hierarchy (per [006-chain-of-authority.md](../docs/foundation/006-chain-of-authority.md))
@@ -225,16 +252,26 @@ The Runtime facilitates implementation of the approved action.
 
 The Runtime verifies implementation results through re-assessment.
 
-**Entry:** Implementation complete  
-**Exit:** Verification complete  
+**Entry:** Artifact Verification Passed (Implementation)  
+**Exit:** Artifact Verification Passed (Verification)  
 **Activities:**
 - Re-run relevant audit dimensions
 - Compare scores to baseline
 - Document improvement
 - Assess readiness for continuation
 
+**Artifact Verification:**
+After verification, the Runtime MUST verify artifacts per [ARTIFACT_VERIFICATION.md](ARTIFACT_VERIFICATION.md):
+- Re-verify all expected files still exist
+- Confirm no new untracked files introduced issues
+- Verify working tree remains consistent
+
+**If Verification Passes:** Proceed to session decision  
+**If Verification Fails:** Report "VERIFICATION INCOMPLETE", re-run verification
+
 **References:**
 - [COMPLIANCE_AUDIT.md - Verification Dimensions](../docs/audit/COMPLIANCE_AUDIT.md)
+- [ARTIFACT_VERIFICATION.md](ARTIFACT_VERIFICATION.md)
 
 ---
 
@@ -261,18 +298,32 @@ Await Human Approval
     ↓
 Implement Approved Work
     ↓
+[REQUIRED] Artifact Verification ← NEW
+    ↓
 Verify Results
+    ↓
+[REQUIRED] Artifact Verification ← NEW
     ↓
 Re-run Compliance Audit
     ↓
 Repeat until target maturity
 ```
 
+**Artifact Verification Gate:**
+Per [ARTIFACT_VERIFICATION.md](ARTIFACT_VERIFICATION.md), the Runtime MUST verify artifacts exist and are properly tracked BEFORE reporting completion of any phase.
+
 ### Session Decision Points
 
 After each verification:
 
 ```
+Artifact Verification Passed?
+    │
+    ├── NO → Return to Implementation
+    │
+    └── YES
+            │
+            ▼
 Target maturity reached?
     │
     ├── YES → Complete Session
@@ -375,7 +426,7 @@ README.md
     ├── EXECUTION_MODEL.md (this document)
     │       │
     │       ├── References: Foundation Audit, Compliance Audit
-    │       │
+    │       ├── References: ARTIFACT_VERIFICATION.md
     │       └── Defines: State machine, workflow
     │
     ├── SESSION_PROTOCOL.md
@@ -385,6 +436,10 @@ README.md
     ├── REPORT_SPEC.md
     │       │
     │       └── Defines: Runtime Report structure
+    │
+    ├── ARTIFACT_VERIFICATION.md
+    │       │
+    │       └── Defines: Artifact verification requirements
     │
     ├── PROMPTS.md
     │       │
