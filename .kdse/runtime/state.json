@@ -1,0 +1,10 @@
+{
+  "runtime_version": "1.0",
+  "knowledge_version": "1.0.0",
+  "knowledge_fingerprint": "b84085605a4477f828307742df93b702c209aae777c41c35d927e90a09895445",
+  "compatible_standard": ">= 1.0.0",
+  "initialized_at": "2026-07-11T13:26:30Z",
+  "repository_path": "/workspace/project/KDSE",
+  "knowledge_loaded": 7,
+  "status": "READY"
+}
