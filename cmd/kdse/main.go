@@ -10,6 +10,8 @@ import (
 	"github.com/kdse/runtime/internal/state"
 	"github.com/kdse/runtime/internal/report"
 	"github.com/kdse/runtime/internal/normalize"
+	"github.com/kdse/runtime/internal/collect"
+	"github.com/kdse/runtime/internal/types"
 )
 
 const version = "1.0.0"
@@ -33,6 +35,8 @@ func main() {
 		handleInstall()
 	case "update":
 		handleUpdate()
+	case "collect":
+		handleCollect(repoPath, args)
 	case "normalize":
 		handleNormalize(repoPath)
 	case "run":
@@ -60,6 +64,7 @@ Usage: kdse <command> [options]
 Commands:
   install     Install KDSE runtime configuration
   update      Update KDSE runtime
+  collect     Collect engineering knowledge for the project
   normalize   Normalize existing documentation to KDSE standard
   run         Start a KDSE session
   status      Show current session status
@@ -235,6 +240,162 @@ func saveNormalizationResult(repoPath string, result *normalize.NormalizationRes
 	// This would save the JSON result for future reference
 	// For now, the report is printed to stdout
 	return nil
+}
+
+func handleCollect(repoPath string, args []string) {
+	// Parse command line arguments
+	input := parseCollectArgs(args)
+
+	// Determine operator name
+	operator := "KDSE Runtime"
+	if input.OperatorName != "" {
+		operator = input.OperatorName
+	}
+
+	fmt.Println()
+	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
+	fmt.Println("║              KDSE Knowledge Collection                       ║")
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+	fmt.Printf("║ Repository:   %s\n", repoPath)
+	fmt.Printf("║ Operator:     %s\n", operator)
+	if len(input.KnowledgeAreas) > 0 {
+		fmt.Printf("║ Areas:        %s\n", formatKnowledgeAreas(input.KnowledgeAreas))
+	}
+	if input.PriorityLevel != "" {
+		fmt.Printf("║ Priority:     %s\n", input.PriorityLevel)
+	}
+	fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
+	fmt.Println()
+
+	fmt.Println("Starting knowledge collection...")
+	fmt.Println("This process will:")
+	fmt.Println("  • Analyze existing knowledge and identify gaps")
+	fmt.Println("  • Collect knowledge from available sources")
+	fmt.Println("  • Generate KDSE-standard knowledge artifacts")
+	fmt.Println("  • Build full traceability")
+	fmt.Println("  • Report collection results and recommendations")
+	fmt.Println()
+
+	// Create collector
+	collector := collect.NewCollector(repoPath, operator)
+
+	// Load session state if available for gap analysis
+	sessionState := loadSessionState(repoPath)
+	input.SessionState = sessionState
+
+	// Execute collection
+	result, err := collector.Collect(&input)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: Knowledge collection failed: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println()
+	fmt.Println(collect.FormatSummary(result))
+	fmt.Println()
+
+	// Print recommendations
+	if len(result.Recommendations) > 0 {
+		fmt.Println("Next Steps:")
+		for _, rec := range result.Recommendations {
+			fmt.Printf("  → %s\n", rec)
+		}
+		fmt.Println()
+	}
+
+	// Save the collection report
+	if err := collect.SaveCollectionReport(repoPath, result); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Could not save collection report: %v\n", err)
+	}
+}
+
+// parseCollectArgs parses command line arguments for collect command
+func parseCollectArgs(args []string) collect.CollectionInput {
+	input := collect.CollectionInput{
+		RepositoryPath: "",
+		OperatorName:  "",
+		PriorityLevel: "",
+	}
+
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		switch arg {
+		case "--operator", "-o":
+			if i+1 < len(args) {
+				input.OperatorName = args[i+1]
+				i++
+			}
+		case "--domain", "-d":
+			if i+1 < len(args) {
+				domain := parseDomain(args[i+1])
+				input.KnowledgeAreas = append(input.KnowledgeAreas, domain)
+				i++
+			}
+		case "--priority", "-p":
+			if i+1 < len(args) {
+				input.PriorityLevel = args[i+1]
+				i++
+			}
+		}
+	}
+
+	return input
+}
+
+// parseDomain converts a string to KnowledgeDomain
+func parseDomain(s string) collect.KnowledgeDomain {
+	domainMap := map[string]collect.KnowledgeDomain{
+		"physics":       collect.DomainPhysics,
+		"equipment":     collect.DomainEquipment,
+		"environment":    collect.DomainEnvironment,
+		"standards":     collect.DomainStandards,
+		"business":      collect.DomainBusiness,
+		"simulation":    collect.DomainSimulation,
+		"control":       collect.DomainControl,
+		"protocols":     collect.DomainProtocols,
+		"vocabulary":    collect.DomainVocabulary,
+		"transformers":   collect.DomainTransformers,
+		"battery":       collect.DomainBattery,
+		"relay":         collect.DomainRelay,
+		"weather":       collect.DomainWeather,
+		"general":       collect.DomainGeneral,
+	}
+
+	if domain, ok := domainMap[s]; ok {
+		return domain
+	}
+	return collect.DomainGeneral
+}
+
+// formatKnowledgeAreas formats knowledge areas for display
+func formatKnowledgeAreas(areas []collect.KnowledgeDomain) string {
+	var result []string
+	for _, area := range areas {
+		result = append(result, string(area))
+	}
+	return joinStrings(result, ", ")
+}
+
+// loadSessionState loads the session state if available
+func loadSessionState(repoPath string) *types.SessionState {
+	mgr := state.NewManager(repoPath)
+	st, err := mgr.LoadState()
+	if err != nil {
+		return nil
+	}
+	return st
+}
+
+// joinStrings joins strings with a separator
+func joinStrings(strs []string, sep string) string {
+	if len(strs) == 0 {
+		return ""
+	}
+	result := strs[0]
+	for i := 1; i < len(strs); i++ {
+		result += sep + strs[i]
+	}
+	return result
 }
 
 func truncate(s string, maxLen int) string {

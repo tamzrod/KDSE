@@ -7,7 +7,7 @@
 
 version: "1.0"
 interface_version: "1.0"
-generated: "2026-07-10T00:00:00Z"
+generated: "2026-07-12T00:00:00Z"
 
 #-------------------------------------------------------------------------------
 # Commands
@@ -459,6 +459,149 @@ commands:
       - "assess"
       - "assessment"
 
+  - name: collect
+    aliases:
+      - "kdse collect"
+      - "collect knowledge"
+      - "gather knowledge"
+      - "acquire knowledge"
+    purpose: |
+      Collect engineering knowledge for the project. Identifies, collects, normalizes, and integrates missing engineering knowledge into the KDSE knowledge base.
+    category: knowledge
+    inputs:
+      - name: operator
+        required: false
+        type: string
+        description: Operator name for collection records
+        aliases: ["-o", "--operator"]
+      - name: domain
+        required: false
+        type: array
+        description: Knowledge domains to focus on
+        aliases: ["-d", "--domain"]
+      - name: priority
+        required: false
+        type: string
+        description: Priority level (critical, high, medium, low)
+        aliases: ["-p", "--priority"]
+    knowledge_domains:
+      - physics
+      - equipment
+      - environment
+      - standards
+      - business
+      - simulation
+      - control
+      - protocols
+      - vocabulary
+      - transformers
+      - battery
+      - relay
+      - weather
+      - general
+    knowledge_sources:
+      - repository
+      - upload
+      - standards
+      - vendor
+      - operator
+      - ai-assisted
+    authority_levels:
+      - verified
+      - normative
+      - vendor
+      - project
+      - operator
+      - derived
+    outputs:
+      - field: session_id
+        type: string
+        description: Unique collection session ID
+      - field: knowledge_areas_reviewed
+        type: array
+        description: Knowledge domains analyzed
+      - field: knowledge_gaps_identified
+        type: array
+        description: Identified knowledge gaps
+      - field: artifacts_collected
+        type: integer
+        description: Count of collected artifacts
+      - field: artifacts_updated
+        type: integer
+        description: Count of updated artifacts
+      - field: artifacts_existing
+        type: integer
+        description: Count of verified existing artifacts
+      - field: knowledge_still_missing
+        type: array
+        description: Remaining knowledge gaps
+      - field: recommendations
+        type: array
+        description: Suggested next actions
+    exit_codes:
+      - code: 0
+        meaning: Collection successful
+      - code: 1
+        meaning: Collection failed
+      - code: 2
+        meaning: Runtime not installed
+    outputs_location:
+      - path: ".kdse/knowledge/"
+        description: Generated knowledge artifacts
+      - path: ".kdse/reports/collection-report-<session>.md"
+        description: Collection report
+      - path: ".kdse/collection-result.json"
+        description: JSON collection result
+    examples:
+      - "kdse collect"
+      - "kdse collect --operator 'Jane Developer'"
+      - "kdse collect --domain equipment --domain physics"
+      - "kdse collect --priority high --domain transformers"
+    natural_language_patterns:
+      - "collect knowledge"
+      - "gather knowledge"
+      - "acquire knowledge"
+      - "collect engineering knowledge"
+      - "identify missing knowledge"
+      - "build knowledge base"
+
+  - name: normalize
+    aliases:
+      - "kdse normalize"
+      - "normalize"
+      - "normalize docs"
+    purpose: |
+      Normalize existing documentation to KDSE standard.
+    category: knowledge
+    inputs:
+      - name: none
+        required: true
+        description: No input required
+    outputs:
+      - field: session_id
+        type: string
+        description: Unique normalization session ID
+      - field: docs_found
+        type: integer
+        description: Count of discovered documents
+      - field: artifacts_generated
+        type: integer
+        description: Count of generated KDSE artifacts
+    exit_codes:
+      - code: 0
+        meaning: Normalization successful
+      - code: 1
+        meaning: Normalization failed
+      - code: 2
+        meaning: Runtime not installed
+    examples:
+      - "kdse normalize"
+      - "Normalize documentation"
+    natural_language_patterns:
+      - "normalize"
+      - "normalize documentation"
+      - "standardize docs"
+
   #---------------------------------------------------------------------------
   # Administration Commands
   #---------------------------------------------------------------------------
@@ -689,6 +832,21 @@ resolution_map:
     - "verify implementation"
     - "check if files exist"
     command: verify-artifacts
+
+  collect_knowledge:
+    - "Collect knowledge"
+    - "collect knowledge"
+    - "gather knowledge"
+    - "acquire knowledge"
+    - "collect engineering knowledge"
+    - "identify missing knowledge"
+    command: collect
+
+  normalize_docs:
+    - "Normalize documentation"
+    - "normalize docs"
+    - "normalize"
+    command: normalize
 
 #-------------------------------------------------------------------------------
 # Exit Codes Reference
