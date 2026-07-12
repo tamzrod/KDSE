@@ -1,0 +1,13 @@
+# KDSE Runtime artifacts
+.kdse/
+
+# Binary - only the compiled binary at root
+/kdse
+
+# Go
+go.sum
+
+# OS
+.DS_Store
+*.swp
+*.swo
