@@ -1,6 +1,6 @@
-# KDSE Knowledge Collection Runtime
+# KDSE Artifact Collection Runtime
 
-**Document Version:** 1.0  
+**Document Version:** 2.0  
 **Type:** Informative Reference Implementation  
 **Effective Date:** 2026-07-12
 
@@ -8,280 +8,161 @@
 
 ## Purpose
 
-The KDSE Knowledge Collection Runtime provides a structured mechanism for collecting missing engineering knowledge before implementation. Engineering projects are knowledge-driven, and implementation quality depends on the completeness of the engineering knowledge available to the project.
+The KDSE Artifact Collection Runtime discovers and catalogs engineering evidence in the repository. It answers the question:
+
+> **"What engineering evidence exists in this repository?"**
 
 ---
 
 ## Design Philosophy
 
+### KDSE Runtime Role
+
+The KDSE Runtime is an **Engineering Runtime**. It orchestrates engineering. It does not perform engineering.
+
+| Responsibility | Belongs To |
+|--------------|-----------|
+| Repository awareness | Runtime |
+| Session management | Runtime |
+| Engineering context | Runtime |
+| Artifact inventory | Runtime |
+| Traceability | Runtime |
+| Reporting | Runtime |
+
+| Non-Responsibility | Belongs To |
+|-------------------|-----------|
+| AI frameworks | Executor |
+| Knowledge engines | Executor |
+| PDF parsing | Executor |
+| RAG systems | Executor |
+| Inference engines | Executor |
+| Knowledge interpretation | Executor |
+
 ### What kdse collect IS
 
-`kdse collect` is a **Knowledge Acquisition workflow**. Its purpose is to help the operator:
-
-1. **Identify** missing engineering knowledge
-2. **Collect** knowledge from available sources
-3. **Normalize** knowledge into KDSE Documentation Standard artifacts
-4. **Integrate** knowledge into the KDSE knowledge base
+`kdse collect` discovers and catalogs engineering evidence. It:
+- Scans the `artifacts/` directory
+- Records file metadata
+- Calculates integrity hashes
+- Generates artifact inventory
+- Produces collection reports
 
 ### What kdse collect IS NOT
 
-- `kdse collect` is NOT a code generator
-- `kdse collect` is NOT an internet scraper
-- `kdse collect` does NOT replace domain expertise
+`kdse collect` never:
+- Interprets evidence content
+- Extracts knowledge
+- Assigns authority levels
+- Identifies knowledge gaps
+- Generates normalized knowledge
+
+These responsibilities belong to executors.
 
 ---
 
-## Workflow
-
-### When to Run
-
-The operator may execute `kdse collect` at any time. It is completely independent.
-
-After `kdse audit` or `kdse normalize`, the runtime may recommend running `kdse collect` when knowledge gaps are detected. The recommendation is informational only—the operator always decides.
-
-### Collection Flow
+## Evidence Pipeline
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                                                                     │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │  1. ANALYZE KNOWLEDGE GAPS                                  │   │
-│  │     • Audit findings                                        │   │
-│  │     • Normalization results                                 │   │
-│  │     • Existing knowledge artifacts                          │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                              │                                     │
-│                              ▼                                     │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │  2. COLLECT FROM SOURCES                                    │   │
-│  │     • Repository documentation                              │   │
-│  │     • Standards documents                                   │   │
-│  │     • Vendor manuals                                        │   │
-│  │     • Operator knowledge                                    │   │
-│  │     • AI-assisted acquisition                               │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                              │                                     │
-│                              ▼                                     │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │  3. NORMALIZE TO KDSE STANDARD                              │   │
-│  │     • Generate KDSE-standard artifacts                      │   │
-│  │     • Include full traceability                             │   │
-│  │     • Assign authority levels                               │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                              │                                     │
-│                              ▼                                     │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │  4. GENERATE REPORT                                         │   │
-│  │     • Collection summary                                    │   │
-│  │     • Recommendations                                      │   │
-│  │     • Remaining gaps                                        │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
+Engineering Evidence
+        ↓
+   kdse collect
+        ↓
+  Artifact Inventory
+        ↓
+     Executor
+        ↓
+Knowledge Extraction
+        ↓
+ Normalized Markdown
+        ↓
+ Operator Review
+        ↓
+Approved Knowledge
+        ↓
+  KDSE Runtime
 ```
 
----
-
-## Knowledge Domains
-
-KDSE supports the following knowledge domains:
-
-| Domain | Description | Examples |
-|--------|-------------|----------|
-| physics | Physics principles and calculations | Thermal models, electrical equations |
-| equipment | Equipment specifications and behavior | Transformer specs, battery characteristics |
-| environment | Environmental conditions | Weather models, site conditions |
-| standards | Standards and regulations | IEC, IEEE, OSHA requirements |
-| business | Business rules and processes | Operating procedures, control logic |
-| simulation | Simulation models | Digital twins, test scenarios |
-| control | Control algorithms | PID tuning, protection logic |
-| protocols | Communication protocols | Modbus, DNP3, IEC 61850 |
-| vocabulary | Domain terminology | Glossary, acronyms |
-| transformers | Transformer behavior | Magnetic flux, thermal limits |
-| battery | Battery behavior | SOC/SOH, charge curves |
-| relay | Relay protection | Coordination, settings |
-| weather | Weather models | Solar irradiance, wind patterns |
-| general | General engineering knowledge | Project overview, stakeholders |
+The runtime consumes normalized knowledge only. It does not produce it.
 
 ---
 
-## Knowledge Sources
+## Directory Structure
 
-### Supported Sources
+### Raw Evidence
 
-| Source | Description | Authority Level |
-|--------|-------------|----------------|
-| Repository | Existing repository documentation | Project |
-| Upload | Uploaded documents | Varies |
-| Standards | Standards documents (IEC, IEEE, etc.) | Normative |
-| Vendor | Vendor documentation | Vendor |
-| Operator | Operator-supplied knowledge | Operator |
-| AI-Assisted | AI-assisted knowledge acquisition | Derived |
+Raw evidence remains immutable in the `artifacts/` directory:
 
-### Extensibility
-
-The implementation is extensible for future knowledge providers:
-
-```go
-type KnowledgeProvider interface {
-    Name() string
-    Collect(input *CollectionInput) ([]CollectedArtifact, error)
-    CanCollect(domain KnowledgeDomain) bool
-}
+```
+artifacts/
+├── manuals/
+│   ├── user-manual.pdf
+│   └── maintenance-guide.pdf
+├── standards/
+│   ├── iec-61850.pdf
+│   └── ieee-1549.pdf
+├── specifications/
+│   ├── transformer-spec.md
+│   └── battery-requirements.md
+├── datasheets/
+│   ├── converter-datasheet.pdf
+│   └── pcb-specs.md
+├── drawings/
+│   ├── system-architecture.png
+│   └── circuit-schematic.svg
+├── images/
+├── videos/
+└── archives/
 ```
 
+### Runtime Output
+
+```
+.kdse/
+├── artifacts/
+│   └── inventory.json      # Artifact inventory
+└── reports/
+    └── artifact-collection-<session>.md  # Collection report
+```
+
+Raw artifacts remain unchanged. The runtime never modifies them.
+
 ---
 
-## Authority Levels
+## Artifact Categories
 
-KDSE distinguishes knowledge by authority level:
+Artifacts are categorized by filename patterns and extensions:
 
-| Level | Symbol | Description | Example |
-|-------|--------|-------------|---------|
-| Verified | ✓ | Tested and validated | Validated test results |
-| Normative | ★ | KDSE standard or specification | KDSE Standard documents |
-| Vendor | ◆ | Vendor documentation | Manufacturer specs |
-| Project | ● | Project-specific knowledge | Design decisions |
-| Operator | ○ | Operator-provided knowledge | Operating experience |
-| Derived | ◐ | Derived from other sources | Calculated values |
-
-The authority level is preserved throughout the knowledge base.
+| Category | Patterns | Extensions |
+|----------|----------|------------|
+| manual | manual, guide, handbook | - |
+| standard | standard, iec, ieee, iso, nist | - |
+| specification | spec, requirement | - |
+| datasheet | datasheet, data-sheet | - |
+| drawing | drawing, diagram, schematic | - |
+| image | - | .jpg, .png, .gif, .svg, .bmp |
+| video | - | .mp4, .avi, .mov, .mkv |
+| archive | - | .zip, .tar, .gz, .rar, .7z |
+| document | - | .pdf, .md, .txt, .doc, .rst, .adoc |
+| unknown | - | Other extensions |
 
 ---
 
 ## Traceability
 
-Every collected artifact includes full traceability:
+Each discovered artifact includes:
 
 | Field | Description |
 |-------|-------------|
-| Artifact ID | Unique identifier |
-| Source | Original source document |
-| Authority | Authority level |
-| Version | Version information |
-| Collection Date | When knowledge was collected |
-| Collected By | Who collected the knowledge |
-| Normative References | Related standards |
-| Dependencies | Related artifacts |
-| Traceability ID | Unique trace identifier |
-
----
-
-## Normalization
-
-Collected knowledge is NOT stored as raw notes. Every collected item is normalized into KDSE Documentation Standard artifacts.
-
-### Output Structure
-
-```
-knowledge/
-├── physics/
-│   ├── DOMAIN_INDEX.md
-│   └── thermal-model.md
-├── equipment/
-│   ├── DOMAIN_INDEX.md
-│   ├── transformer-specs.md
-│   └── battery-characteristics.md
-├── standards/
-│   ├── DOMAIN_INDEX.md
-│   └── iec-61850-reference.md
-└── INDEX.md  (master index)
-```
-
-### Artifact Format
-
-Each artifact follows KDSE Documentation Standard:
-
-```markdown
-# Artifact Title
-
-**Artifact ID:** equipment-ART-20260712
-**Domain:** equipment
-**Source:** vendor
-**Authority Level:** Vendor
-**Version:** 1.0
-**Collection Date:** 2026-07-12T10:00:00Z
-**Collected By:** Jane Developer
-**Confidence Level:** 95%
-
----
-
-## Summary
-
-Brief description of the collected knowledge.
-
-## Content
-
-Detailed knowledge content...
-
-## Traceability
-
-| Field | Value |
-|-------|-------|
-| Traceability ID | TRC-20260712-001 |
-| Source | Vendor Manual v2.1 |
-| ... | ... |
-```
-
----
-
-## Reporting
-
-### Collection Report
-
-Generated at `.kdse/reports/collection-report-<session>.md`:
-
-```markdown
-# KDSE Knowledge Collection Report
-
-**Report ID:** KDSE-RT-2026-07-12-001
-**Repository:** /workspace/project/myapp
-**Collection Date:** 2026-07-12
-
----
-
-## Executive Summary
-
-This report documents the knowledge collection performed...
-
-## Collection Statistics
-
-| Metric | Value |
-|--------|-------|
-| Knowledge Areas Reviewed | 5 |
-| Knowledge Gaps Identified | 3 |
-| Artifacts Collected | 12 |
-| Artifacts Updated | 2 |
-| Success Rate | 85% |
-
-## Knowledge Still Missing
-
-Detailed list of remaining gaps with recommendations...
-```
-
-### Terminal Output
-
-Running `kdse collect` provides immediate summary:
-
-```
-📊 Knowledge Collection Summary
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Knowledge Areas Reviewed:    5
-  Knowledge Gaps Found:       3
-  Artifacts Collected:        12
-  Artifacts Updated:          2
-  Artifacts Already Present:   8
-  Knowledge Still Missing:     1
-  Processing Time:           2.34s
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📋 Recommendations:
-  → Run 'kdse collect' again after addressing identified gaps
-  → Run 'kdse normalize' to integrate collected knowledge
-
-📁 Collected artifacts are available in: .kdse/knowledge/
-📄 Full report: .kdse/collection-result.json
-```
+| ID | Unique artifact identifier |
+| Path | Absolute file path |
+| RelativePath | Path relative to repository |
+| Name | Filename |
+| Category | Artifact category |
+| Size | File size in bytes |
+| Hash | SHA-256 hash for integrity |
+| Modified | Last modification timestamp |
+| Extension | File extension |
+| CollectionID | Collection session identifier |
 
 ---
 
@@ -293,134 +174,143 @@ Running `kdse collect` provides immediate summary:
 kdse collect
 ```
 
-### With Options
+### Output
 
-```bash
-# Specify operator
-kdse collect --operator "Jane Developer"
-
-# Focus on specific domains
-kdse collect --domain equipment --domain physics --domain standards
-
-# Set priority
-kdse collect --priority high --domain transformers
-
-# Combine options
-kdse collect --operator "Jane" --domain battery --domain relay --priority critical
 ```
+╔═══════════════════════════════════════════════════════════════╗
+║              KDSE Artifact Collection                        ║
+╠═══════════════════════════════════════════════════════════════╣
+║ Repository:   /workspace/project/myapp
+╚═══════════════════════════════════════════════════════════════╝
 
-### Integration Commands
+Discovering engineering artifacts in artifacts/ directory...
 
-```bash
-# After audit - collect based on findings
-kdse audit && kdse collect
+╔═══════════════════════════════════════════════════════════════╗
+║              Collection Complete                             ║
+╠═══════════════════════════════════════════════════════════════╣
+║ Artifacts Discovered: 12
+║ Total Size:          4.2 MB
+║ Processing Time:     0.34s
+╚═══════════════════════════════════════════════════════════════╝
 
-# After normalization - integrate with normalized docs
-kdse normalize && kdse collect
+Artifact inventory: .kdse/artifacts/inventory.json
+Collection report:  .kdse/reports/
 
-# Full workflow
-kdse audit && kdse normalize && kdse collect && kdse run
+Artifacts by category:
+  document: 5
+  datasheet: 3
+  drawing: 2
+  manual: 1
+  standard: 1
+
+The runtime discovers and catalogs evidence.
+Interpretation belongs to executors.
 ```
 
 ---
 
-## Configuration
+## Inventory Format
 
-### Provider Configuration
+The artifact inventory is stored as JSON:
 
-Knowledge providers can be registered in the collector:
-
-```go
-registry := NewProviderRegistry(repoPath)
-registry.Register(NewCustomProvider())
+```json
+{
+  "session_id": "kdse-collect-20260712",
+  "started_at": "2026-07-12T10:00:00Z",
+  "completed_at": "2026-07-12T10:00:00Z",
+  "repository": "/workspace/project/myapp",
+  "artifacts_found": [
+    {
+      "id": "ART-a1b2-AA",
+      "path": "/workspace/project/myapp/artifacts/standards/iec-61850.pdf",
+      "relative_path": "artifacts/standards/iec-61850.pdf",
+      "name": "iec-61850.pdf",
+      "category": "standard",
+      "size": 1048576,
+      "hash": "abc123...",
+      "modified": "2026-07-10T15:30:00Z",
+      "extension": ".pdf",
+      "collection_id": "kdse-collect-20260712"
+    }
+  ],
+  "total_size": 4404019,
+  "processing_time_seconds": 0.34
+}
 ```
 
-### Domain Configuration
+---
 
-Default domain paths can be customized:
+## Collection Report
 
-```go
-DomainPaths = map[KnowledgeDomain]string{
-    DomainPhysics:    "knowledge/physics",
-    DomainEquipment:  "knowledge/equipment",
-    // ...
-}
+A human-readable report is also generated:
+
+```markdown
+# KDSE Artifact Collection Report
+
+| Field | Value |
+|-------|-------|
+| Session ID | kdse-collect-20260712 |
+| Repository | /workspace/project/myapp |
+| Collection Date | 2026-07-12T10:00:00Z |
+| Report Version | 1.0 |
+
+## Summary
+
+**Artifacts Discovered:** 12
+**Total Size:** 4.2 MB
+**Processing Time:** 0.34 seconds
+
+## Artifacts by Category
+
+| Category | Count | Size |
+|----------|-------|------|
+| document | 5 | 1.2 MB |
+| datasheet | 3 | 890 KB |
+| drawing | 2 | 2.1 MB |
+| manual | 1 | 120 KB |
+| standard | 1 | 45 KB |
+
+## Artifact Inventory
+
+| ID | Name | Category | Size | Hash |
+|----|------|----------|------|------|
+| ART-a1b2-AA | iec-61850.pdf | standard | 1.0 MB | abc123... |
+| ART-c3d4-BB | transformer-spec.md | specification | 12 KB | def456... |
+
+---
+
+*Report generated by KDSE Collect v1.0*
 ```
 
 ---
 
 ## Success Criteria
 
-The KDSE Runtime successfully implements `kdse collect` when:
+After refactoring, `kdse collect` successfully answers:
 
-1. ✅ Knowledge gaps are identified from audit findings and normalization results
-2. ✅ Knowledge is collected from multiple extensible sources
-3. ✅ Collected knowledge is normalized into KDSE-standard artifacts
-4. ✅ Full traceability is maintained for every artifact
-5. ✅ Authority levels are preserved and documented
-6. ✅ Collection reports are generated with statistics and recommendations
-7. ✅ The command integrates naturally with `kdse audit`, `kdse normalize`, and `kdse run`
-8. ✅ The command remains completely optional and independent
+> ✅ **"What engineering evidence exists in this repository?"**
+
+It never answers:
+
+> ❌ **"What does this evidence mean?"**
 
 ---
 
-## Examples
+## Simplification Summary
 
-### Example 1: Initial Knowledge Collection
+The refactored implementation:
 
-```bash
-$ kdse collect
-╔═══════════════════════════════════════════════════════════════╗
-║              KDSE Knowledge Collection                       ║
-╠═══════════════════════════════════════════════════════════════╣
-║ Repository:   /workspace/project/solar-inverter
-║ Session ID:   KDSE-RT-2026-07-12-001
-╚═══════════════════════════════════════════════════════════════╝
+| Before | After |
+|--------|-------|
+| ~2086 lines | ~250 lines |
+| Knowledge providers | Removed |
+| AI-assisted collection | Removed |
+| Domain inference | Removed |
+| Authority assignment | Removed |
+| Gap analysis | Removed |
+| Content interpretation | Removed |
 
-[1/5] Analyzing knowledge gaps...
-      Found 5 knowledge gaps
-
-[2/5] Collecting knowledge from available sources...
-      ✓ Collected 15 artifacts
-
-[3/5] Checking for existing knowledge...
-      ✓ Verified 3 existing artifacts
-
-[4/5] Generating KDSE-standard artifacts...
-      ✓ Generated 12 new artifacts
-
-[5/5] Analyzing remaining gaps...
-      1 gap still requires attention
-
-📊 Knowledge Collection Summary
-  Knowledge Areas Reviewed:    5
-  Artifacts Collected:        12
-  Knowledge Still Missing:     1
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📁 Collected artifacts are available in: .kdse/knowledge/
-```
-
-### Example 2: Domain-Focused Collection
-
-```bash
-$ kdse collect --domain battery --domain transformer --operator "Battery Team"
-╔═══════════════════════════════════════════════════════════════╗
-║              KDSE Knowledge Collection                       ║
-╠═══════════════════════════════════════════════════════════════╣
-║ Repository:   /workspace/project/solar-inverter
-║ Operator:     Battery Team
-║ Areas:        battery, transformer
-╚═══════════════════════════════════════════════════════════════╝
-
-[1/5] Analyzing knowledge gaps...
-      Found 2 knowledge gaps
-
-[2/5] Collecting knowledge from available sources...
-      ✓ Collected 8 artifacts
-
-...
-```
+The runtime remains lightweight, deterministic, repository-aware, and consistent with the KDSE philosophy.
 
 ---
 
@@ -431,27 +321,7 @@ $ kdse collect --domain battery --domain transformer --operator "Battery Team"
 | [COMMANDS.md](COMMANDS.md) | Command interface definition |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Runtime architecture context |
 | [SESSION_PROTOCOL.md](SESSION_PROTOCOL.md) | Session lifecycle |
-| [NORMALIZE.md](NORMALIZE.md) | Documentation normalization |
 
 ---
 
-## Document Relationships
-
-```
-COLLECT.md (this document)
-    │
-    ├── Defines: Knowledge collection workflow
-    │
-    ├── Referenced by:
-    │   ├── COMMANDS.md (command reference)
-    │   └── ARCHITECTURE.md (architecture context)
-    │
-    └── Related to:
-        ├── NORMALIZE.md (normalization workflow)
-        ├── SESSION_PROTOCOL.md (session context)
-        └── WORKFLOW.md (overall workflow)
-```
-
----
-
-*This document is an informative reference implementation. It describes the Knowledge Collection Runtime, not KDSE requirements.*
+*This document is an informative reference implementation. It describes the Artifact Collection Runtime, not KDSE requirements.*

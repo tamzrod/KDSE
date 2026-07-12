@@ -788,187 +788,107 @@ Normalized artifacts are available in: .kdse/normalized/
 
 ---
 
-## Knowledge Collection Commands
+## Artifact Collection Commands
 
-The Knowledge Collection Runtime enables operators to collect missing engineering knowledge before implementation. It is a Knowledge Acquisition workflow that helps identify, collect, normalize, and integrate missing engineering knowledge into the KDSE knowledge base.
+The Artifact Collection Runtime discovers and catalogs engineering evidence in the repository.
 
 ### Design Philosophy
 
-`kdse collect` is NOT a code generator.
-`kdse collect` is NOT an internet scraper.
-`kdse collect` is a Knowledge Acquisition workflow.
+The KDSE Runtime is an Engineering Runtime. It orchestrates engineering. It does not perform engineering.
 
-### Command Overview
-
-| Category | Commands | Description |
-|----------|----------|-------------|
-| Collection | kdse collect | Collect engineering knowledge from available sources |
-| Configuration | kdse collect --domain | Specify knowledge domain to focus on |
-| Configuration | kdse collect --operator | Specify operator name |
+`kdse collect` discovers and catalogs engineering evidence. It never interprets evidence. Interpretation belongs to executors.
 
 ### kdse collect
 
-Collects engineering knowledge for the project.
+Discovers and catalogs engineering artifacts in the `artifacts/` directory.
 
-**Purpose:** Identify, collect, normalize, and integrate missing engineering knowledge into the KDSE knowledge base before implementation.
+**Purpose:** Answer the question "What engineering evidence exists in this repository?"
 
 **Inputs:**
 
 | Parameter | Required | Type | Description |
 |-----------|----------|------|-------------|
 | repository | No | String | Target repository path (defaults to current directory) |
-| --operator, -o | No | String | Operator name for collection records |
-| --domain, -d | No | Array | Knowledge domains to focus on |
-| --priority, -p | No | String | Priority level (critical, high, medium, low) |
-
-**Knowledge Domains:**
-
-| Domain | Description |
-|--------|-------------|
-| physics | Physics principles and calculations |
-| equipment | Equipment specifications and behavior |
-| environment | Environmental conditions and models |
-| standards | Standards and regulations |
-| business | Business rules and processes |
-| simulation | Simulation models and validation |
-| control | Control algorithms and logic |
-| protocols | Communication protocols |
-| vocabulary | Domain terminology |
-| transformers | Transformer behavior |
-| battery | Battery behavior |
-| relay | Relay protection |
-| weather | Weather models |
-| general | General engineering knowledge |
 
 **Outputs:**
 
 | Output | Type | Description |
 |--------|------|-------------|
 | session_id | String | Unique collection session ID |
-| knowledge_gaps | Array | Identified knowledge gaps |
-| artifacts_collected | Number | Count of collected artifacts |
-| artifacts_updated | Number | Count of updated artifacts |
-| knowledge_still_missing | Array | Remaining knowledge gaps |
-| recommendations | Array | Suggested next actions |
+| artifacts_found | Array | Discovered artifacts |
+| total_size | Number | Total size of artifacts |
 
-**Preconditions:**
-- Runtime is in Idle state
-- Target repository is accessible
+**Discovery Target:**
+The command scans the `artifacts/` directory for evidence files.
 
-**Postconditions:**
-- Knowledge artifacts generated in .kdse/knowledge/
-- Collection report saved in .kdse/reports/
-- Recommendations provided for next steps
+**Example Artifact Directory Structure:**
+```
+artifacts/
+    manuals/
+        user-manual.pdf
+        maintenance-guide.pdf
+    standards/
+        iec-61850.pdf
+        ieee-1549.pdf
+    specifications/
+        transformer-spec.md
+        battery-requirements.md
+    datasheets/
+        converter-datasheet.pdf
+    drawings/
+        system-architecture.png
+```
 
-**Knowledge Sources:**
-
-| Source | Description |
-|--------|-------------|
-| Repository | Existing repository documentation |
-| Upload | Uploaded documents |
-| Standards | Standards documents |
-| Vendor | Vendor documentation |
-| Operator | Operator-supplied knowledge |
-| AI-Assisted | AI-assisted knowledge acquisition |
-
-**Authority Levels:**
-
-| Level | Description |
-|-------|-------------|
-| Verified | Tested and validated knowledge |
-| Normative | KDSE standard or specification |
-| Vendor | Vendor documentation |
-| Project | Project-specific knowledge |
-| Operator | Operator-provided knowledge |
-| Derived | Derived from other sources |
+**Output Location:**
+- Artifact inventory: `.kdse/artifacts/inventory.json`
+- Collection report: `.kdse/reports/artifact-collection-<session>.md`
 
 **Example Usage:**
-
-Minimal:
 ```
 kdse collect
-```
-
-With operator and domain:
-```
-kdse collect --operator "Jane Developer" --domain equipment --domain physics
-```
-
-With priority:
-```
-kdse collect --priority high --domain transformers
 ```
 
 **Example Output:**
 ```
 ╔═══════════════════════════════════════════════════════════════╗
-║              KDSE Knowledge Collection                       ║
+║              KDSE Artifact Collection                        ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║ Repository:   /workspace/project/myapp
-║ Session ID:   KDSE-RT-2026-07-12-123456
 ╚═══════════════════════════════════════════════════════════════╝
 
-[1/5] Analyzing knowledge gaps...
-      Found 3 knowledge gaps
-      • [general-GAP-20260712-001] General Engineering Knowledge (Low)
-      • [equipment-GAP-20260712-002] Equipment Specifications (Medium)
-      • [standards-GAP-20260712-003] Standards Documentation (High)
+Discovering engineering artifacts in artifacts/ directory...
 
-[2/5] Collecting knowledge from available sources...
-      Checking provider: Repository Documentation...
-      ✓ Collected 5 artifacts
-      Checking provider: Standards Documentation...
-      ✓ Collected 2 artifacts
+╔═══════════════════════════════════════════════════════════════╗
+║              Collection Complete                             ║
+╠═══════════════════════════════════════════════════════════════╣
+║ Artifacts Discovered: 12
+║ Total Size:          4.2 MB
+║ Processing Time:     0.34s
+╚═══════════════════════════════════════════════════════════════╝
 
-[3/5] Checking for existing knowledge...
-      ✓ Verified 3 existing artifacts
+Artifact inventory: .kdse/artifacts/inventory.json
+Collection report:  .kdse/reports/
 
-[4/5] Generating KDSE-standard artifacts...
-      ✓ Generated 4 new artifacts
+Artifacts by category:
+  document: 5
+  datasheet: 3
+  drawing: 2
+  manual: 1
+  standard: 1
 
-[5/5] Analyzing remaining gaps...
-      0 gaps still require attention
-
-📊 Knowledge Collection Summary
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Knowledge Areas Reviewed:    3
-  Knowledge Gaps Found:       3
-  Artifacts Collected:        4
-  Artifacts Updated:          0
-  Artifacts Already Present:   3
-  Knowledge Still Missing:     0
-  Processing Time:           1.23s
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📋 Recommendations:
-  → Run 'kdse normalize' to integrate collected knowledge
-  → Review collected artifacts in .kdse/knowledge/
-
-📁 Collected artifacts are available in: .kdse/knowledge/
-📄 Full report: .kdse/collection-result.json
+The runtime discovers and catalogs evidence.
+Interpretation belongs to executors.
 ```
-
-**Integration with Other Commands:**
-
-The `kdse collect` command integrates naturally with:
-- `kdse audit` - Collect knowledge based on audit findings
-- `kdse normalize` - Integrate collected knowledge into normalized artifacts
-- `kdse run` - Start a session with comprehensive knowledge base
-
-It is completely optional and can be run independently at any time.
 
 **Traceability:**
 
-Every collected artifact includes:
-- Artifact ID
-- Source
-- Authority
-- Version
-- Collection Date
-- Collected By
-- Normative References
-- Dependencies
-- Traceability ID
+Each discovered artifact includes:
+- Artifact ID (unique identifier)
+- Path (file location)
+- Size (bytes)
+- Hash (SHA-256 for integrity)
+- Modified (last modification time)
+- Category (document, standard, manual, etc.)
 
 ---
 

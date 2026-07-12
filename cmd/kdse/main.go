@@ -11,7 +11,6 @@ import (
 	"github.com/kdse/runtime/internal/report"
 	"github.com/kdse/runtime/internal/normalize"
 	"github.com/kdse/runtime/internal/collect"
-	"github.com/kdse/runtime/internal/types"
 )
 
 const version = "1.0.0"
@@ -36,7 +35,7 @@ func main() {
 	case "update":
 		handleUpdate()
 	case "collect":
-		handleCollect(repoPath, args)
+		handleCollect(repoPath)
 	case "normalize":
 		handleNormalize(repoPath)
 	case "run":
@@ -64,7 +63,7 @@ Usage: kdse <command> [options]
 Commands:
   install     Install KDSE runtime configuration
   update      Update KDSE runtime
-  collect     Collect engineering knowledge for the project
+  collect     Collect engineering evidence
   normalize   Normalize existing documentation to KDSE standard
   run         Start a KDSE session
   status      Show current session status
@@ -230,172 +229,89 @@ func handleNormalize(repoPath string) {
 	fmt.Println()
 	fmt.Println(result.FormatReport())
 
-	// Save the result
 	if err := saveNormalizationResult(repoPath, result); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: Could not save normalization result: %v\n", err)
 	}
 }
 
 func saveNormalizationResult(repoPath string, result *normalize.NormalizationResult) error {
-	// This would save the JSON result for future reference
-	// For now, the report is printed to stdout
 	return nil
 }
 
-func handleCollect(repoPath string, args []string) {
-	// Parse command line arguments
-	input := parseCollectArgs(args)
-
-	// Determine operator name
-	operator := "KDSE Runtime"
-	if input.OperatorName != "" {
-		operator = input.OperatorName
-	}
-
+func handleCollect(repoPath string) {
 	fmt.Println()
 	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
-	fmt.Println("║              KDSE Knowledge Collection                       ║")
+	fmt.Println("║              KDSE Artifact Collection                        ║")
 	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
 	fmt.Printf("║ Repository:   %s\n", repoPath)
-	fmt.Printf("║ Operator:     %s\n", operator)
-	if len(input.KnowledgeAreas) > 0 {
-		fmt.Printf("║ Areas:        %s\n", formatKnowledgeAreas(input.KnowledgeAreas))
-	}
-	if input.PriorityLevel != "" {
-		fmt.Printf("║ Priority:     %s\n", input.PriorityLevel)
-	}
 	fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
 	fmt.Println()
 
-	fmt.Println("Starting knowledge collection...")
-	fmt.Println("This process will:")
-	fmt.Println("  • Analyze existing knowledge and identify gaps")
-	fmt.Println("  • Collect knowledge from available sources")
-	fmt.Println("  • Generate KDSE-standard knowledge artifacts")
-	fmt.Println("  • Build full traceability")
-	fmt.Println("  • Report collection results and recommendations")
+	fmt.Println("Discovering engineering artifacts in artifacts/ directory...")
 	fmt.Println()
 
-	// Create collector
-	collector := collect.NewCollector(repoPath, operator)
-
-	// Load session state if available for gap analysis
-	sessionState := loadSessionState(repoPath)
-	input.SessionState = sessionState
-
-	// Execute collection
-	result, err := collector.Collect(&input)
+	collector := collect.NewCollector(repoPath, "kdse-collect")
+	result, err := collector.Collect()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: Knowledge collection failed: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: Artifact collection failed: %v\n", err)
 		os.Exit(1)
 	}
 
 	fmt.Println()
-	fmt.Println(collect.FormatSummary(result))
+	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
+	fmt.Println("║              Collection Complete                             ║")
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+
+	fmt.Printf("║ Artifacts Discovered: %d\n", len(result.ArtifactsFound))
+	fmt.Printf("║ Total Size:          %s\n", formatSize(result.TotalSize))
+	fmt.Printf("║ Processing Time:     %.2fs\n", result.ProcessingTime)
+	fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
 	fmt.Println()
 
-	// Print recommendations
-	if len(result.Recommendations) > 0 {
-		fmt.Println("Next Steps:")
-		for _, rec := range result.Recommendations {
-			fmt.Printf("  → %s\n", rec)
+	if len(result.ArtifactsFound) == 0 {
+		fmt.Println("No artifacts found in artifacts/ directory.")
+		fmt.Println("Create an artifacts/ directory and add engineering evidence.")
+		fmt.Println()
+		fmt.Println("Example structure:")
+		fmt.Println("  artifacts/")
+		fmt.Println("    manuals/")
+		fmt.Println("    standards/")
+		fmt.Println("    specifications/")
+		fmt.Println("    datasheets/")
+		fmt.Println()
+	} else {
+		fmt.Println("Artifact inventory: .kdse/artifacts/inventory.json")
+		fmt.Println("Collection report:  .kdse/reports/")
+		fmt.Println()
+
+		// Show category summary
+		categories := make(map[collect.ArtifactCategory]int)
+		for _, art := range result.ArtifactsFound {
+			categories[art.Category]++
+		}
+
+		fmt.Println("Artifacts by category:")
+		for cat, count := range categories {
+			fmt.Printf("  %s: %d\n", cat, count)
 		}
 		fmt.Println()
 	}
 
-	// Save the collection report
-	if err := collect.SaveCollectionReport(repoPath, result); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: Could not save collection report: %v\n", err)
-	}
+	fmt.Println("The runtime discovers and catalogs evidence.")
+	fmt.Println("Interpretation belongs to executors.")
 }
 
-// parseCollectArgs parses command line arguments for collect command
-func parseCollectArgs(args []string) collect.CollectionInput {
-	input := collect.CollectionInput{
-		RepositoryPath: "",
-		OperatorName:  "",
-		PriorityLevel: "",
+func formatSize(bytes int64) string {
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
 	}
-
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		switch arg {
-		case "--operator", "-o":
-			if i+1 < len(args) {
-				input.OperatorName = args[i+1]
-				i++
-			}
-		case "--domain", "-d":
-			if i+1 < len(args) {
-				domain := parseDomain(args[i+1])
-				input.KnowledgeAreas = append(input.KnowledgeAreas, domain)
-				i++
-			}
-		case "--priority", "-p":
-			if i+1 < len(args) {
-				input.PriorityLevel = args[i+1]
-				i++
-			}
-		}
+	div, exp := int64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
 	}
-
-	return input
-}
-
-// parseDomain converts a string to KnowledgeDomain
-func parseDomain(s string) collect.KnowledgeDomain {
-	domainMap := map[string]collect.KnowledgeDomain{
-		"physics":       collect.DomainPhysics,
-		"equipment":     collect.DomainEquipment,
-		"environment":    collect.DomainEnvironment,
-		"standards":     collect.DomainStandards,
-		"business":      collect.DomainBusiness,
-		"simulation":    collect.DomainSimulation,
-		"control":       collect.DomainControl,
-		"protocols":     collect.DomainProtocols,
-		"vocabulary":    collect.DomainVocabulary,
-		"transformers":   collect.DomainTransformers,
-		"battery":       collect.DomainBattery,
-		"relay":         collect.DomainRelay,
-		"weather":       collect.DomainWeather,
-		"general":       collect.DomainGeneral,
-	}
-
-	if domain, ok := domainMap[s]; ok {
-		return domain
-	}
-	return collect.DomainGeneral
-}
-
-// formatKnowledgeAreas formats knowledge areas for display
-func formatKnowledgeAreas(areas []collect.KnowledgeDomain) string {
-	var result []string
-	for _, area := range areas {
-		result = append(result, string(area))
-	}
-	return joinStrings(result, ", ")
-}
-
-// loadSessionState loads the session state if available
-func loadSessionState(repoPath string) *types.SessionState {
-	mgr := state.NewManager(repoPath)
-	st, err := mgr.LoadState()
-	if err != nil {
-		return nil
-	}
-	return st
-}
-
-// joinStrings joins strings with a separator
-func joinStrings(strs []string, sep string) string {
-	if len(strs) == 0 {
-		return ""
-	}
-	result := strs[0]
-	for i := 1; i < len(strs); i++ {
-		result += sep + strs[i]
-	}
-	return result
+	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
 
 func truncate(s string, maxLen int) string {

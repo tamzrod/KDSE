@@ -1,175 +1,62 @@
 package collect
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
-
-	"github.com/kdse/runtime/internal/types"
 )
 
-const kdseVersion = "1.0.0"
-
-// AuthorityLevel represents the level of authority for collected knowledge
-type AuthorityLevel string
+// ArtifactCategory represents the category of an artifact
+type ArtifactCategory string
 
 const (
-	AuthorityVerified   AuthorityLevel = "Verified"    // Tested and validated
-	AuthorityNormative  AuthorityLevel = "Normative"   // KDSE standard or specification
-	AuthorityVendor     AuthorityLevel = "Vendor"      // From vendor documentation
-	AuthorityProject    AuthorityLevel = "Project"     // Project-specific knowledge
-	AuthorityOperator   AuthorityLevel = "Operator"    // Operator-provided knowledge
-	AuthorityDerived    AuthorityLevel = "Derived"     // Derived from other sources
+	CategoryManual    ArtifactCategory = "manual"
+	CategoryStandard  ArtifactCategory = "standard"
+	CategorySpec     ArtifactCategory = "specification"
+	CategoryDatasheet ArtifactCategory = "datasheet"
+	CategoryDrawing  ArtifactCategory = "drawing"
+	CategoryImage    ArtifactCategory = "image"
+	CategoryVideo    ArtifactCategory = "video"
+	CategoryArchive  ArtifactCategory = "archive"
+	CategoryDocument ArtifactCategory = "document"
+	CategoryUnknown  ArtifactCategory = "unknown"
 )
 
-// KnowledgeDomain represents the domain category for collected knowledge
-type KnowledgeDomain string
-
-const (
-	DomainPhysics      KnowledgeDomain = "physics"
-	DomainEquipment    KnowledgeDomain = "equipment"
-	DomainEnvironment  KnowledgeDomain = "environment"
-	DomainStandards    KnowledgeDomain = "standards"
-	DomainBusiness     KnowledgeDomain = "business"
-	DomainSimulation   KnowledgeDomain = "simulation"
-	DomainControl      KnowledgeDomain = "control"
-	DomainProtocols    KnowledgeDomain = "protocols"
-	DomainVocabulary   KnowledgeDomain = "vocabulary"
-	DomainTransformers KnowledgeDomain = "transformers"
-	DomainBattery      KnowledgeDomain = "battery"
-	DomainRelay       KnowledgeDomain = "relay"
-	DomainWeather     KnowledgeDomain = "weather"
-	DomainGeneral     KnowledgeDomain = "general"
-)
-
-// KnowledgeSource represents the source of collected knowledge
-type KnowledgeSource string
-
-const (
-	SourceRepository   KnowledgeSource = "repository"
-	SourceUpload      KnowledgeSource = "upload"
-	SourceStandards    KnowledgeSource = "standards"
-	SourceVendor      KnowledgeSource = "vendor"
-	SourceOperator    KnowledgeSource = "operator"
-	SourceAI         KnowledgeSource = "ai-assisted"
-	SourceExternal    KnowledgeSource = "external"
-)
-
-// KnowledgeGap represents an identified gap in engineering knowledge
-type KnowledgeGap struct {
-	ID           string          `json:"id"`
-	Domain       KnowledgeDomain `json:"domain"`
-	Topic        string          `json:"topic"`
-	Description  string          `json:"description"`
-	Severity     string          `json:"severity"` // Critical, High, Medium, Low
-	Impact       string          `json:"impact"`    // How this gap affects implementation
-	Recommendations []string      `json:"recommendations"`
+// DiscoveredArtifact represents an artifact discovered in the repository
+type DiscoveredArtifact struct {
+	ID           string           `json:"id"`
+	Path         string           `json:"path"`
+	RelativePath string           `json:"relative_path"`
+	Name         string           `json:"name"`
+	Category     ArtifactCategory `json:"category"`
+	Size         int64            `json:"size"`
+	Hash         string           `json:"hash"`
+	Modified     string           `json:"modified"`
+	Extension    string           `json:"extension"`
+	CollectionID string           `json:"collection_id"`
 }
 
-// CollectedArtifact represents a piece of collected and normalized knowledge
-type CollectedArtifact struct {
-	ID              string            `json:"id"`
-	Domain          KnowledgeDomain   `json:"domain"`
-	Title           string            `json:"title"`
-	Content         string            `json:"content"`
-	Summary         string            `json:"summary"`
-	Source          KnowledgeSource   `json:"source"`
-	SourcePath      string            `json:"source_path,omitempty"`
-	Authority       AuthorityLevel    `json:"authority"`
-	Version         string            `json:"version,omitempty"`
-	CollectionDate  string            `json:"collection_date"`
-	CollectedBy     string            `json:"collected_by,omitempty"`
-	NormativeRefs   []string          `json:"normative_refs,omitempty"`
-	Dependencies    []string          `json:"dependencies,omitempty"`
-	Traceability    Traceability      `json:"traceability"`
-	ConfidenceLevel float64           `json:"confidence_level"` // 0.0-1.0
-	Tags            []string          `json:"tags,omitempty"`
-	Path            string            `json:"path,omitempty"`   // File path where stored
-}
-
-// Traceability contains traceability information for collected artifacts
-type Traceability struct {
-	ArtifactID      string   `json:"artifact_id"`
-	Source          string   `json:"source"`
-	Authority       string   `json:"authority"`
-	Version         string   `json:"version"`
-	CollectionDate  string   `json:"collection_date"`
-	CollectedBy     string   `json:"collected_by"`
-	NormativeRefs   []string `json:"normative_refs"`
-	Dependencies    []string `json:"dependencies"`
-	TraceabilityID  string   `json:"traceability_id"`
-}
-
-// CollectionInput contains input data for knowledge collection
-type CollectionInput struct {
-	RepositoryPath  string
-	AuditFindings   []types.Finding
-	NormResult      interface{} // Can be *normalize.NormalizationResult
-	SessionState    *types.SessionState
-	OperatorName    string
-	KnowledgeAreas  []KnowledgeDomain
-	PriorityLevel   string // Critical, High, Medium, Low
-}
-
-// CollectionResult contains the results of a knowledge collection operation
+// CollectionResult contains the results of an artifact collection operation
 type CollectionResult struct {
-	SessionID          string             `json:"session_id"`
-	StartedAt          string             `json:"started_at"`
-	CompletedAt        string              `json:"completed_at"`
-	Repository         string             `json:"repository"`
-	Operator           string             `json:"operator"`
-	KnowledgeAreasReviewed []KnowledgeDomain `json:"knowledge_areas_reviewed"`
-	KnowledgeGapsIdentified []KnowledgeGap  `json:"knowledge_gaps_identified"`
-	ArtifactsCollected []CollectedArtifact `json:"artifacts_collected"`
-	ArtifactsUpdated   []CollectedArtifact `json:"artifacts_updated"`
-	ArtifactsExisting  []CollectedArtifact `json:"artifacts_existing"`
-	KnowledgeStillMissing []KnowledgeGap   `json:"knowledge_still_missing"`
-	Statistics         CollectionStats    `json:"statistics"`
-	Recommendations    []string           `json:"recommendations"`
-}
-
-// CollectionStats contains statistics about the collection process
-type CollectionStats struct {
-	TotalGapsIdentified   int     `json:"total_gaps_identified"`
-	TotalArtifactsAdded    int     `json:"total_artifacts_added"`
-	TotalArtifactsUpdated  int     `json:"total_artifacts_updated"`
-	TotalArtifactsExisting int     `json:"total_artifacts_existing"`
-	TotalKnowledgeCollected int    `json:"total_knowledge_collected"`
-	ProcessingTime        float64 `json:"processing_time_seconds"`
-	SuccessRate           float64 `json:"success_rate"`
-}
-
-// CollectionReport is a human-readable collection report
-type CollectionReport struct {
-	ReportID         string             `json:"report_id"`
-	CollectionResult *CollectionResult   `json:"collection_result"`
-	GeneratedAt      string             `json:"generated_at"`
-}
-
-// KnowledgeProvider is an interface for extensible knowledge sources
-type KnowledgeProvider interface {
-	Name() string
-	Collect(input *CollectionInput) ([]CollectedArtifact, error)
-	CanCollect(domain KnowledgeDomain) bool
-}
-
-// GapAnalyzer analyzes knowledge gaps from audit findings and normalization results
-type GapAnalyzer interface {
-	Analyze(input *CollectionInput) []KnowledgeGap
+	SessionID      string              `json:"session_id"`
+	StartedAt      string              `json:"started_at"`
+	CompletedAt    string              `json:"completed_at"`
+	Repository     string              `json:"repository"`
+	ArtifactsFound []DiscoveredArtifact `json:"artifacts_found"`
+	TotalSize      int64               `json:"total_size"`
+	ProcessingTime float64             `json:"processing_time_seconds"`
 }
 
 // NewCollectionResult creates a new collection result
-func NewCollectionResult(sessionID, repoPath, operator string) *CollectionResult {
+func NewCollectionResult(sessionID, repoPath string) *CollectionResult {
 	return &CollectionResult{
-		SessionID:         sessionID,
-		StartedAt:         time.Now().Format(time.RFC3339),
-		Repository:        repoPath,
-		Operator:          operator,
-		KnowledgeAreasReviewed: []KnowledgeDomain{},
-		KnowledgeGapsIdentified: []KnowledgeGap{},
-		ArtifactsCollected: []CollectedArtifact{},
-		ArtifactsUpdated:   []CollectedArtifact{},
-		ArtifactsExisting: []CollectedArtifact{},
-		KnowledgeStillMissing: []KnowledgeGap{},
-		Recommendations:   []string{},
+		SessionID:      sessionID,
+		StartedAt:      time.Now().Format(time.RFC3339),
+		Repository:     repoPath,
+		ArtifactsFound: []DiscoveredArtifact{},
 	}
 }
 
@@ -178,43 +65,54 @@ func (r *CollectionResult) SetCompleted() {
 	r.CompletedAt = time.Now().Format(time.RFC3339)
 }
 
-// CalculateStats computes statistics from the collection
-func (r *CollectionResult) CalculateStats(startTime time.Time) {
-	r.Statistics = CollectionStats{
-		TotalGapsIdentified:    len(r.KnowledgeGapsIdentified),
-		TotalArtifactsAdded:     len(r.ArtifactsCollected),
-		TotalArtifactsUpdated:   len(r.ArtifactsUpdated),
-		TotalArtifactsExisting: len(r.ArtifactsExisting),
-		TotalKnowledgeCollected: len(r.ArtifactsCollected) + len(r.ArtifactsUpdated),
-		ProcessingTime:          time.Since(startTime).Seconds(),
-		SuccessRate:            calculateSuccessRate(len(r.ArtifactsCollected), len(r.KnowledgeGapsIdentified)),
+// AddArtifact adds a discovered artifact to the result
+func (r *CollectionResult) AddArtifact(artifact DiscoveredArtifact) {
+	r.ArtifactsFound = append(r.ArtifactsFound, artifact)
+	r.TotalSize += artifact.Size
+}
+
+// DetectCategory determines the artifact category from file extension and path
+func DetectCategory(path string) ArtifactCategory {
+	ext := strings.ToLower(filepath.Ext(path))
+	lowerPath := strings.ToLower(path)
+
+	switch {
+	case strings.Contains(lowerPath, "manual") || strings.Contains(lowerPath, "guide") || strings.Contains(lowerPath, "handbook"):
+		return CategoryManual
+	case strings.Contains(lowerPath, "standard") || strings.Contains(lowerPath, "iec") || strings.Contains(lowerPath, "ieee") || strings.Contains(lowerPath, "iso") || strings.Contains(lowerPath, "nist"):
+		return CategoryStandard
+	case strings.Contains(lowerPath, "spec") || strings.Contains(lowerPath, "requirement"):
+		return CategorySpec
+	case strings.Contains(lowerPath, "datasheet") || strings.Contains(lowerPath, "data-sheet"):
+		return CategoryDatasheet
+	case strings.Contains(lowerPath, "drawing") || strings.Contains(lowerPath, "diagram") || strings.Contains(lowerPath, "schematic"):
+		return CategoryDrawing
+	case ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" || ext == ".svg" || ext == ".bmp":
+		return CategoryImage
+	case ext == ".mp4" || ext == ".avi" || ext == ".mov" || ext == ".mkv" || ext == ".webm":
+		return CategoryVideo
+	case ext == ".zip" || ext == ".tar" || ext == ".gz" || ext == ".rar" || ext == ".7z":
+		return CategoryArchive
+	case ext == ".pdf" || ext == ".md" || ext == ".txt" || ext == ".doc" || ext == ".docx" || ext == ".rst" || ext == ".adoc":
+		return CategoryDocument
+	default:
+		return CategoryUnknown
 	}
 }
 
-func calculateSuccessRate(collected, gaps int) float64 {
-	if gaps == 0 {
-		return 100.0
+// CalculateHash computes SHA-256 hash of a file
+func CalculateHash(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
 	}
-	return float64(collected) / float64(gaps) * 100
+	hash := sha256.Sum256(data)
+	return hex.EncodeToString(hash[:]), nil
 }
 
 // GenerateArtifactID generates a unique artifact ID
-func GenerateArtifactID(domain KnowledgeDomain) string {
-	timestamp := time.Now().Format("20060102150405")
-	return string(domain) + "-ART-" + timestamp
-}
-
-// GenerateGapID generates a unique gap ID
-func GenerateGapID(domain KnowledgeDomain, sequence int) string {
-	return string(domain) + "-GAP-" + time.Now().Format("20060102") + "-" + formatSeq(sequence)
-}
-
-func formatSeq(n int) string {
-	if n < 10 {
-		return "00" + string(rune('0'+n))
-	}
-	if n < 100 {
-		return "0" + string(rune('0'+n/10)) + string(rune('0'+n%10))
-	}
-	return string(rune('0'+n/100)) + string(rune('0'+(n%100)/10)) + string(rune('0'+n%10))
+func GenerateArtifactID(repoPath, artifactPath string, index int) string {
+	relPath, _ := filepath.Rel(repoPath, artifactPath)
+	hash := sha256.Sum256([]byte(relPath + time.Now().Format("20060102")))
+	return "ART-" + hex.EncodeToString(hash[:4]) + "-" + string(rune('A'+index/26)) + string(rune('A'+index%26))
 }
