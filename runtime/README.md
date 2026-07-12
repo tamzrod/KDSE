@@ -106,13 +106,37 @@ The Runtime does:
 
 ## Quick Start
 
-### Begin a KDSE Session
+### Option 1: Normalize Existing Documentation
+
+If your repository already has documentation:
 
 1. **Open your repository** in your preferred environment
 
 2. **Enter the command:**
    ```
-   Run KDSE
+   kdse normalize
+   ```
+
+3. **The Runtime will:**
+   - Discover existing documentation
+   - Analyze and extract knowledge
+   - Generate KDSE-standard artifacts
+   - Build full traceability
+   - Produce a normalization report
+
+4. **Review the generated artifacts** in `.kdse/normalized/`
+
+5. **Continue with** `kdse run` or other commands
+
+### Option 2: Start Immediately
+
+If you want to start working right away:
+
+1. **Open your repository** in your preferred environment
+
+2. **Enter the command:**
+   ```
+   kdse run
    ```
 
 3. **The Runtime will:**
@@ -135,10 +159,11 @@ The Runtime does:
 
 | Command | Purpose |
 |---------|---------|
-| `Run KDSE` | Start a new KDSE session |
-| `Continue KDSE` | Resume an existing session |
-| `Close KDSE` | End the current session |
-| `KDSE Status` | View current session state |
+| `kdse normalize` | Normalize existing documentation to KDSE standard |
+| `kdse run` | Start a new KDSE session |
+| `kdse continue` | Resume an existing session |
+| `kdse status` | View current session state |
+| `kdse report` | Generate runtime report |
 
 ---
 

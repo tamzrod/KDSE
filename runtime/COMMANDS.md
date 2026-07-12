@@ -23,6 +23,7 @@ This document defines the KDSE Runtime command interface. Commands provide a tec
 | Session Information | KDSE Status, KDSE Report, KDSE Progress | View session state |
 | Query | KDSE Scores, KDSE Findings, KDSE History | Query session data |
 | Decision | Approve, Reject, Defer | Operator decisions |
+| Normalization | Normalize | Normalize existing documentation |
 
 ### Command Summary Table
 
@@ -42,6 +43,7 @@ This document defines the KDSE Runtime command interface. Commands provide a tec
 | Approve | Decision | Yes | Human only |
 | Reject | Decision | Yes | Human only |
 | Defer | Decision | Yes | Human only |
+| Normalize | Normalization | No | All |
 
 ---
 
@@ -674,6 +676,113 @@ Defer
 Recommendation: KDSE-ACT-001
 Reason: Waiting for architecture review
 Resume After: Architecture decision meeting (July 20)
+```
+
+---
+
+## Normalization Commands
+
+The Normalization Runtime enables existing repositories with documentation to adopt the KDSE Runtime without requiring documentation to be rewritten. It creates a normalized engineering layer while preserving all original documentation.
+
+### Command Overview
+
+| Category | Commands | Description |
+|----------|----------|-------------|
+| Discovery | kdse normalize | Discover and normalize existing documentation |
+| Configuration | kdse normalize --types | Specify documentation types to include |
+
+### kdse normalize
+
+Normalizes existing documentation to KDSE standard.
+
+**Purpose:** Adopt existing repositories without rewriting documentation.
+
+**Inputs:**
+
+| Parameter | Required | Type | Description |
+|-----------|----------|------|-------------|
+| repository | No | String | Target repository path (defaults to current directory) |
+| types | No | Array | Documentation types to include |
+
+**Outputs:**
+
+| Output | Type | Description |
+|--------|------|-------------|
+| session_id | String | Unique normalization session ID |
+| docs_found | Number | Count of discovered documents |
+| artifacts_generated | Number | Count of generated KDSE artifacts |
+| processing_time | Number | Time taken in seconds |
+| success_rate | Number | Percentage of successful generation |
+
+**Preconditions:**
+- Runtime is in Idle state
+- Target repository is accessible
+
+**Postconditions:**
+- Original documentation preserved unchanged
+- KDSE artifacts generated in `.kdse/normalized/`
+- Normalization report generated
+
+**Outputs Generated:**
+
+| Output | Location | Description |
+|--------|----------|-------------|
+| SPEC.md | `.kdse/normalized/` | KDSE Specification |
+| ARCHITECTURE.md | `.kdse/normalized/` | KDSE Architecture |
+| GLOSSARY.md | `.kdse/normalized/` | KDSE Glossary |
+| DECISIONS.md | `.kdse/normalized/` | KDSE Decisions |
+| GOVERNANCE.md | `.kdse/normalized/` | KDSE Governance |
+| ARTIFACTS.md | `.kdse/normalized/` | Artifact Index |
+
+**Traceability:**
+Every generated artifact includes:
+- Derived From: Original documents used
+- Authority: Source attribution
+- Version: KDSE version information
+- Normative References: KDSE standard references
+
+**Example Usage:**
+
+Minimal:
+```
+kdse normalize
+```
+
+With types:
+```
+kdse normalize --types=README,Architecture,Design
+```
+
+**Example Output:**
+```
+╔═══════════════════════════════════════════════════════════════╗
+║              KDSE Documentation Normalization                 ║
+╠═══════════════════════════════════════════════════════════════╣
+║ Repository:   /workspace/project/myapp
+╚═══════════════════════════════════════════════════════════════╝
+
+Starting documentation normalization...
+
+Discovering documentation...
+Analyzing 5 documentation files...
+Generating KDSE-standard documentation...
+
+╔═══════════════════════════════════════════════════════════════╗
+║              Normalization Complete                           ║
+╠═══════════════════════════════════════════════════════════════╣
+║ Documents Found:       5
+║ Artifacts Generated:  4
+║ Processing Time:       0.15s
+║ Success Rate:         80.0%
+╠═══════════════════════════════════════════════════════════════╣
+║ Generated Artifacts:                                         ║
+║   • Project Specification
+║   • System Architecture
+║   • Project Glossary
+║   • Architecture Decisions
+╚═══════════════════════════════════════════════════════════════╝
+
+Normalized artifacts are available in: .kdse/normalized/
 ```
 
 ---

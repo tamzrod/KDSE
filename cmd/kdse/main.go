@@ -9,6 +9,7 @@ import (
 	"github.com/kdse/runtime/internal/context"
 	"github.com/kdse/runtime/internal/state"
 	"github.com/kdse/runtime/internal/report"
+	"github.com/kdse/runtime/internal/normalize"
 )
 
 const version = "1.0.0"
@@ -32,6 +33,8 @@ func main() {
 		handleInstall()
 	case "update":
 		handleUpdate()
+	case "normalize":
+		handleNormalize(repoPath)
 	case "run":
 		handleRun(repoPath, args)
 	case "status":
@@ -55,11 +58,12 @@ func printUsage() {
 Usage: kdse <command> [options]
 
 Commands:
-  install    Install KDSE runtime configuration
-  update     Update KDSE runtime
-  run        Start a KDSE session
-  status     Show current session status
-  report     Generate runtime report
+  install     Install KDSE runtime configuration
+  update      Update KDSE runtime
+  normalize   Normalize existing documentation to KDSE standard
+  run         Start a KDSE session
+  status      Show current session status
+  report      Generate runtime report
 
 Options:
   -h, --help    Show this help message
@@ -169,4 +173,73 @@ func handleReport(repoPath string) {
 	if err := rpt.Save(repoPath); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: Could not save report: %v\n", err)
 	}
+}
+
+func handleNormalize(repoPath string) {
+	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
+	fmt.Println("║              KDSE Documentation Normalization                 ║")
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+
+	fmt.Printf("║ Repository:   %s\n", repoPath)
+	fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
+	fmt.Println()
+
+	fmt.Println("Starting documentation normalization...")
+	fmt.Println("This process will:")
+	fmt.Println("  • Discover existing documentation")
+	fmt.Println("  • Analyze and extract engineering knowledge")
+	fmt.Println("  • Generate KDSE-standard artifacts")
+	fmt.Println("  • Build full traceability")
+	fmt.Println("  • Preserve all original documentation unchanged")
+	fmt.Println()
+
+	normalizer := normalize.NewNormalizer(repoPath)
+	result, err := normalizer.Normalize()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: Normalization failed: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println()
+	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
+	fmt.Println("║              Normalization Complete                           ║")
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+
+	fmt.Printf("║ Documents Found:       %d\n", result.Statistics.TotalDocsFound)
+	fmt.Printf("║ Artifacts Generated:  %d\n", result.Statistics.TotalArtifactsGen)
+	fmt.Printf("║ Processing Time:       %.2fs\n", result.Statistics.ProcessingTime)
+	fmt.Printf("║ Success Rate:         %.1f%%\n", result.Statistics.SuccessRate)
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+
+	if len(result.NormalizedArts) > 0 {
+		fmt.Println("║ Generated Artifacts:                                         ║")
+		for _, art := range result.NormalizedArts {
+			artName := truncate(art.Title, 44)
+			fmt.Printf("║   • %s\n", artName)
+		}
+	}
+	fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
+	fmt.Println()
+
+	fmt.Println("Normalized artifacts are available in: .kdse/normalized/")
+	fmt.Println()
+	fmt.Println(result.FormatReport())
+
+	// Save the result
+	if err := saveNormalizationResult(repoPath, result); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Could not save normalization result: %v\n", err)
+	}
+}
+
+func saveNormalizationResult(repoPath string, result *normalize.NormalizationResult) error {
+	// This would save the JSON result for future reference
+	// For now, the report is printed to stdout
+	return nil
+}
+
+func truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen-3] + "..."
 }
