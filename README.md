@@ -25,6 +25,16 @@
 | [012-traceability.md](docs/foundation/012-traceability.md) | Traceability framework |
 | [013-authority-resolution.md](docs/foundation/013-authority-resolution.md) | Authority and conflict resolution |
 | [014-engineering-review-process.md](docs/foundation/014-engineering-review-process.md) | Methodology review process |
+| [015-reference-artifacts.md](docs/foundation/015-reference-artifacts.md) | Reference Artifacts as engineering evidence |
+| [016-reference-analysis-knowledge-derivation.md](docs/foundation/016-reference-analysis-knowledge-derivation.md) | Knowledge Derivation Lifecycle |
+| [017-engineering-knowledge-definition.md](docs/foundation/017-engineering-knowledge-definition.md) | Domain Knowledge definition |
+| [018-architecture-phase.md](docs/foundation/018-architecture-phase.md) | Architecture as distinct phase |
+| [019-implementation-phase.md](docs/foundation/019-implementation-phase.md) | Implementation as distinct phase |
+| [020-domain-interfaces.md](docs/foundation/020-domain-interfaces.md) | Domain Interfaces |
+| [021-evidence-and-strength.md](docs/foundation/021-evidence-and-strength.md) | Evidence and Evidence Strength |
+| [022-collector-philosophy.md](docs/foundation/022-collector-philosophy.md) | Collector philosophy |
+| [023-question-classification.md](docs/foundation/023-question-classification.md) | Question classification |
+| [024-engineering-independence-test.md](docs/foundation/024-engineering-independence-test.md) | Engineering Independence Test |
 
 ## Core Principles
 
@@ -38,24 +48,43 @@
 8. Authority flows downward
 9. Verification confirms alignment
 10. Evolution maintains authority
+11. Reference Artifacts support Domain Knowledge (not replace)
+12. Domain Knowledge is implementation-independent
+13. Evidence Strength strengthens but does not authorize
+14. Repository First: analyze artifacts before asking operator
+15. Contradictions are preserved, never silently resolved
 
 ## Engineering Lifecycle
 
 ```
-Knowledge → Architecture → Implementation → Verification → Evolution
+Reference Artifacts → Reference Analysis → Domain Knowledge Derivation → Architecture → Implementation → Verification → Evolution
 ```
 
 ## Key Concepts
 
-- **Structured Knowledge**: Validated understanding with explicit provenance, dependencies, and stewardship
+- **Reference Artifacts**: Existing sources of domain information (evidence, not authority)
+- **Domain Knowledge**: Implementation-independent understanding that remains valid if implementation is rewritten
+- **Domain Interfaces**: Domain responsibilities that exclude implementation technologies
+- **Evidence Strength**: Domain support measure (★★★★★ to ★☆☆☆☆) replacing AI confidence
+- **Engineering Independence Test**: Validation ensuring knowledge remains valid across technology changes
+- **Collector**: Methodology component defined by responsibility, not artifact type
+- **Question Classification**: Routing unresolved items to correct phase (Knowledge/Architecture/Implementation)
+- **Repository First Principle**: Analyze all artifacts before asking operator
 - **Artifact Lifecycle**: Progression through defined states (Draft, Reviewed, Approved, etc.)
 - **Stewardship**: Responsibility without dominion; knowledge is stewarded, not owned
-- **Derivation**: The process by which knowledge becomes architecture
 - **Traceability**: The ability to follow relationships between artifacts
-- **Verification Domain**: First-class knowledge domain for verification principles and processes
-- **Methodology Maturity**: KDSE evolves through defined maturity levels (Concept → Proven)
-- **Evidence-Driven Evolution**: Changes require evidence from real engineering applications
-- **KDSE Runtime**: Official reference implementation providing operational workflow (see [runtime/](runtime/))
+- **Separation of Concerns**: Reference Artifacts, Domain Knowledge, Architecture, and Implementation remain independent
+
+## Separation of Concerns
+
+KDSE maintains strict separation between:
+
+| Concern | Description |
+|---------|-------------|
+| Reference Artifact | Domain evidence (project docs, implementation, vendor docs) |
+| Domain Knowledge | Implementation-independent understanding |
+| Architecture | Organization of Domain Knowledge into software |
+| Implementation | Realization of Architecture using specific technologies |
 
 ## License
 

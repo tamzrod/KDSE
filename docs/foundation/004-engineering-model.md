@@ -5,7 +5,11 @@
 KDSE defines a lifecycle in which artifacts progress through defined stages. Each stage produces artifacts that serve as input to subsequent stages.
 
 ```
-Knowledge
+Reference Artifacts
+    ↓
+Reference Analysis
+    ↓
+Engineering Knowledge Derivation
     ↓
 Architecture
     ↓
@@ -16,37 +20,93 @@ Verification
 Evolution
 ```
 
-## Stage 1: Knowledge
+## Stage 0: Reference Artifacts
 
 ### Purpose
 
-Capture, structure, and authorize the knowledge necessary to address a problem space.
+Collect and organize existing sources of engineering information that will serve as evidence for knowledge derivation.
 
 ### Input
 
-- Problem statements
-- Constraints
-- Domain knowledge
-- Existing knowledge artifacts (for continuation)
+- Project documentation
+- Implementation artifacts
+- Vendor documentation
+- Standards and specifications
+- Commissioning records
+- Communication artifacts
 
 ### Output
 
-- Knowledge artifacts establishing requirements
-- Knowledge artifacts establishing non-functional requirements
-- Knowledge artifacts establishing context and assumptions
+- Catalog of Reference Artifacts
+- Artifact inventory with relevance assessment
+- Context documentation
 
 ### Activities
 
-- Elicit knowledge from stakeholders
-- Structure knowledge in authorized formats
-- Review and validate knowledge artifacts
-- Authorize knowledge artifacts
+- Identify available Reference Artifacts
+- Assess relevance to engineering domain
+- Document artifact provenance
+- Organize artifacts for analysis
 
 ### Why This Stage Comes First
 
-Knowledge must precede architecture because architecture serves knowledge. Architecture decisions made without knowledge basis are arbitrary. By establishing knowledge artifacts first, subsequent stages have authoritative grounding.
+Reference Artifacts are the evidence from which Engineering Knowledge is derived. Without Reference Artifacts, knowledge derivation has no foundation.
 
-## Stage 2: Architecture
+## Stage 1: Reference Analysis
+
+### Purpose
+
+Examine Reference Artifacts to identify engineering evidence that supports knowledge derivation.
+
+### Input
+
+- Reference Artifacts from Stage 0
+- Engineering domain scope
+
+### Output
+
+- Identified evidence from each artifact
+- Evidence categorization
+- Context for each piece of evidence
+
+### Activities
+
+- Analyze each Reference Artifact
+- Extract factual statements, assertions, and decisions
+- Identify constraints and requirements
+- Document evidence with provenance
+
+## Stage 2: Engineering Knowledge Derivation
+
+### Purpose
+
+Transform analyzed evidence into implementation-independent Engineering Knowledge.
+
+### Input
+
+- Evidence from Stage 1
+- Engineering domain scope
+
+### Output
+
+- Engineering Knowledge statements
+- Evidence Strength assessments
+- Traceability links
+
+### Activities
+
+- Interpret evidence for engineering meaning
+- Apply Engineering Independence Test
+- Formulate implementation-independent statements
+- Assess Evidence Strength
+- Correlate evidence across sources
+- Identify and preserve contradictions
+
+### Why This Stage Follows Reference Analysis
+
+Engineering Knowledge must be derived, not simply extracted. Analysis reveals evidence; derivation transforms evidence into authoritative knowledge.
+
+## Stage 3: Architecture
 
 ### Purpose
 
@@ -71,11 +131,11 @@ Translate knowledge into structural decisions that guide implementation.
 - Review architecture against knowledge
 - Authorize architecture artifacts
 
-### Why This Stage Comes Second
+### Why This Stage Comes After Knowledge Derivation
 
 Architecture bridges knowledge and implementation. Architecture translates abstract knowledge into concrete structural decisions. Implementation without architecture guidance produces inconsistent systems.
 
-## Stage 3: Implementation
+## Stage 4: Implementation
 
 ### Purpose
 
@@ -100,11 +160,11 @@ Realize architecture through code that traces to authorized artifacts.
 - Resolve implementation questions against architecture
 - Document implementation decisions not requiring architecture change
 
-### Why This Stage Comes Third
+### Why This Stage Comes After Architecture
 
 Implementation realizes architecture. Implementation decisions must align with architectural direction. Implementation that contradicts architecture represents drift requiring correction.
 
-## Stage 4: Verification
+## Stage 5: Verification
 
 ### Purpose
 
@@ -131,11 +191,11 @@ Confirm that implementation aligns with architecture and that architecture align
 - Determine root cause of identified misalignments
 - Classify misalignments by source artifact (Knowledge, Architecture, or Implementation)
 
-### Why This Stage Comes Fourth
+### Why This Stage Comes After Implementation
 
 Verification confirms alignment. Without prior stages producing artifacts, verification has no basis. Verification cannot confirm alignment that does not exist.
 
-## Stage 5: Evolution
+## Stage 6: Evolution
 
 ### Purpose
 
@@ -184,13 +244,23 @@ Software systems evolve. Artifacts must evolve with them. Evolution is not a ter
                         │
                         ▼
                 Verification
+        │
+        ▼
+┌───────────────────────────────────────┐
+│                                       │
+│  Reference Artifacts → Analysis →      │
+│  Engineering Knowledge Derivation       │
+│                                       │
+└───────────────────────────────────────┘
 ```
 
 ## Derivation Principle
 
 Each stage derives from its predecessor:
 
-- Architecture derives from Knowledge
+- Reference Analysis derives from Reference Artifacts
+- Engineering Knowledge Derivation derives from Reference Analysis
+- Architecture derives from Engineering Knowledge
 - Implementation derives from Architecture
 - Verification derives from Implementation (and confirms alignment with Knowledge and Architecture)
 
@@ -200,8 +270,23 @@ Derivation is not optional. Artifacts produced in later stages must trace to aut
 
 Authority flows downward:
 
-- Knowledge authorizes Architecture
+- Reference Artifacts provide evidence (not authority)
+- Engineering Knowledge derives from evidence and carries authority
+- Architecture derives authority from Knowledge
 - Architecture authorizes Implementation
 - Implementation is subject to Verification
 
 Lower stages cannot contradict higher stages. Violations represent methodology non-compliance.
+
+## Separation of Concerns
+
+KDSE maintains strict separation between:
+
+| Concern | Description |
+|---------|-------------|
+| Reference Artifact | Engineering evidence (project docs, implementation, vendor docs) |
+| Engineering Knowledge | Implementation-independent understanding |
+| Architecture | Organization of Engineering Knowledge into software |
+| Implementation | Realization of Architecture using specific technologies |
+
+These concepts remain independent throughout the entire methodology.

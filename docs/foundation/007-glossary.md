@@ -316,8 +316,50 @@ Working memory in KDSE refers to intermediate artifacts and reasoning processes 
 
 ---
 
+## New Terms Added
+
+This section documents terms introduced in the Phase 2 methodology refactoring.
+
+### Reference Artifact
+
+Any existing source of domain information. Reference Artifacts are domain evidence from which Domain Knowledge is derived. Reference Artifacts include project documentation, implementation artifacts, vendor documentation, standards, and specifications. A Reference Artifact shall never be considered authoritative Domain Knowledge by itself; Domain Knowledge must always be derived.
+
+### Evidence Strength
+
+A measure of how well Domain Knowledge is supported by independent Reference Artifacts. Evidence Strength reflects domain support rather than AI certainty. The scale ranges from ★★★★★ (supported by multiple independent sources) to ★☆☆☆☆ (supported by indirect or inferential evidence only). Evidence Strength affects confidence but does not determine authority.
+
+### Domain Interface
+
+An implementation-independent contract describing the information exchanged between domain concepts. A Domain Interface defines what information exists, what the information means, responsibilities, constraints, assumptions, units (when applicable), and relationships to other domain concepts. Domain Interfaces intentionally exclude programming language, software framework, communication protocol, database, vendor, and deployment architecture.
+
+### Engineering Independence Test
+
+A validation that ensures Domain Knowledge statements remain valid if the implementation is completely rewritten. The test asks: "If the implementation were rewritten tomorrow using a different programming language, communication protocol, runtime, framework, vendor, or platform, would this statement still remain true?" Statements that pass the test are Domain Knowledge; statements that fail are Architecture or Implementation.
+
+### Evidence Correlation
+
+The process of strengthening Domain Knowledge through multiple independent Reference Artifacts. When multiple Reference Artifacts agree, Domain Knowledge becomes stronger. When Reference Artifacts disagree, the contradiction shall be preserved and never silently resolved.
+
+### Question Classification
+
+The process of categorizing unresolved items before asking the operator. Questions are classified as Domain Knowledge Questions (cannot be derived from artifacts), Architecture Questions (relates to software organization), or Implementation Questions (relates to implementation technology).
+
+### Repository First Principle
+
+The principle that before asking the operator, all available Reference Artifacts shall be analyzed. If sufficient domain evidence exists in artifacts, derive Domain Knowledge without asking the operator.
+
+### Collector
+
+A methodology component defined by its responsibility rather than by the type of Reference Artifact it analyzes. A Collector analyzes Reference Artifacts, identifies domain evidence, derives implementation-independent Domain Knowledge, preserves traceability, correlates evidence, identifies contradictions, and identifies gaps.
+
+### Knowledge Derivation Lifecycle
+
+The process by which Reference Artifacts are transformed into Approved Domain Knowledge: Reference Artifact → Reference Analysis → Domain Knowledge Derivation → Evidence Correlation → Knowledge Validation → Approved Domain Knowledge.
+
+---
+
 ## Version
 
-- **Document Version**: 1.2
-- **Effective Date**: 2026-07-10
-- **Change Note**: Added Assessment Score and Compliance Score terminology to address KDSE-CASE-001 OBS-003
+- **Document Version**: 1.4
+- **Effective Date**: 2026-07-13
+- **Change Note**: Generalized Engineering Interface to Domain Interface to make KDSE domain-agnostic; updated related terminology from Engineering Knowledge to Domain Knowledge

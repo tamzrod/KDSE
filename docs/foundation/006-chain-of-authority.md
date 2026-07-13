@@ -36,6 +36,51 @@ Highest Authority
 Lowest Authority
 ```
 
+## Reference Artifacts: Evidence, Not Authority
+
+Reference Artifacts occupy a special position in the hierarchy. They are **evidence**, not **authority**.
+
+```
+Reference Artifacts
+        │
+        │ Provide evidence
+        ▼
+Engineering Knowledge
+        │
+        │ Authorizes
+        ▼
+Architecture
+```
+
+### Reference Artifacts Are Not Authority
+
+Reference Artifacts (project documentation, implementation artifacts, vendor documentation, standards) provide evidence. They do not carry authority by themselves.
+
+A Reference Artifact may contain information, but information is not authoritative knowledge until it has been:
+
+1. Analyzed for evidence
+2. Transformed into implementation-independent statements
+3. Validated through structured process
+4. Reviewed and approved
+
+### Evidence Supports Knowledge
+
+Reference Artifacts support Engineering Knowledge. The relationship is:
+
+- Reference Artifacts → Evidence → Engineering Knowledge
+
+Evidence Strength reflects how well Engineering Knowledge is supported by Reference Artifacts. However, Evidence Strength affects confidence, not authority.
+
+Authority derives from process (validation, review, traceability), not from evidence quantity.
+
+### Implications
+
+1. **Reference Artifacts do not contradict Knowledge**: Reference Artifacts may disagree, but they do not "contradict" in the authority sense. Contradictions are preserved.
+
+2. **Knowledge derives from Evidence**: Knowledge is not "extracted" from Reference Artifacts. It is derived through analysis, interpretation, and validation.
+
+3. **Authority hierarchy starts with Knowledge**: The chain of authority begins with Engineering Knowledge, not Reference Artifacts.
+
 ## Layer Definitions
 
 ### Knowledge (Highest Authority)

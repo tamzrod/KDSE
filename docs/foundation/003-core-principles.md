@@ -64,6 +64,36 @@ Changes must flow through proper channels and maintain authority hierarchy. Chan
 
 **Rationale**: Bottom-up change requests without proper channels produce drift. Authority remains with higher layers; lower layers request, higher layers decide. Evolution is planned change, not drift.
 
+### Principle 11: Reference Artifacts Support Engineering Knowledge
+
+Reference Artifacts are engineering evidence. They support Engineering Knowledge; they do not replace it. Engineering Knowledge must always be derived, never simply extracted.
+
+**Rationale**: Raw artifacts contain information, not authoritative knowledge. Derivation through analysis, interpretation, and validation transforms evidence into trustworthy knowledge.
+
+### Principle 12: Engineering Knowledge Is Implementation-Independent
+
+Engineering Knowledge remains valid if the implementation is completely rewritten. Knowledge describes engineering purpose, behavior, and constraints—not programming language, runtime, protocol, or vendor.
+
+**Rationale**: Implementation changes over time. Knowledge that depends on specific technologies becomes obsolete when those technologies change. Independence ensures longevity.
+
+### Principle 13: Evidence Strengthens but Does Not Authorize
+
+Engineering Knowledge is strengthened by multiple independent Reference Artifacts. However, Evidence Strength reflects confidence, not authority. Authority derives from structured derivation, not evidence quantity.
+
+**Rationale**: Strong evidence increases confidence. Authority requires proper process: validation, review, and traceability. Knowledge with weak evidence may still be authoritative if properly derived.
+
+### Principle 14: Repository First
+
+Before asking the operator, analyze all available Reference Artifacts. Derive Engineering Knowledge from evidence when sufficient evidence exists.
+
+**Rationale**: Operator time is valuable. Most questions can be answered from existing artifacts. Repository-first analysis minimizes unnecessary operator interaction.
+
+### Principle 15: Contradictions Are Preserved
+
+When Reference Artifacts disagree, the contradiction shall be preserved. Contradictions shall never be silently resolved. Operator review is required only when contradictions affect Engineering Knowledge.
+
+**Rationale**: Silent resolution hides uncertainty. Preserved contradictions inform future analysis. Resolution requires understanding the engineering significance of the disagreement.
+
 ## Principles Are Not Practices
 
 These principles are not practices. They do not prescribe:
