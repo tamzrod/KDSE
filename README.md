@@ -35,6 +35,7 @@
 | [022-collector-philosophy.md](docs/foundation/022-collector-philosophy.md) | Collector philosophy |
 | [023-question-classification.md](docs/foundation/023-question-classification.md) | Question classification |
 | [024-engineering-independence-test.md](docs/foundation/024-engineering-independence-test.md) | Engineering Independence Test |
+| [025-reference-artifact-management.md](docs/foundation/025-reference-artifact-management.md) | Reference Artifact Management |
 
 ## Core Principles
 
@@ -57,23 +58,24 @@
 ## Engineering Lifecycle
 
 ```
-Reference Artifacts → Reference Analysis → Domain Knowledge Derivation → Architecture → Implementation → Verification → Evolution
+Reference Artifacts → Reference Artifact Management → Reference Analysis → Domain Knowledge Derivation → Evidence Correlation → Knowledge Validation → Approved Domain Knowledge → Architecture → Implementation → Verification → Evolution
 ```
 
 ## Key Concepts
 
 - **Reference Artifacts**: Existing sources of domain information (evidence, not authority)
+- **Reference Artifact Management**: Discovery, cataloging, classification, and provenance of Reference Artifacts (does NOT analyze or derive knowledge)
+- **Collector**: Methodology component that consumes cataloged artifacts and derives Domain Knowledge
 - **Domain Knowledge**: Implementation-independent understanding that remains valid if implementation is rewritten
 - **Domain Interfaces**: Domain responsibilities that exclude implementation technologies
-- **Evidence Strength**: Domain support measure (★★★★★ to ★☆☆☆☆) replacing AI confidence
+- **Evidence Strength**: Domain support measure (★★★★★ to ★☆☆☆☆) based on corroborating artifacts
 - **Engineering Independence Test**: Validation ensuring knowledge remains valid across technology changes
-- **Collector**: Methodology component defined by responsibility, not artifact type
-- **Question Classification**: Routing unresolved items to correct phase (Knowledge/Architecture/Implementation)
+- **Question Classification**: Routing unresolved items to correct phase (Domain Knowledge/Architecture/Implementation)
 - **Repository First Principle**: Analyze all artifacts before asking operator
 - **Artifact Lifecycle**: Progression through defined states (Draft, Reviewed, Approved, etc.)
 - **Stewardship**: Responsibility without dominion; knowledge is stewarded, not owned
 - **Traceability**: The ability to follow relationships between artifacts
-- **Separation of Concerns**: Reference Artifacts, Domain Knowledge, Architecture, and Implementation remain independent
+- **Separation of Concerns**: Reference Artifacts, Reference Artifact Management, Domain Knowledge, Architecture, and Implementation remain independent
 
 ## Separation of Concerns
 
@@ -81,7 +83,8 @@ KDSE maintains strict separation between:
 
 | Concern | Description |
 |---------|-------------|
-| Reference Artifact | Domain evidence (project docs, implementation, vendor docs) |
+| Reference Artifact | Raw domain evidence (project docs, implementation, vendor docs) |
+| Reference Artifact Management | Discovery, cataloging, classification, provenance (does NOT analyze) |
 | Domain Knowledge | Implementation-independent understanding |
 | Architecture | Organization of Domain Knowledge into software |
 | Implementation | Realization of Architecture using specific technologies |

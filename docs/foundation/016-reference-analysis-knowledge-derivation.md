@@ -40,19 +40,62 @@ The transformation from Reference Artifacts to Engineering Knowledge follows a d
 
 ```
 Reference Artifact
-        ↓
-Reference Analysis
-        ↓
-Engineering Knowledge Derivation
-        ↓
-Evidence Correlation
-        ↓
-Knowledge Validation
-        ↓
-Approved Engineering Knowledge
+        │
+        ▼
+┌───────────────────────────┐
+│  Reference Artifact        │
+│  Management                │
+│                           │
+│  - Discovery              │
+│  - Inventory              │
+│  - Cataloging             │
+│  - Classification        │
+│  - Provenance             │
+└───────────────────────────┘
+        │
+        ▼
+┌───────────────────────────┐
+│  Reference Analysis         │
+│                           │
+│  - Examine artifacts       │
+│  - Identify evidence       │
+│  - Document context       │
+└───────────────────────────┘
+        │
+        ▼
+┌───────────────────────────┐
+│  Domain Knowledge          │
+│  Derivation                │
+│                           │
+│  - Apply independence     │
+│    test                  │
+│  - Formulate statements   │
+│  - Assess strength        │
+└───────────────────────────┘
+        │
+        ▼
+┌───────────────────────────┐
+│  Evidence Correlation      │
+│                           │
+│  - Compare sources        │
+│  - Identify agreements    │
+│  - Preserve conflicts    │
+└───────────────────────────┘
+        │
+        ▼
+┌───────────────────────────┐
+│  Knowledge Validation      │
+│                           │
+│  - Review traceability    │
+│  - Verify independence   │
+│  - Check completeness    │
+└───────────────────────────┘
+        │
+        ▼
+  Approved Domain Knowledge
 ```
 
-### Phase 1: Reference Artifact
+### Phase 0: Reference Artifact
 
 The lifecycle begins with Reference Artifacts. These are existing sources of engineering information, including:
 
@@ -63,9 +106,32 @@ The lifecycle begins with Reference Artifacts. These are existing sources of eng
 - Commissioning records
 - Communication artifacts
 
+### Phase 1: Reference Artifact Management
+
+**Note:** This phase is performed by Reference Artifact Management, NOT the Collector.
+
+Reference Artifact Management discovers, catalogs, classifies, and maintains Reference Artifacts before analysis begins.
+
+#### Activities in Reference Artifact Management
+
+1. **Discovery**: Find Reference Artifacts within the repository and external sources
+2. **Inventory**: Record the existence and basic properties of each artifact
+3. **Cataloging**: Organize Reference Artifacts into meaningful categories
+4. **Classification**: Determine the nature and quality of each artifact
+5. **Provenance**: Maintain the origin and history of artifacts
+6. **Lifecycle**: Manage artifacts throughout their existence
+
+#### Reference Artifact Management Outputs
+
+- Artifact inventory
+- Classification metadata
+- Provenance records
+- Integrity fingerprints
+- Lifecycle status
+
 ### Phase 2: Reference Analysis
 
-Reference Analysis is the process of examining Reference Artifacts to identify engineering evidence.
+Reference Analysis is the process of examining cataloged Reference Artifacts to identify engineering evidence.
 
 #### Activities in Reference Analysis
 
@@ -318,24 +384,29 @@ Assign Evidence Strength:
 
 ## The Role of the Collector
 
-A **Collector** is a methodology component responsible for executing the knowledge derivation lifecycle.
+A **Collector** is a methodology component responsible for executing the knowledge derivation lifecycle. The Collector consumes cataloged Reference Artifacts from Reference Artifact Management.
 
 ### Collector Responsibilities
 
 A Collector shall:
 
-- Analyze Reference Artifacts
-- Identify engineering evidence
-- Derive implementation-independent Engineering Knowledge
+- Consume cataloged Reference Artifacts (from Reference Artifact Management)
+- Perform Reference Analysis
+- Derive implementation-independent Domain Knowledge
 - Preserve traceability
 - Correlate evidence
 - Identify contradictions
-- Identify Engineering Knowledge gaps
+- Validate knowledge
+- Identify Domain Knowledge gaps
+- Classify questions for operator interaction
 
 ### Collector Limitations
 
-A Collector does not:
+A Collector does NOT:
 
+- Discover Reference Artifacts (this is Reference Artifact Management)
+- Catalog or classify artifacts (this is Reference Artifact Management)
+- Maintain artifact inventory (this is Reference Artifact Management)
 - Generate software documentation
 - Design software
 - Generate architecture
@@ -343,9 +414,21 @@ A Collector does not:
 
 ### Collector Definition
 
-A Collector is defined by its responsibility, not by the type of Reference Artifact it analyzes.
+A Collector is defined by its responsibility (analysis and derivation), not by the type of Reference Artifact it analyzes.
 
 Support for specific Reference Artifact formats is an implementation concern.
+
+### The Handoff
+
+The handoff between Reference Artifact Management and Collector is well-defined:
+
+| Reference Artifact Management Produces | Collector Consumes |
+|--------------------------------------|-------------------|
+| Artifact inventory | Artifact inventory |
+| Classification metadata | Classification metadata |
+| Provenance records | Provenance records |
+| Integrity fingerprints | Integrity fingerprints |
+| **NOT analyzed content** | **Analyzed content** |
 
 ## Question Classification During Derivation
 
@@ -390,21 +473,24 @@ Ask yourself:
 
 ## Summary
 
-The Knowledge Derivation Lifecycle transforms Reference Artifacts into Approved Engineering Knowledge through systematic process:
+The Knowledge Derivation Lifecycle transforms Reference Artifacts into Approved Domain Knowledge through systematic process:
 
-1. **Reference Artifact**: Collect existing engineering information
-2. **Reference Analysis**: Examine artifacts to identify evidence
-3. **Engineering Knowledge Derivation**: Transform evidence into implementation-independent statements
-4. **Evidence Correlation**: Strengthen knowledge through multiple sources
-5. **Knowledge Validation**: Confirm accuracy and completeness
-6. **Approved Engineering Knowledge**: Authorize validated knowledge for use
+1. **Reference Artifact**: Raw engineering evidence exists in various forms
+2. **Reference Artifact Management**: Discover, catalog, classify, and maintain artifacts (does NOT analyze)
+3. **Reference Analysis**: Examine cataloged artifacts to identify evidence
+4. **Domain Knowledge Derivation**: Transform evidence into implementation-independent statements
+5. **Evidence Correlation**: Strengthen knowledge through multiple sources
+6. **Knowledge Validation**: Confirm accuracy and completeness
+7. **Approved Domain Knowledge**: Authorize validated knowledge for use
 
 This process replaces "Knowledge Extraction" with a more accurate description of analytical transformation.
+
+The key insight is that **managing evidence** (discovery, cataloging, classification) is fundamentally different from **analyzing evidence** (deriving knowledge). These responsibilities must remain separate.
 
 ---
 
 ## Version
 
-- **Document Version**: 1.0
+- **Document Version**: 1.1
 - **Effective Date**: 2026-07-13
-- **Change Note**: Initial release replacing "Knowledge Extraction" with formal derivation lifecycle
+- **Change Note**: Added Reference Artifact Management phase; clarified Collector consumes cataloged artifacts

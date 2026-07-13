@@ -309,29 +309,76 @@ Reference Artifacts occupy a specific position in the KDSE lifecycle:
 
 ```
 Reference Artifact
-        ↓
-Reference Analysis
-        ↓
-Engineering Knowledge Derivation
-        ↓
-Evidence Correlation
-        ↓
-Knowledge Validation
-        ↓
-Approved Engineering Knowledge
+        │
+        ▼
+┌───────────────────────────┐
+│  Reference Artifact        │
+│  Management                │
+│                           │
+│  - Discovery              │
+│  - Inventory              │
+│  - Cataloging             │
+│  - Classification        │
+│  - Provenance             │
+│  - Lifecycle              │
+└───────────────────────────┘
+        │
+        ▼
+┌───────────────────────────┐
+│  Reference Analysis         │
+│                           │
+│  - Examine artifacts       │
+│  - Identify evidence       │
+│  - Document context       │
+└───────────────────────────┘
+        │
+        ▼
+┌───────────────────────────┐
+│  Domain Knowledge          │
+│  Derivation                │
+│                           │
+│  - Apply independence test │
+│  - Formulate statements   │
+│  - Assess strength         │
+└───────────────────────────┘
+        │
+        ▼
+┌───────────────────────────┐
+│  Evidence Correlation      │
+│                           │
+│  - Compare sources        │
+│  - Identify agreements    │
+│  - Preserve conflicts     │
+└───────────────────────────┘
+        │
+        ▼
+┌───────────────────────────┐
+│  Knowledge Validation      │
+│                           │
+│  - Review traceability     │
+│  - Verify independence   │
+│  - Check completeness     │
+└───────────────────────────┘
+        │
+        ▼
+  Approved Domain Knowledge
 ```
 
-### Phase 1: Reference Artifact
+### Phase 0: Reference Artifact
 
-Collect and organize Reference Artifacts from available sources.
+Raw engineering evidence that exists in various forms.
+
+### Phase 1: Reference Artifact Management
+
+Discover, catalog, classify, and maintain Reference Artifacts before analysis begins. **Note:** This phase does NOT analyze or interpret artifact content; it only prepares artifacts for the Collector.
 
 ### Phase 2: Reference Analysis
 
-Analyze Reference Artifacts to identify engineering evidence.
+Analyze cataloged Reference Artifacts to identify engineering evidence.
 
-### Phase 3: Engineering Knowledge Derivation
+### Phase 3: Domain Knowledge Derivation
 
-Derive Engineering Knowledge statements from the analyzed evidence.
+Derive Domain Knowledge statements from the analyzed evidence.
 
 ### Phase 4: Evidence Correlation
 
@@ -339,11 +386,11 @@ Correlate evidence across multiple Reference Artifacts to strengthen or question
 
 ### Phase 5: Knowledge Validation
 
-Validate derived Engineering Knowledge through structured review.
+Validate derived Domain Knowledge through structured review.
 
-### Phase 6: Approved Engineering Knowledge
+### Phase 6: Approved Domain Knowledge
 
-Authorize validated Engineering Knowledge for use in architecture and implementation.
+Authorize validated Domain Knowledge for use in architecture and implementation.
 
 ## Repository First Principle
 

@@ -350,16 +350,20 @@ The principle that before asking the operator, all available Reference Artifacts
 
 ### Collector
 
-A methodology component defined by its responsibility rather than by the type of Reference Artifact it analyzes. A Collector analyzes Reference Artifacts, identifies domain evidence, derives implementation-independent Domain Knowledge, preserves traceability, correlates evidence, identifies contradictions, and identifies gaps.
+A methodology component defined by its responsibility rather than by the type of Reference Artifact it analyzes. A Collector consumes cataloged Reference Artifacts from Reference Artifact Management and performs Reference Analysis, derives implementation-independent Domain Knowledge, preserves traceability, correlates evidence, identifies contradictions, validates knowledge, and identifies gaps.
+
+### Reference Artifact Management
+
+The methodology phase responsible for discovering, cataloging, classifying, and maintaining Reference Artifacts throughout their lifecycle. Reference Artifact Management does NOT derive Domain Knowledge; it only prepares Reference Artifacts for later analysis by the Collector. Reference Artifact Management answers the question: "What Reference Artifacts exist?"
 
 ### Knowledge Derivation Lifecycle
 
-The process by which Reference Artifacts are transformed into Approved Domain Knowledge: Reference Artifact → Reference Analysis → Domain Knowledge Derivation → Evidence Correlation → Knowledge Validation → Approved Domain Knowledge.
+The process by which Reference Artifacts are transformed into Approved Domain Knowledge: Reference Artifact → Reference Artifact Management → Reference Analysis → Domain Knowledge Derivation → Evidence Correlation → Knowledge Validation → Approved Domain Knowledge.
 
 ---
 
 ## Version
 
-- **Document Version**: 1.4
+- **Document Version**: 1.5
 - **Effective Date**: 2026-07-13
-- **Change Note**: Generalized Engineering Interface to Domain Interface to make KDSE domain-agnostic; updated related terminology from Engineering Knowledge to Domain Knowledge
+- **Change Note**: Added Reference Artifact Management term; updated Collector definition to reflect consumption of cataloged artifacts; updated Knowledge Derivation Lifecycle to include Reference Artifact Management phase

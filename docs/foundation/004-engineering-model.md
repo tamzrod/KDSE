@@ -7,9 +7,17 @@ KDSE defines a lifecycle in which artifacts progress through defined stages. Eac
 ```
 Reference Artifacts
     ↓
+Reference Artifact Management
+    ↓
 Reference Analysis
     ↓
-Engineering Knowledge Derivation
+Domain Knowledge Derivation
+    ↓
+Evidence Correlation
+    ↓
+Knowledge Validation
+    ↓
+Approved Domain Knowledge
     ↓
 Architecture
     ↓
@@ -24,7 +32,7 @@ Evolution
 
 ### Purpose
 
-Collect and organize existing sources of engineering information that will serve as evidence for knowledge derivation.
+Raw engineering evidence that exists in various forms throughout the project and external sources.
 
 ### Input
 
@@ -37,30 +45,58 @@ Collect and organize existing sources of engineering information that will serve
 
 ### Output
 
-- Catalog of Reference Artifacts
-- Artifact inventory with relevance assessment
-- Context documentation
+- Raw artifacts (unchanged)
 
-### Activities
+### Note
 
-- Identify available Reference Artifacts
-- Assess relevance to engineering domain
-- Document artifact provenance
-- Organize artifacts for analysis
+Reference Artifacts are the evidence from which Domain Knowledge is derived. Without Reference Artifacts, knowledge derivation has no foundation.
 
-### Why This Stage Comes First
-
-Reference Artifacts are the evidence from which Engineering Knowledge is derived. Without Reference Artifacts, knowledge derivation has no foundation.
-
-## Stage 1: Reference Analysis
+## Stage 1: Reference Artifact Management
 
 ### Purpose
 
-Examine Reference Artifacts to identify engineering evidence that supports knowledge derivation.
+Discover, catalog, classify, and manage Reference Artifacts before analysis begins.
 
 ### Input
 
 - Reference Artifacts from Stage 0
+
+### Output
+
+- Catalog of Reference Artifacts
+- Artifact inventory with classification
+- Provenance records
+- Integrity fingerprints
+- Lifecycle status
+
+### Activities
+
+- Discover artifacts within the repository and external sources
+- Assign unique identifiers
+- Classify artifacts by type (manual, standard, specification, etc.)
+- Record provenance (origin, acquisition method)
+- Calculate content hashes for integrity
+- Track lifecycle status (active, deprecated, superseded)
+
+### Responsibilities
+
+Reference Artifact Management:
+- **DOES**: Discover, catalog, classify, maintain inventory, preserve provenance
+- **DOES NOT**: Interpret content, derive knowledge, analyze meaning
+
+### Why This Stage Is Explicit
+
+Reference Artifact Management is distinct from the Collector. Managing evidence (inventory, classification, provenance) is fundamentally different from analyzing evidence (deriving knowledge). This separation ensures clarity of responsibility.
+
+## Stage 2: Reference Analysis
+
+### Purpose
+
+Examine cataloged Reference Artifacts to identify engineering evidence that supports knowledge derivation.
+
+### Input
+
+- Cataloged Reference Artifacts from Stage 1
 - Engineering domain scope
 
 ### Output
@@ -71,42 +107,115 @@ Examine Reference Artifacts to identify engineering evidence that supports knowl
 
 ### Activities
 
-- Analyze each Reference Artifact
+- Analyze each cataloged Reference Artifact
 - Extract factual statements, assertions, and decisions
 - Identify constraints and requirements
 - Document evidence with provenance
 
-## Stage 2: Engineering Knowledge Derivation
+## Stage 3: Domain Knowledge Derivation
 
 ### Purpose
 
-Transform analyzed evidence into implementation-independent Engineering Knowledge.
+Transform analyzed evidence into implementation-independent Domain Knowledge.
 
 ### Input
 
-- Evidence from Stage 1
+- Evidence from Stage 2
 - Engineering domain scope
 
 ### Output
 
-- Engineering Knowledge statements
+- Domain Knowledge statements
 - Evidence Strength assessments
 - Traceability links
 
 ### Activities
 
-- Interpret evidence for engineering meaning
+- Interpret evidence for domain meaning
 - Apply Engineering Independence Test
 - Formulate implementation-independent statements
 - Assess Evidence Strength
-- Correlate evidence across sources
-- Identify and preserve contradictions
+- Identify domain behavior
+- Define domain constraints
+- Document assumptions
 
 ### Why This Stage Follows Reference Analysis
 
-Engineering Knowledge must be derived, not simply extracted. Analysis reveals evidence; derivation transforms evidence into authoritative knowledge.
+Domain Knowledge must be derived, not simply extracted. Analysis reveals evidence; derivation transforms evidence into authoritative knowledge.
 
-## Stage 3: Architecture
+## Stage 4: Evidence Correlation
+
+### Purpose
+
+Strengthen Domain Knowledge through multiple independent Reference Artifacts.
+
+### Input
+
+- Domain Knowledge statements from Stage 3
+- Multiple Reference Artifacts
+
+### Output
+
+- Correlated Domain Knowledge
+- Evidence Strength assignments
+- Identified contradictions
+
+### Activities
+
+- Compare evidence across multiple artifacts
+- Identify corroborating evidence
+- Identify contradicting evidence
+- Assign Evidence Strength based on corroboration
+- Preserve contradictions (do not resolve silently)
+
+### Evidence Strength Scale
+
+- ★★★★★: Supported by multiple independent sources
+- ★★★★☆: Supported by Project Doc + one additional source
+- ★★★☆☆: Supported by Project Documentation only
+- ★★☆☆☆: Supported by single source or vendor only
+- ★☆☆☆☆: Inferred from indirect evidence
+
+## Stage 5: Knowledge Validation
+
+### Purpose
+
+Validate that Domain Knowledge meets quality criteria before approval.
+
+### Input
+
+- Correlated Domain Knowledge from Stage 4
+
+### Output
+
+- Validated Domain Knowledge
+- Validation report
+- Identified gaps
+
+### Activities
+
+- Review traceability links
+- Verify Engineering Independence Test passes
+- Confirm Evidence Strength is appropriate
+- Check completeness
+- Identify remaining gaps
+
+## Stage 6: Approved Domain Knowledge
+
+### Purpose
+
+Domain Knowledge that has passed validation and is authorized for downstream use.
+
+### Input
+
+- Validated Domain Knowledge from Stage 5
+
+### Output
+
+- Approved Domain Knowledge artifacts
+- Authority records
+
+## Stage 7: Architecture
 
 ### Purpose
 
@@ -131,11 +240,11 @@ Translate knowledge into structural decisions that guide implementation.
 - Review architecture against knowledge
 - Authorize architecture artifacts
 
-### Why This Stage Comes After Knowledge Derivation
+### Why This Stage Comes After Knowledge Validation
 
 Architecture bridges knowledge and implementation. Architecture translates abstract knowledge into concrete structural decisions. Implementation without architecture guidance produces inconsistent systems.
 
-## Stage 4: Implementation
+## Stage 8: Implementation
 
 ### Purpose
 
@@ -164,7 +273,7 @@ Realize architecture through code that traces to authorized artifacts.
 
 Implementation realizes architecture. Implementation decisions must align with architectural direction. Implementation that contradicts architecture represents drift requiring correction.
 
-## Stage 5: Verification
+## Stage 9: Verification
 
 ### Purpose
 
@@ -195,7 +304,7 @@ Confirm that implementation aligns with architecture and that architecture align
 
 Verification confirms alignment. Without prior stages producing artifacts, verification has no basis. Verification cannot confirm alignment that does not exist.
 
-## Stage 6: Evolution
+## Stage 10: Evolution
 
 ### Purpose
 
@@ -248,8 +357,19 @@ Software systems evolve. Artifacts must evolve with them. Evolution is not a ter
         ▼
 ┌───────────────────────────────────────┐
 │                                       │
-│  Reference Artifacts → Analysis →      │
-│  Engineering Knowledge Derivation       │
+│  Reference Artifacts                   │
+│       ↓                               │
+│  Reference Artifact Management          │
+│       ↓                               │
+│  Reference Analysis                     │
+│       ↓                               │
+│  Domain Knowledge Derivation           │
+│       ↓                               │
+│  Evidence Correlation                  │
+│       ↓                               │
+│  Knowledge Validation                   │
+│       ↓                               │
+│  Approved Domain Knowledge             │
 │                                       │
 └───────────────────────────────────────┘
 ```
@@ -258,9 +378,12 @@ Software systems evolve. Artifacts must evolve with them. Evolution is not a ter
 
 Each stage derives from its predecessor:
 
-- Reference Analysis derives from Reference Artifacts
-- Engineering Knowledge Derivation derives from Reference Analysis
-- Architecture derives from Engineering Knowledge
+- Reference Artifact Management derives from Reference Artifacts
+- Reference Analysis derives from cataloged Reference Artifacts
+- Domain Knowledge Derivation derives from Reference Analysis
+- Evidence Correlation derives from Domain Knowledge Derivation
+- Knowledge Validation derives from Evidence Correlation
+- Architecture derives from Approved Domain Knowledge
 - Implementation derives from Architecture
 - Verification derives from Implementation (and confirms alignment with Knowledge and Architecture)
 
@@ -271,7 +394,8 @@ Derivation is not optional. Artifacts produced in later stages must trace to aut
 Authority flows downward:
 
 - Reference Artifacts provide evidence (not authority)
-- Engineering Knowledge derives from evidence and carries authority
+- Reference Artifact Management preserves evidence (not authority)
+- Domain Knowledge derives from evidence and carries authority
 - Architecture derives authority from Knowledge
 - Architecture authorizes Implementation
 - Implementation is subject to Verification
@@ -284,9 +408,10 @@ KDSE maintains strict separation between:
 
 | Concern | Description |
 |---------|-------------|
-| Reference Artifact | Engineering evidence (project docs, implementation, vendor docs) |
-| Engineering Knowledge | Implementation-independent understanding |
-| Architecture | Organization of Engineering Knowledge into software |
+| Reference Artifact | Raw engineering evidence |
+| Reference Artifact Management | Discovery, cataloging, classification, provenance (does NOT analyze) |
+| Domain Knowledge | Implementation-independent understanding |
+| Architecture | Organization of Domain Knowledge into software |
 | Implementation | Realization of Architecture using specific technologies |
 
 These concepts remain independent throughout the entire methodology.

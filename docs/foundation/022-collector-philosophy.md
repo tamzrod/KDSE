@@ -4,6 +4,8 @@
 
 This document establishes the philosophy for **Collectors** in KDSE. A Collector is a methodology component defined by its responsibility, not by the type of Reference Artifact it analyzes.
 
+**Important:** Collectors consume cataloged Reference Artifacts from Reference Artifact Management. They do not discover or catalog artifacts themselves.
+
 ## The Problem with Artifact-Type Definitions
 
 ### Traditional Approach
@@ -27,13 +29,23 @@ Traditional methodology often defines collectors by the artifact type they handl
 
 A **Collector** is a methodology component that:
 
-1. **Analyzes Reference Artifacts**
-2. **Identifies engineering evidence**
-3. **Derives implementation-independent Engineering Knowledge**
+1. **Consumes cataloged Reference Artifacts** (from Reference Artifact Management)
+2. **Performs Reference Analysis** on artifacts
+3. **Derives implementation-independent Domain Knowledge**
 4. **Preserves traceability**
 5. **Correlates evidence**
 6. **Identifies contradictions**
-7. **Identifies Engineering Knowledge gaps**
+7. **Validates Domain Knowledge**
+8. **Identifies Domain Knowledge gaps**
+9. **Classifies questions** for operator interaction
+
+### What Collectors Do NOT Do
+
+Collectors do NOT:
+- **Discover Reference Artifacts** (this is Reference Artifact Management)
+- **Catalog or classify artifacts** (this is Reference Artifact Management)
+- **Maintain artifact inventory** (this is Reference Artifact Management)
+- **Establish provenance** (this is Reference Artifact Management)
 
 ### Collector Definition By Responsibility
 
@@ -149,6 +161,9 @@ These responsibilities belong to different phases and roles:
 
 | Excluded Responsibility | Belongs To |
 |------------------------|-----------|
+| Discover Reference Artifacts | Reference Artifact Management |
+| Catalog Reference Artifacts | Reference Artifact Management |
+| Maintain artifact inventory | Reference Artifact Management |
 | Generate documentation | Documentation practices |
 | Design software | Architecture phase |
 | Generate architecture | Architecture phase |
@@ -158,15 +173,48 @@ These responsibilities belong to different phases and roles:
 
 ### Position in Lifecycle
 
-Collectors operate during the Reference Analysis and Knowledge Derivation phases:
+Collectors consume cataloged Reference Artifacts from Reference Artifact Management:
 
 ```
-Reference Artifact
-        ↓
-Collector Activity
-        ↓
-Engineering Knowledge
+┌─────────────────────────────────────────┐
+│    Reference Artifact Management        │
+│                                         │
+│  - Discovery                           │
+│  - Inventory                           │
+│  - Cataloging                          │
+│  - Classification                      │
+│  - Provenance                          │
+└─────────────────────────────────────────┘
+                    │
+                    │ Produces cataloged artifacts
+                    ▼
+┌─────────────────────────────────────────┐
+│           Collector                     │
+│                                         │
+│  - Reference Analysis                  │
+│  - Domain Knowledge Derivation         │
+│  - Evidence Correlation                │
+│  - Contradiction Detection             │
+│  - Knowledge Validation                │
+│  - Gap Identification                 │
+│  - Question Classification             │
+└─────────────────────────────────────────┘
+                    │
+                    ▼
+        Approved Domain Knowledge
 ```
+
+### The Handoff
+
+The handoff between Reference Artifact Management and Collector is well-defined:
+
+| Reference Artifact Management Produces | Collector Consumes |
+|--------------------------------------|-------------------|
+| Artifact inventory | Artifact inventory |
+| Classification metadata | Classification metadata |
+| Provenance records | Provenance records |
+| Integrity fingerprints | Integrity fingerprints |
+| **NOT analyzed content** | **Analyzed content** |
 
 ### Collector Workflow
 
@@ -174,15 +222,39 @@ Engineering Knowledge
 ┌─────────────────────────────────────┐
 │         Collector Workflow          │
 ├─────────────────────────────────────┤
-│ 1. Receive Reference Artifacts       │
-│ 2. Analyze artifacts                │
+│ 1. Receive cataloged artifacts      │
+│ 2. Perform Reference Analysis       │
 │ 3. Identify evidence                 │
-│ 4. Derive knowledge                  │
-│ 5. Correlate evidence                │
-│ 6. Identify gaps                     │
-│ 7. Produce knowledge artifacts      │
+│ 4. Derive Domain Knowledge          │
+│ 5. Apply Independence Test          │
+│ 6. Correlate evidence                │
+│ 7. Detect contradictions             │
+│ 8. Validate knowledge               │
+│ 9. Identify gaps                     │
+│ 10. Classify questions               │
+│ 11. Produce knowledge artifacts     │
 └─────────────────────────────────────┘
 ```
+
+## Relationship to Reference Artifact Management
+
+### Distinction
+
+| Aspect | Reference Artifact Management | Collector |
+|--------|------------------------------|-----------|
+| Question Answered | "What artifacts exist?" | "What knowledge can be derived?" |
+| Focus | Evidence inventory and classification | Evidence analysis and derivation |
+| Input | Raw artifacts | Cataloged artifacts |
+| Output | Artifact inventory | Domain Knowledge artifacts |
+| Content Interpretation | None | Full interpretation |
+
+### Why This Separation Matters
+
+1. **Clarity**: Each phase has exactly one primary responsibility
+2. **Reusability**: The artifact inventory can be used by multiple collectors
+3. **Separation of Concerns**: Discovery and analysis are independent
+4. **Testing**: Each phase can be tested independently
+5. **Scalability**: Different approaches can be used for each phase
 
 ## Artifact Type Independence
 
@@ -395,7 +467,9 @@ Collector output is validated against:
 The Collector philosophy establishes that:
 
 - **Collectors are defined by responsibility, not artifact type**
-- **Collectors analyze Reference Artifacts to derive Engineering Knowledge**
+- **Collectors consume cataloged Reference Artifacts from Reference Artifact Management**
+- **Collectors do NOT discover or catalog artifacts (this is Reference Artifact Management)**
+- **Collectors analyze Reference Artifacts to derive Domain Knowledge**
 - **Collectors preserve traceability, correlate evidence, and identify gaps**
 - **Collectors do not generate documentation, design software, or implement systems**
 - **Support for specific formats is implementation, not methodology**
@@ -407,6 +481,6 @@ Understanding this philosophy ensures consistent, effective knowledge derivation
 
 ## Version
 
-- **Document Version**: 1.0
+- **Document Version**: 2.0
 - **Effective Date**: 2026-07-13
-- **Change Note**: Initial release establishing responsibility-based Collector philosophy
+- **Change Note**: Separated Collector from Reference Artifact Management; Collector now consumes cataloged artifacts rather than discovering them
