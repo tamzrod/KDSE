@@ -1,16 +1,55 @@
 // KDSE MCP Server - Model Context Protocol server for Knowledge-Driven Software Engineering
+// Supports both STDIO (local development) and Streamable HTTP (remote deployment) transports
 package main
 
 import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
+	"net/http"
 	"os"
+	"strings"
 
 	"github.com/kdse/mcp-server/tools"
 )
 
-// MCP Protocol types
+// =============================================================================
+// Transport Configuration
+// =============================================================================
+
+const (
+	TransportStdio = "stdio"
+	TransportHTTP  = "http"
+
+	DefaultHTTPPort = "8080"
+	ProtocolVersion = "2024-11-05"
+)
+
+// Transport is selected via MCP_TRANSPORT environment variable or --transport flag
+func getTransport() string {
+	if transport := os.Getenv("MCP_TRANSPORT"); transport != "" {
+		return strings.ToLower(transport)
+	}
+	// Check legacy MCP_STDIO env var for backward compatibility
+	if os.Getenv("MCP_STDIO") == "true" {
+		return TransportStdio
+	}
+	// Default to stdio for local development
+	return TransportStdio
+}
+
+func getHTTPPort() string {
+	if port := os.Getenv("MCP_HTTP_PORT"); port != "" {
+		return port
+	}
+	return DefaultHTTPPort
+}
+
+// =============================================================================
+// MCP Protocol Types
+// =============================================================================
+
 type MCPRequest struct {
 	JSONRPC string          `json:"jsonrpc"`
 	Method  string          `json:"method"`
@@ -42,75 +81,68 @@ type ClientInfo struct {
 	Version string `json:"version,omitempty"`
 }
 
-// Protocol constants
-const (
-	ProtocolVersion = "2024-11-05"
-)
-
-func main() {
-	server := NewMCPServer()
-	server.Run()
+type ToolCallParams struct {
+	Name      string                 `json:"name"`
+	Arguments map[string]interface{} `json:"arguments,omitempty"`
 }
 
-type MCPServer struct {
+// =============================================================================
+// Main Entry Point
+// =============================================================================
+
+func main() {
+	transport := getTransport()
+
+	switch transport {
+	case TransportHTTP:
+		log.Println("Starting KDSE MCP Server in HTTP mode...")
+		runHTTPServer()
+	default:
+		log.Println("Starting KDSE MCP Server in STDIO mode...")
+		runStdioServer()
+	}
+}
+
+// =============================================================================
+// KDSE Service Layer (shared by all transports)
+// =============================================================================
+
+type KDSEService struct {
 	tools *tools.ToolHandler
 }
 
-func NewMCPServer() *MCPServer {
-	return &MCPServer{
+func NewKDSEService() *KDSEService {
+	return &KDSEService{
 		tools: tools.NewToolHandler(),
 	}
 }
 
-func (s *MCPServer) Run() {
-	decoder := json.NewDecoder(os.Stdin)
-	encoder := json.NewEncoder(os.Stdout)
-
-	for {
-		var req MCPRequest
-		if err := decoder.Decode(&req); err != nil {
-			if err == io.EOF {
-				return
-			}
-			s.sendError(encoder, nil, -32700, "Parse error")
-			continue
-		}
-
-		s.handleRequest(encoder, &req)
-	}
-}
-
-func (s *MCPServer) handleRequest(encoder *json.Encoder, req *MCPRequest) {
-	// Handle MCP protocol methods
+func (s *KDSEService) HandleRequest(req *MCPRequest) (interface{}, *MCPError) {
 	switch req.Method {
 	case "initialize":
-		s.handleInitialize(encoder, req)
+		return s.handleInitialize(req), nil
 	case "notifications/initialized":
-		// Client has finished initialization - no response needed
-		return
+		return nil, nil
 	case "tools/list":
-		s.handleListTools(encoder, req)
+		return s.handleListTools(), nil
 	case "tools/call":
-		s.handleToolCall(encoder, req)
+		return s.handleToolCall(req)
 	case "help":
-		s.handleHelp(encoder, req)
+		return s.tools.Help(), nil
 	case "status":
-		s.handleStatus(encoder, req)
+		return s.tools.Status(), nil
 	default:
-		// Try tool name directly
-		if req.ID != nil {
-			s.sendError(encoder, req.ID, -32601, fmt.Sprintf("Method not found: %s", req.Method))
-		}
+		return nil, &MCPError{Code: -32601, Message: fmt.Sprintf("Method not found: %s", req.Method)}
 	}
 }
 
-func (s *MCPServer) handleInitialize(encoder *json.Encoder, req *MCPRequest) {
+func (s *KDSEService) handleInitialize(req *MCPRequest) map[string]interface{} {
 	var params InitializeParams
 	if req.Params != nil {
 		json.Unmarshal(req.Params, &params)
 	}
 
-	result := map[string]interface{}{
+	return map[string]interface{}{
 		"protocolVersion": ProtocolVersion,
 		"serverInfo": map[string]interface{}{
 			"name":    "kdse-mcp-server",
@@ -123,11 +155,9 @@ func (s *MCPServer) handleInitialize(encoder *json.Encoder, req *MCPRequest) {
 		},
 		"instructions": "KDSE MCP Server v0.1 - Provides access to Knowledge-Driven Software Engineering repository information. Available tools: help, initialize, status",
 	}
-
-	s.sendResult(encoder, req.ID, result)
 }
 
-func (s *MCPServer) handleListTools(encoder *json.Encoder, req *MCPRequest) {
+func (s *KDSEService) handleListTools() map[string]interface{} {
 	toolDefs := []map[string]interface{}{
 		{
 			"name":        "help",
@@ -155,17 +185,12 @@ func (s *MCPServer) handleListTools(encoder *json.Encoder, req *MCPRequest) {
 		},
 	}
 
-	s.sendResult(encoder, req.ID, map[string]interface{}{
+	return map[string]interface{}{
 		"tools": toolDefs,
-	})
+	}
 }
 
-type ToolCallParams struct {
-	Name      string                 `json:"name"`
-	Arguments map[string]interface{} `json:"arguments,omitempty"`
-}
-
-func (s *MCPServer) handleToolCall(encoder *json.Encoder, req *MCPRequest) {
+func (s *KDSEService) handleToolCall(req *MCPRequest) (interface{}, *MCPError) {
 	var params ToolCallParams
 	if req.Params != nil {
 		json.Unmarshal(req.Params, &params)
@@ -180,31 +205,72 @@ func (s *MCPServer) handleToolCall(encoder *json.Encoder, req *MCPRequest) {
 	case "status":
 		result = s.tools.Status()
 	default:
-		s.sendError(encoder, req.ID, -32602, fmt.Sprintf("Unknown tool: %s", params.Name))
-		return
+		return nil, &MCPError{Code: -32602, Message: fmt.Sprintf("Unknown tool: %s", params.Name)}
 	}
 
-	s.sendResult(encoder, req.ID, map[string]interface{}{
+	return map[string]interface{}{
 		"content": []map[string]interface{}{
 			{
 				"type": "text",
 				"text": formatJSON(result),
 			},
 		},
-	})
+	}, nil
 }
 
-func (s *MCPServer) handleHelp(encoder *json.Encoder, req *MCPRequest) {
-	result := s.tools.Help()
-	s.sendResult(encoder, req.ID, result)
+// =============================================================================
+// STDIO Transport (Local Development)
+// =============================================================================
+
+func runStdioServer() {
+	server := &StdioTransport{
+		service: NewKDSEService(),
+	}
+	server.Run()
 }
 
-func (s *MCPServer) handleStatus(encoder *json.Encoder, req *MCPRequest) {
-	result := s.tools.Status()
-	s.sendResult(encoder, req.ID, result)
+type StdioTransport struct {
+	service *KDSEService
 }
 
-func (s *MCPServer) sendResult(encoder *json.Encoder, id interface{}, result interface{}) {
+func (t *StdioTransport) Run() {
+	decoder := json.NewDecoder(os.Stdin)
+	encoder := json.NewEncoder(os.Stdout)
+
+	for {
+		var req MCPRequest
+		if err := decoder.Decode(&req); err != nil {
+			if err == io.EOF {
+				return
+			}
+			t.sendError(encoder, nil, -32700, "Parse error")
+			continue
+		}
+
+		t.handleRequest(encoder, &req)
+	}
+}
+
+func (t *StdioTransport) handleRequest(encoder *json.Encoder, req *MCPRequest) {
+	result, err := t.service.HandleRequest(req)
+	if err != nil {
+		if req.ID != nil {
+			t.sendError(encoder, req.ID, err.Code, err.Message)
+		}
+		return
+	}
+
+	// Handle notifications that don't need responses
+	if result == nil && req.Method == "notifications/initialized" {
+		return
+	}
+
+	if req.ID != nil {
+		t.sendResult(encoder, req.ID, result)
+	}
+}
+
+func (t *StdioTransport) sendResult(encoder *json.Encoder, id interface{}, result interface{}) {
 	resp := MCPResponse{
 		JSONRPC: "2.0",
 		Result:  result,
@@ -213,7 +279,7 @@ func (s *MCPServer) sendResult(encoder *json.Encoder, id interface{}, result int
 	encoder.Encode(resp)
 }
 
-func (s *MCPServer) sendError(encoder *json.Encoder, id interface{}, code int, message string) {
+func (t *StdioTransport) sendError(encoder *json.Encoder, id interface{}, code int, message string) {
 	resp := MCPResponse{
 		JSONRPC: "2.0",
 		Error: &MCPError{
@@ -224,6 +290,98 @@ func (s *MCPServer) sendError(encoder *json.Encoder, id interface{}, code int, m
 	}
 	encoder.Encode(resp)
 }
+
+// =============================================================================
+// HTTP Transport (Remote Deployment)
+// =============================================================================
+
+func runHTTPServer() {
+	server := &HTTPTransport{
+		service: NewKDSEService(),
+		port:    getHTTPPort(),
+	}
+	log.Printf("HTTP server listening on port %s", server.port)
+	log.Fatal(http.ListenAndServe(":"+server.port, server))
+}
+
+type HTTPTransport struct {
+	service *KDSEService
+	port    string
+}
+
+func (t *HTTPTransport) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Set CORS headers for remote clients
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, MCP-Session-ID")
+	w.Header().Set("Content-Type", "application/json")
+
+	// Handle CORS preflight
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// Health endpoint
+	if r.URL.Path == "/health" || r.URL.Path == "/healthz" {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{"status": "healthy"})
+		return
+	}
+
+	// MCP endpoint - requires POST
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Handle streaming endpoint for MCP Streamable HTTP
+	if strings.HasPrefix(r.URL.Path, "/mcp/") || r.URL.Path == "/mcp" {
+		t.handleMCP(w, r)
+		return
+	}
+
+	// Default to MCP endpoint
+	t.handleMCP(w, r)
+}
+
+func (t *HTTPTransport) handleMCP(w http.ResponseWriter, r *http.Request) {
+	var req MCPRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	result, err := t.service.HandleRequest(&req)
+	if err != nil {
+		resp := MCPResponse{
+			JSONRPC: "2.0",
+			Error:   err,
+			ID:      req.ID,
+		}
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(resp)
+		return
+	}
+
+	// Handle notifications that don't need responses
+	if result == nil && req.Method == "notifications/initialized" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	resp := MCPResponse{
+		JSONRPC: "2.0",
+		Result:  result,
+		ID:      req.ID,
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(resp)
+}
+
+// =============================================================================
+// Utility Functions
+// =============================================================================
 
 func formatJSON(data interface{}) string {
 	b, err := json.MarshalIndent(data, "", "  ")

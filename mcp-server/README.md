@@ -1,38 +1,98 @@
 # KDSE MCP Server
 
-**Version:** 0.1.0  
+**Version:** 0.2.0  
 **Protocol:** Model Context Protocol (MCP) 2024-11-05
 
 ---
 
 ## Overview
 
-The KDSE MCP Server provides a Model Context Protocol interface for Knowledge-Driven Software Engineering. It enables AI assistants like OpenHands to communicate with KDSE through the standard MCP protocol.
+The KDSE MCP Server provides a Model Context Protocol interface for Knowledge-Driven Software Engineering. It supports **dual transport modes**:
 
-This v0.1 release establishes the MCP communication foundation with static responses.
+1. **STDIO transport** - For local development
+2. **HTTP transport** - For remote deployment
+
+This v0.2 release adds HTTP transport for remote MCP client connections while maintaining STDIO support for local development.
 
 ## Design Principles
 
-1. **Static Responses**: v0.1 returns static data to prove MCP communication works
+1. **Dual Transport Architecture**: Same server binary supports STDIO (local) and HTTP (remote)
 2. **Protocol Isolation**: MCP protocol handling is strictly separated from KDSE service logic
 3. **Structured Output**: All responses are structured JSON, suitable for programmatic consumption
 4. **Foundation Only**: Repository reading and advanced features are out of scope for v0.1
 
-## Quick Start
+## Architecture
 
-### Using Docker Compose
-
-```bash
-cd mcp-server
-docker compose up --build
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     KDSE MCP Server                          │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │                  Transport Layer                        │ │
+│  │  ┌──────────────────┐    ┌──────────────────────────┐  │ │
+│  │  │   STDIO Transport │    │   HTTP Transport          │  │ │
+│  │  │   (Local Dev)     │    │   (Remote Deployment)     │  │ │
+│  │  │                   │    │   • /health endpoint      │  │ │
+│  │  │   stdin/stdout    │    │   • /mcp endpoint        │  │ │
+│  │  │   JSON-RPC        │    │   CORS enabled           │  │ │
+│  │  └──────────────────┘    └──────────────────────────┘  │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                            │                                 │
+│                            ▼                                 │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │               KDSE Service Layer                        │ │
+│  │  • initialize()  • help()  • status()                  │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                            │                                 │
+│                            ▼                                 │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │              Tool Implementations                       │ │
+│  └────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### Local Development
+## Transport Configuration
+
+The transport is selected via the `MCP_TRANSPORT` environment variable:
+
+| Transport | Environment | Use Case |
+|-----------|-------------|----------|
+| STDIO | `MCP_TRANSPORT=stdio` | Local development |
+| HTTP | `MCP_TRANSPORT=http` | Remote deployment |
+
+**HTTP Port:** Configure via `MCP_HTTP_PORT` (default: 8080)
+
+## Quick Start
+
+### Local Development (STDIO)
 
 ```bash
 cd mcp-server
 go mod download
 go run .
+```
+
+### Remote Deployment (HTTP)
+
+```bash
+# Set transport and port
+export MCP_TRANSPORT=http
+export MCP_HTTP_PORT=8080
+
+# Run
+go run .
+```
+
+### Using Docker Compose
+
+```bash
+cd mcp-server
+
+# STDIO mode (local development)
+docker compose --profile stdio up -d
+
+# HTTP mode (remote deployment)
+docker compose --profile http up -d
 ```
 
 ## Available Tools
@@ -60,7 +120,7 @@ Returns information about all available KDSE MCP tools.
   "result": {
     "content": [{
       "type": "text",
-      "text": "{\n  \"server\": {\n    \"name\": \"kdse-mcp-server\",\n    \"version\": \"0.1.0\",\n    ...\n  },\n  \"tools\": [...]\n}"
+      "text": "{\n  \"server\": {\n    \"name\": \"kdse-mcp-server\",\n    \"version\": \"0.2.0\",\n   ...\n  },\n  \"tools\": [...]\n}"
     }]
   }
 }
@@ -89,7 +149,7 @@ Returns repository initialization information (static).
   "result": {
     "content": [{
       "type": "text",
-      "text": "{\n  \"repository\": {\"root\": \"/workspace/project/KDSE\", \"exists\": true},\n  \"module\": \"github.com/kdse/runtime\",\n  \"version\": \"0.1.0\",\n  \"goVersion\": \"1.22.5\",\n  \"features\": [\"help\", \"initialize\", \"status\"],\n  \"components\": {...}\n}"
+      "text": "{\n  \"repository\": {\"root\": \"/workspace/project/KDSE\", \"exists\": true},\n  \"module\": \"github.com/kdse/runtime\",\n  \"version\": \"0.2.0\",\n  \"goVersion\": \"1.22.5\",\n  \"features\": [\"help\", \"initialize\", \"status\"],\n  \"components\": {...}\n}"
     }]
   }
 }
@@ -122,6 +182,27 @@ Returns repository status information (static).
     }]
   }
 }
+```
+
+## HTTP Transport Endpoints
+
+When running in HTTP mode, the server exposes:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Health check |
+| `/mcp` | POST | MCP JSON-RPC endpoint |
+
+### Testing HTTP Endpoint
+
+```bash
+# Check health
+curl http://localhost:8080/health
+
+# Test MCP initialization
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"initialize","params":{},"id":0}'
 ```
 
 ## MCP Protocol
@@ -159,44 +240,16 @@ List available tools with `tools/list`:
 }
 ```
 
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     MCP Client (OpenHands)                    │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              │ JSON-RPC 2.0 over stdio
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    KDSE MCP Server                           │
-│  ┌─────────────────────────────────────────────────────────┐│
-│  │              Protocol Handler (main.go)                 ││
-│  │  • JSON-RPC 2.0 parsing                                  ││
-│  │  • Request routing                                       ││
-│  │  • Response formatting                                   ││
-│  └─────────────────────────────────────────────────────────┘│
-│                              │                               │
-│                              ▼                               │
-│  ┌─────────────────────────────────────────────────────────┐│
-│  │              Tool Handler (tools/tools.go)               ││
-│  │  • help - Tool information (static)                      ││
-│  │  • initialize - Repository metadata (static)             ││
-│  │  • status - Repository state (static)                    ││
-│  └─────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────┘
-```
-
 ## Future Extensions
 
-This is v0.1 establishing the MCP foundation. Planned additions:
+This is v0.2 establishing dual transport support. Planned additions:
 
 - [ ] Repository reading for dynamic responses
 - [ ] Development Experience tool
 - [ ] Audit tool for compliance checks
 - [ ] Architecture search capabilities
 - [ ] AI reasoning integration
-- [ ] HTTP transport mode
+- [ ] Streaming responses for long-running operations
 
 ## License
 
