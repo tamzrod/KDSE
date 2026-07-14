@@ -7,14 +7,16 @@
 
 ## Overview
 
-The KDSE MCP Server provides a Model Context Protocol interface to Knowledge-Driven Software Engineering repository information. It enables AI assistants like OpenHands to query structured KDSE repository data through the standard MCP protocol.
+The KDSE MCP Server provides a Model Context Protocol interface for Knowledge-Driven Software Engineering. It enables AI assistants like OpenHands to communicate with KDSE through the standard MCP protocol.
+
+This v0.1 release establishes the MCP communication foundation with static responses.
 
 ## Design Principles
 
-1. **Read-Only**: The server only reads repository data; it never modifies anything.
-2. **Knowledge Separation**: The MCP server does not own repository knowledge. Repository knowledge remains the source of truth.
-3. **Protocol Isolation**: MCP protocol handling is strictly separated from KDSE service logic.
-4. **Structured Output**: All responses are structured JSON, suitable for programmatic consumption.
+1. **Static Responses**: v0.1 returns static data to prove MCP communication works
+2. **Protocol Isolation**: MCP protocol handling is strictly separated from KDSE service logic
+3. **Structured Output**: All responses are structured JSON, suitable for programmatic consumption
+4. **Foundation Only**: Repository reading and advanced features are out of scope for v0.1
 
 ## Quick Start
 
@@ -56,20 +58,17 @@ Returns information about all available KDSE MCP tools.
 {
   "jsonrpc": "2.0",
   "result": {
-    "server": {
-      "name": "kdse-mcp-server",
-      "version": "0.1.0",
-      "description": "Model Context Protocol server for Knowledge-Driven Software Engineering",
-      "protocol": "2024-11-05"
-    },
-    "tools": [...]
+    "content": [{
+      "type": "text",
+      "text": "{\n  \"server\": {\n    \"name\": \"kdse-mcp-server\",\n    \"version\": \"0.1.0\",\n    ...\n  },\n  \"tools\": [...]\n}"
+    }]
   }
 }
 ```
 
 ### initialize
 
-Returns repository initialization information including module name, version, and supported features.
+Returns repository initialization information (static).
 
 **Request:**
 ```json
@@ -88,25 +87,17 @@ Returns repository initialization information including module name, version, an
 {
   "jsonrpc": "2.0",
   "result": {
-    "repository": {
-      "root": "/workspace/project/KDSE",
-      "exists": true
-    },
-    "module": "github.com/kdse/runtime",
-    "version": "0.1.0",
-    "goVersion": "1.22.5",
-    "features": ["help", "initialize", "status"],
-    "components": {
-      "commands": ["kdse"],
-      "packages": ["collect", "config", "context", "detection", "normalize", "report", "state", "types"]
-    }
+    "content": [{
+      "type": "text",
+      "text": "{\n  \"repository\": {\"root\": \"/workspace/project/KDSE\", \"exists\": true},\n  \"module\": \"github.com/kdse/runtime\",\n  \"version\": \"0.1.0\",\n  \"goVersion\": \"1.22.5\",\n  \"features\": [\"help\", \"initialize\", \"status\"],\n  \"components\": {...}\n}"
+    }]
   }
 }
 ```
 
 ### status
 
-Returns current repository status information including git state, file counts, and KDSE compliance.
+Returns repository status information (static).
 
 **Request:**
 ```json
@@ -125,30 +116,10 @@ Returns current repository status information including git state, file counts, 
 {
   "jsonrpc": "2.0",
   "result": {
-    "repository": {
-      "root": "/workspace/project/KDSE",
-      "exists": true
-    },
-    "git": {
-      "available": true,
-      "branch": "main",
-      "commit": "abc12345",
-      "has_changes": false
-    },
-    "files": {
-      "total": 150,
-      "by_type": {".go": 45, ".md": 80, ".yml": 10},
-      "by_location": {"cmd": 5, "internal": 40, "runtime": 30, "docs": 75}
-    },
-    "kdse": {
-      "compliant": true,
-      "has_readme": true,
-      "has_foundation": true,
-      "has_runtime": true,
-      "has_go_mod": true,
-      "has_docker": false,
-      "has_mcp_server": true
-    }
+    "content": [{
+      "type": "text",
+      "text": "{\n  \"repository\": {\"root\": \"/workspace/project/KDSE\", \"exists\": true},\n  \"git\": {\"available\": true, \"branch\": \"main\", ...},\n  \"kdse\": {\"compliant\": true, ...}\n}"
+    }]
   }
 }
 ```
@@ -175,21 +146,6 @@ The MCP client must send an `initialize` request before using any tools:
 }
 ```
 
-### Tool Calling
-
-Tools are called using `tools/call`:
-
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "tools/call",
-  "params": {
-    "name": "help"
-  },
-  "id": 1
-}
-```
-
 ### Tool Listing
 
 List available tools with `tools/list`:
@@ -202,13 +158,6 @@ List available tools with `tools/list`:
   "id": 1
 }
 ```
-
-## Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `KDSE_REPO_ROOT` | `/workspace/project/KDSE` | Path to KDSE repository |
-| `MCP_STDIO` | `true` | Use stdio transport (currently only mode) |
 
 ## Architecture
 
@@ -231,25 +180,19 @@ List available tools with `tools/list`:
 │                              ▼                               │
 │  ┌─────────────────────────────────────────────────────────┐│
 │  │              Tool Handler (tools/tools.go)               ││
-│  │  • help - Tool information                              ││
-│  │  • initialize - Repository metadata                     ││
-│  │  • status - Repository state                            ││
+│  │  • help - Tool information (static)                      ││
+│  │  • initialize - Repository metadata (static)             ││
+│  │  • status - Repository state (static)                    ││
 │  └─────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              │ Read-only
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    KDSE Repository                           │
-│                    (Source of Truth)                         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ## Future Extensions
 
-This is v0.1 with minimal functionality. Planned additions:
+This is v0.1 establishing the MCP foundation. Planned additions:
 
-- [ ] Experience tool for development experience queries
+- [ ] Repository reading for dynamic responses
+- [ ] Development Experience tool
 - [ ] Audit tool for compliance checks
 - [ ] Architecture search capabilities
 - [ ] AI reasoning integration
