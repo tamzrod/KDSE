@@ -6,9 +6,9 @@ services:
   # STDIO mode - for local development via docker exec
   kdse-mcp-stdio:
     build:
-      context: ${KDSE_BUILD_CONTEXT:-../../../mcp-server}
+      context: ${KDSE_BUILD_CONTEXT:-../..}
       dockerfile: ${KDSE_DOCKERFILE:-Dockerfile}
-    image: ${KDSE_IMAGE:-kdse-mcp-server}:${KDSE_TAG:-latest}
+    image: ${KDSE_IMAGE:-kdse-mcp}:${KDSE_TAG:-latest}
     container_name: ${KDSE_STDIO_CONTAINER_NAME:-kdse-mcp-stdio}
     restart: unless-stopped
     environment:
@@ -26,9 +26,9 @@ services:
   # HTTP mode - for remote MCP client connections
   kdse-mcp-http:
     build:
-      context: ${KDSE_BUILD_CONTEXT:-../../../mcp-server}
+      context: ${KDSE_BUILD_CONTEXT:-../..}
       dockerfile: ${KDSE_DOCKERFILE:-Dockerfile}
-    image: ${KDSE_IMAGE:-kdse-mcp-server}:${KDSE_TAG:-latest}
+    image: ${KDSE_IMAGE:-kdse-mcp}:${KDSE_TAG:-latest}
     container_name: ${KDSE_HTTP_CONTAINER_NAME:-kdse-mcp-http}
     restart: unless-stopped
     environment:

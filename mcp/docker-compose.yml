@@ -1,6 +1,7 @@
 # KDSE MCP Server Docker Compose Configuration
 # Version: 0.2.0
-# Supports both STDIO (local) and HTTP (remote) transports
+# DEVELOPMENT ONLY - Local development with Docker Compose
+# For production deployment, use mcp/deploy/droplet_linux/docker-compose.yml
 
 services:
   # KDSE MCP Server - STDIO mode (local development)
@@ -8,7 +9,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: kdse-mcp-server:0.2.0
+    image: kdse-mcp:dev
     container_name: kdse-mcp-stdio
     environment:
       - KDSE_REPO_ROOT=/workspace/project/KDSE
@@ -24,13 +25,14 @@ services:
     profiles:
       - stdio
       - local
+      - development
 
-  # KDSE MCP Server - HTTP mode (remote deployment)
+  # KDSE MCP Server - HTTP mode (development server)
   kdse-mcp-http:
     build:
       context: .
       dockerfile: Dockerfile
-    image: kdse-mcp-server:0.2.0
+    image: kdse-mcp:dev
     container_name: kdse-mcp-http
     environment:
       - KDSE_REPO_ROOT=/workspace/project/KDSE
@@ -57,7 +59,7 @@ services:
         max-file: "3"
     profiles:
       - http
-      - remote
+      - development
 
 networks:
   kdse-network:

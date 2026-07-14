@@ -67,7 +67,7 @@ The transport is selected via the `MCP_TRANSPORT` environment variable:
 ### Local Development (STDIO)
 
 ```bash
-cd mcp-server
+cd mcp
 go mod download
 go run .
 ```
@@ -83,17 +83,19 @@ export MCP_HTTP_PORT=8080
 go run .
 ```
 
-### Using Docker Compose
+### Using Docker Compose (Development)
 
 ```bash
-cd mcp-server
+cd mcp
 
 # STDIO mode (local development)
 docker compose --profile stdio up -d
 
-# HTTP mode (remote deployment)
+# HTTP mode (development server)
 docker compose --profile http up -d
 ```
+
+**Note:** For production deployment, use the configuration in `mcp/deploy/droplet_linux/`
 
 ## Available Tools
 

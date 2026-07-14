@@ -90,9 +90,9 @@ nano .env
 |----------|---------|-------------|
 | `MCP_TRANSPORT` | `http` | Transport mode: `stdio` or `http` |
 | `MCP_HTTP_PORT` | `8080` | HTTP port for remote mode |
-| `KDSE_BUILD_CONTEXT` | `../../../mcp-server` | Path to mcp-server source |
+| `KDSE_BUILD_CONTEXT` | `../..` | Path to MCP source |
 | `KDSE_DOCKERFILE` | `Dockerfile` | Dockerfile name |
-| `KDSE_IMAGE` | `kdse-mcp-server` | Docker image name |
+| `KDSE_IMAGE` | `kdse-mcp` | Docker image name |
 | `KDSE_TAG` | `latest` | Image tag |
 | `KDSE_HTTP_CONTAINER_NAME` | `kdse-mcp-http` | HTTP container name |
 | `KDSE_STDIO_CONTAINER_NAME` | `kdse-mcp-stdio` | STDIO container name |
@@ -126,7 +126,7 @@ cd /opt/kdse/mcp/deploy/droplet_linux
 ```
 
 This will:
-1. Build the Docker image locally from `mcp-server/Dockerfile`
+1. Build the Docker image locally from `mcp/Dockerfile`
 2. Create the network
 3. Start the HTTP server container on port 8080
 
@@ -456,7 +456,7 @@ netstat -tlnp | grep 8080
 pwd  # Should be: /opt/kdse/mcp/deploy/droplet_linux
 
 # Verify Dockerfile exists
-ls -la ../../../mcp-server/Dockerfile
+ls -la ../../Dockerfile
 ```
 
 ### HTTP Client Connection Refused

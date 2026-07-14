@@ -11,7 +11,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/kdse/mcp-server/tools"
+	"github.com/kdse/mcp/tools"
 )
 
 // =============================================================================
@@ -145,8 +145,8 @@ func (s *KDSEService) handleInitialize(req *MCPRequest) map[string]interface{} {
 	return map[string]interface{}{
 		"protocolVersion": ProtocolVersion,
 		"serverInfo": map[string]interface{}{
-			"name":    "kdse-mcp-server",
-			"version": "0.1.0",
+			"name":    "kdse-mcp",
+			"version": "0.2.0",
 		},
 		"capabilities": map[string]interface{}{
 			"tools": map[string]interface{}{

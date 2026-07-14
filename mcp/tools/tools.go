@@ -13,8 +13,8 @@ func NewToolHandler() *ToolHandler {
 func (h *ToolHandler) Help() map[string]interface{} {
 	return map[string]interface{}{
 		"server": map[string]interface{}{
-			"name":        "kdse-mcp-server",
-			"version":     "0.1.0",
+			"name":        "kdse-mcp",
+			"version":     "0.2.0",
 			"description": "Model Context Protocol server for Knowledge-Driven Software Engineering",
 			"protocol":    "2024-11-05",
 		},
@@ -86,7 +86,7 @@ func (h *ToolHandler) Status() map[string]interface{} {
 		"files": map[string]interface{}{
 			"total":        42,
 			"by_type":      map[string]interface{}{".go": 12, ".md": 28, ".yml": 2},
-			"by_location":  map[string]interface{}{"cmd": 1, "docs": 28, "internal": 8, "runtime": 3, "mcp-server": 7},
+			"by_location":  map[string]interface{}{"cmd": 1, "docs": 28, "internal": 8, "runtime": 3, "mcp": 7},
 		},
 		"kdse": map[string]interface{}{
 			"compliant":          true,
