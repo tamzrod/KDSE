@@ -1,0 +1,33 @@
+# KDSE MCP Server - Production Deployment for Linux Droplets
+# DigitalOcean Droplet / Ubuntu Linux VPS
+
+services:
+  kdse-mcp:
+    image: ${KDSE_IMAGE:-kdse-mcp-server}:${KDSE_TAG:-latest}
+    container_name: ${KDSE_CONTAINER_NAME:-kdse-mcp-server}
+    restart: unless-stopped
+    environment:
+      - MCP_STDIO=${MCP_STDIO:-true}
+      - KDSE_REPO_ROOT=${KDSE_REPO_ROOT:-/data/kdse}
+    volumes:
+      - ${KDSE_DATA_PATH:-/data/kdse}:/data/kdse:ro
+    stdin_open: true
+    tty: true
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - kdse-network
+
+networks:
+  kdse-network:
+    name: ${KDSE_NETWORK:-kdse-mcp-network}
+    driver: bridge
