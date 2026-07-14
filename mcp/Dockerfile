@@ -20,7 +20,7 @@ RUN go mod download
 COPY . .
 
 # Build the binary
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o kdse-mcp-server .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o kdse-mcp .
 
 # Runtime stage - minimal image
 FROM alpine:3.19
@@ -35,7 +35,7 @@ RUN adduser -D -u 1000 kdse
 WORKDIR /app
 
 # Copy binary from builder
-COPY --from=builder /build/kdse-mcp-server .
+COPY --from=builder /build/kdse-mcp .
 
 # Set ownership
 RUN chown -R kdse:kdse /app
@@ -49,4 +49,4 @@ USER kdse
 
 # Default command - MCP server
 # Transport is selected via MCP_TRANSPORT environment variable
-CMD ["./kdse-mcp-server"]
+CMD ["./kdse-mcp"]

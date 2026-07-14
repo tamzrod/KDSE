@@ -349,7 +349,7 @@ MCP_TRANSPORT=stdio ./deploy.sh deploy
 docker compose --profile stdio up -d
 
 # Test with docker exec
-docker exec -i kdse-mcp-stdio sh -c 'echo {"jsonrpc":"2.0","method":"initialize","params":{},"id":0}' | ./kdse-mcp-server
+docker exec -i kdse-mcp-stdio sh -c 'echo {"jsonrpc":"2.0","method":"initialize","params":{},"id":0}' | ./kdse-mcp
 ```
 
 ---
