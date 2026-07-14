@@ -36,6 +36,10 @@
 | [023-question-classification.md](docs/foundation/023-question-classification.md) | Question classification |
 | [024-engineering-independence-test.md](docs/foundation/024-engineering-independence-test.md) | Engineering Independence Test |
 | [025-reference-artifact-management.md](docs/foundation/025-reference-artifact-management.md) | Reference Artifact Management |
+| [DEVELOPMENT-EXPERIENCE-SPECIFICATION.md](docs/foundation/DEVELOPMENT-EXPERIENCE-SPECIFICATION.md) | Development Experience schema |
+| [CONFIDENCE-MODEL.md](docs/foundation/CONFIDENCE-MODEL.md) | Confidence levels for experiences |
+| [CAPTURE-RULES.md](docs/foundation/CAPTURE-RULES.md) | Rules for capturing experiences |
+| [RETRIEVAL-RULES.md](docs/foundation/RETRIEVAL-RULES.md) | Rules for retrieving experiences |
 
 ## Core Principles
 
@@ -76,6 +80,7 @@ Reference Artifacts → Reference Artifact Management → Reference Analysis →
 - **Stewardship**: Responsibility without dominion; knowledge is stewarded, not owned
 - **Traceability**: The ability to follow relationships between artifacts
 - **Separation of Concerns**: Reference Artifacts, Reference Artifact Management, Domain Knowledge, Architecture, and Implementation remain independent
+- **Development Experience**: Verified development knowledge captured from real events, enabling knowledge transfer between AI sessions
 
 ## Separation of Concerns
 
@@ -88,6 +93,7 @@ KDSE maintains strict separation between:
 | Domain Knowledge | Implementation-independent understanding |
 | Architecture | Organization of Domain Knowledge into software |
 | Implementation | Realization of Architecture using specific technologies |
+| Development Experience | Verified development knowledge (lateral artifact, available at any phase) |
 
 ## License
 
