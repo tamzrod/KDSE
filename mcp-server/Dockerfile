@@ -1,5 +1,6 @@
 # KDSE MCP Server Dockerfile
 # Multi-stage build for minimal image size
+# Version: 0.2.0
 
 # Build stage
 FROM golang:1.22-alpine AS builder
@@ -25,7 +26,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o kdse-mcp-server .
 FROM alpine:3.19
 
 # Install git for repository access (if needed at runtime)
-RUN apk add --no-cache git ca-certificates
+# Install wget for healthcheck
+RUN apk add --no-cache git ca-certificates wget
 
 # Create non-root user
 RUN adduser -D -u 1000 kdse
@@ -38,11 +40,13 @@ COPY --from=builder /build/kdse-mcp-server .
 # Set ownership
 RUN chown -R kdse:kdse /app
 
-# Environment variables
-ENV MCP_STDIO=true
+# Environment variables (defaults)
+ENV MCP_TRANSPORT=stdio
+ENV MCP_HTTP_PORT=8080
 
 # User setup
 USER kdse
 
-# Default command - MCP server over stdio
+# Default command - MCP server
+# Transport is selected via MCP_TRANSPORT environment variable
 CMD ["./kdse-mcp-server"]

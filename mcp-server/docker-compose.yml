@@ -1,17 +1,18 @@
 # KDSE MCP Server Docker Compose Configuration
-# Version: 0.1.0
+# Version: 0.2.0
+# Supports both STDIO (local) and HTTP (remote) transports
 
 services:
-  # KDSE MCP Server - stdio mode (default)
-  kdse-mcp:
+  # KDSE MCP Server - STDIO mode (local development)
+  kdse-mcp-stdio:
     build:
       context: .
       dockerfile: Dockerfile
-    image: kdse-mcp-server:0.1.0
-    container_name: kdse-mcp-server
+    image: kdse-mcp-server:0.2.0
+    container_name: kdse-mcp-stdio
     environment:
       - KDSE_REPO_ROOT=/workspace/project/KDSE
-      - MCP_STDIO=true
+      - MCP_TRANSPORT=stdio
     volumes:
       # Mount KDSE repository read-only
       - ${KDSE_REPO_PATH:-../}:/workspace/project/KDSE:ro
@@ -20,26 +21,43 @@ services:
     networks:
       - kdse-network
     restart: unless-stopped
+    profiles:
+      - stdio
+      - local
 
-  # KDSE MCP Server - Development mode with hot reload
-  # Uncomment for development
-  # kdse-mcp-dev:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.dev
-  #   image: kdse-mcp-server:0.1.0-dev
-  #   container_name: kdse-mcp-server-dev
-  #   environment:
-  #     - KDSE_REPO_ROOT=/workspace/project/KDSE
-  #     - MCP_STDIO=true
-  #     - DEBUG=true
-  #   volumes:
-  #     - ${KDSE_REPO_PATH:-../}:/workspace/project/KDSE:ro
-  #     - .:/app
-  #   stdin_open: true
-  #   tty: true
-  #   networks:
-  #     - kdse-network
+  # KDSE MCP Server - HTTP mode (remote deployment)
+  kdse-mcp-http:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: kdse-mcp-server:0.2.0
+    container_name: kdse-mcp-http
+    environment:
+      - KDSE_REPO_ROOT=/workspace/project/KDSE
+      - MCP_TRANSPORT=http
+      - MCP_HTTP_PORT=${MCP_HTTP_PORT:-8080}
+    volumes:
+      # Mount KDSE repository read-only
+      - ${KDSE_REPO_PATH:-../}:/workspace/project/KDSE:ro
+    ports:
+      - "${MCP_HTTP_PORT:-8080}:${MCP_HTTP_PORT:-8080}"
+    networks:
+      - kdse-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    profiles:
+      - http
+      - remote
 
 networks:
   kdse-network:

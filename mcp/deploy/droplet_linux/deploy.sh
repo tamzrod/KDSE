@@ -26,8 +26,16 @@ else
     echo -e "${YELLOW}Warning: .env file not found. Using defaults from docker-compose.yml${NC}"
 fi
 
-# Container name from env or default
-CONTAINER_NAME="${KDSE_CONTAINER_NAME:-kdse-mcp-server}"
+# Transport mode: stdio or http
+TRANSPORT_MODE="${MCP_TRANSPORT:-http}"
+
+# Container names based on transport
+if [ "$TRANSPORT_MODE" = "http" ]; then
+    CONTAINER_NAME="${KDSE_HTTP_CONTAINER_NAME:-kdse-mcp-http}"
+    HTTP_PORT="${MCP_HTTP_PORT:-8080}"
+else
+    CONTAINER_NAME="${KDSE_STDIO_CONTAINER_NAME:-kdse-mcp-stdio}"
+fi
 
 # =============================================================================
 # HELPER FUNCTIONS
@@ -69,6 +77,7 @@ check_docker() {
 
 deploy() {
     log_info "Starting KDSE MCP Server deployment..."
+    log_info "Transport mode: ${TRANSPORT_MODE}"
     
     # Build image locally from source
     log_info "Building Docker image from source..."
@@ -78,21 +87,20 @@ deploy() {
     log_info "Ensuring network exists..."
     docker network create "${KDSE_NETWORK:-kdse-mcp-network}" 2>/dev/null || true
     
-    # Stop existing container if running
-    if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-        log_info "Stopping existing container..."
-        docker compose stop
-    fi
+    # Stop existing containers
+    log_info "Stopping any existing containers..."
+    docker compose down 2>/dev/null || true
     
-    # Remove old container if exists
-    if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-        log_info "Removing old container..."
-        docker compose rm -f
-    fi
+    # Start the service based on transport mode
+    log_info "Starting KDSE MCP Server in ${TRANSPORT_MODE} mode..."
     
-    # Start the service
-    log_info "Starting KDSE MCP Server..."
-    docker compose up -d
+    if [ "$TRANSPORT_MODE" = "http" ]; then
+        docker compose --profile http up -d
+        log_info "HTTP server will be available on port ${HTTP_PORT}"
+    else
+        docker compose --profile stdio up -d
+        log_info "STDIO server ready for local connections"
+    fi
     
     log_success "Deployment complete!"
 }
@@ -103,12 +111,22 @@ deploy() {
 
 status() {
     echo ""
-    echo "=== Container Status ==="
+    echo "=== KDSE MCP Server Status ==="
+    echo "Transport mode: ${TRANSPORT_MODE}"
+    echo ""
     docker compose ps
     echo ""
     
     if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
         log_success "Container '${CONTAINER_NAME}' is running"
+        
+        # Show transport-specific info
+        if [ "$TRANSPORT_MODE" = "http" ]; then
+            echo ""
+            echo "=== HTTP Endpoint ==="
+            echo "Health: http://localhost:${HTTP_PORT}/health"
+            echo "MCP:    http://localhost:${HTTP_PORT}/mcp"
+        fi
         
         # Show recent logs
         echo ""
@@ -132,30 +150,66 @@ health_check() {
         return 1
     fi
     
-    # Check container health status
-    HEALTH=$(docker inspect --format='{{.State.Health.Status}}' "${CONTAINER_NAME}" 2>/dev/null || echo "none")
-    
-    if [ "$HEALTH" = "healthy" ]; then
-        log_success "Container health: ${HEALTH}"
-    elif [ "$HEALTH" = "none" ]; then
-        log_warning "No healthcheck configured (this is normal for stdio mode)"
-        log_info "Verifying container is responsive..."
+    if [ "$TRANSPORT_MODE" = "http" ]; then
+        # Test HTTP health endpoint
+        log_info "Testing HTTP health endpoint..."
+        if curl -sf "http://localhost:${HTTP_PORT}/health" > /dev/null 2>&1; then
+            log_success "HTTP health check passed"
+        else
+            log_error "HTTP health check failed"
+            return 1
+        fi
         
-        # For stdio containers, just verify it's running
-        if docker ps --format '{{.Status}}' | grep -q "Up"; then
-            log_success "Container is up and running"
+        # Test MCP initialization over HTTP
+        log_info "Testing MCP initialization..."
+        RESPONSE=$(curl -sf -X POST "http://localhost:${HTTP_PORT}/mcp" \
+            -H "Content-Type: application/json" \
+            -d '{"jsonrpc":"2.0","method":"initialize","params":{},"id":0}' 2>/dev/null)
+        
+        if echo "$RESPONSE" | grep -q "protocolVersion"; then
+            log_success "MCP server is responding correctly"
+        else
+            log_warning "Could not verify MCP response"
         fi
     else
-        log_warning "Container health: ${HEALTH}"
+        # STDIO mode - just verify it's running
+        HEALTH=$(docker inspect --format='{{.State.Health.Status}}' "${CONTAINER_NAME}" 2>/dev/null || echo "none")
+        if [ "$HEALTH" = "healthy" ] || [ "$HEALTH" = "none" ]; then
+            log_success "Container is running in STDIO mode"
+        else
+            log_warning "Container health: ${HEALTH}"
+        fi
+    fi
+}
+
+# =============================================================================
+# SWITCH TRANSPORT MODE
+# =============================================================================
+
+switch_mode() {
+    local new_mode="$1"
+    
+    if [ "$new_mode" != "stdio" ] && [ "$new_mode" != "http" ]; then
+        log_error "Invalid mode. Use 'stdio' or 'http'"
+        exit 1
     fi
     
-    # Test MCP communication if possible
-    log_info "Testing MCP initialization..."
-    if echo '{"jsonrpc":"2.0","method":"initialize","params":{},"id":0}' | timeout 5 docker compose exec -T "${CONTAINER_NAME}" ./kdse-mcp-server 2>/dev/null | grep -q "protocolVersion"; then
-        log_success "MCP server is responding correctly"
+    log_info "Switching to ${new_mode} mode..."
+    
+    # Stop current containers
+    docker compose down
+    
+    # Update environment
+    export MCP_TRANSPORT="$new_mode"
+    
+    # Restart with new mode
+    if [ "$new_mode" = "http" ]; then
+        docker compose --profile http up -d
     else
-        log_warning "Could not verify MCP response (this may be expected for stdio mode)"
+        docker compose --profile stdio up -d
     fi
+    
+    log_success "Switched to ${new_mode} mode"
 }
 
 # =============================================================================
@@ -171,7 +225,11 @@ case "${1:-deploy}" in
         ;;
     start)
         check_docker
-        docker compose up -d
+        if [ "$TRANSPORT_MODE" = "http" ]; then
+            docker compose --profile http up -d
+        else
+            docker compose --profile stdio up -d
+        fi
         log_success "Started"
         ;;
     stop)
@@ -203,8 +261,17 @@ case "${1:-deploy}" in
         docker compose build
         log_success "Image built successfully"
         ;;
+    switch)
+        switch_mode "${2:-http}"
+        ;;
+    http)
+        switch_mode "http"
+        ;;
+    stdio)
+        switch_mode "stdio"
+        ;;
     *)
-        echo "Usage: $0 {deploy|start|stop|restart|status|logs|health|build}"
+        echo "Usage: $0 {deploy|start|stop|restart|status|logs|health|build|switch}"
         echo ""
         echo "Commands:"
         echo "  deploy  - Full deployment (build, stop old, start new)"
@@ -215,6 +282,13 @@ case "${1:-deploy}" in
         echo "  logs    - View logs (follow mode)"
         echo "  health  - Run health verification"
         echo "  build   - Build Docker image from source"
+        echo "  switch  - Switch transport mode (stdio|http)"
+        echo ""
+        echo "Environment Variables:"
+        echo "  MCP_TRANSPORT     - Transport mode: 'stdio' or 'http' (default: http)"
+        echo "  MCP_HTTP_PORT     - HTTP port for remote mode (default: 8080)"
+        echo ""
+        echo "Current mode: ${TRANSPORT_MODE}"
         exit 1
         ;;
 esac
