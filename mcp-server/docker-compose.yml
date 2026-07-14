@@ -1,0 +1,46 @@
+# KDSE MCP Server Docker Compose Configuration
+# Version: 0.1.0
+
+services:
+  # KDSE MCP Server - stdio mode (default)
+  kdse-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: kdse-mcp-server:0.1.0
+    container_name: kdse-mcp-server
+    environment:
+      - KDSE_REPO_ROOT=/workspace/project/KDSE
+      - MCP_STDIO=true
+    volumes:
+      # Mount KDSE repository read-only
+      - ${KDSE_REPO_PATH:-../}:/workspace/project/KDSE:ro
+    stdin_open: true  # -i
+    tty: true         # -t
+    networks:
+      - kdse-network
+    restart: unless-stopped
+
+  # KDSE MCP Server - Development mode with hot reload
+  # Uncomment for development
+  # kdse-mcp-dev:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.dev
+  #   image: kdse-mcp-server:0.1.0-dev
+  #   container_name: kdse-mcp-server-dev
+  #   environment:
+  #     - KDSE_REPO_ROOT=/workspace/project/KDSE
+  #     - MCP_STDIO=true
+  #     - DEBUG=true
+  #   volumes:
+  #     - ${KDSE_REPO_PATH:-../}:/workspace/project/KDSE:ro
+  #     - .:/app
+  #   stdin_open: true
+  #   tty: true
+  #   networks:
+  #     - kdse-network
+
+networks:
+  kdse-network:
+    driver: bridge
