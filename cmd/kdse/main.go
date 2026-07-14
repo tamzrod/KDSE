@@ -44,6 +44,8 @@ func main() {
 		handleStatus(repoPath)
 	case "report":
 		handleReport(repoPath)
+	case "context":
+		handleContext(repoPath, args)
 	case "version", "--version", "-v":
 		fmt.Printf("KDSE Runtime v%s\n", version)
 	case "help", "--help", "-h":
@@ -68,6 +70,14 @@ Commands:
   run         Start a KDSE session
   status      Show current session status
   report      Generate runtime report
+  context     Context handoff management
+
+Context Commands:
+  kdse context init           Initialize context handoff
+  kdse context stage         Transition to new stage
+  kdse context next-action   Set next action directive
+  kdse context add-evidence  Add evidence files
+  kdse context read          Display current context
 
 Options:
   -h, --help    Show this help message
@@ -319,4 +329,254 @@ func truncate(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen-3] + "..."
+}
+
+// handleContext manages the context handoff system
+func handleContext(repoPath string, args []string) {
+	if len(args) < 1 {
+		printContextUsage()
+		os.Exit(1)
+	}
+
+	subcmd := args[0]
+	subargs := args[1:]
+
+	switch subcmd {
+	case "init":
+		handleContextInit(repoPath, subargs)
+	case "stage":
+		handleContextStage(repoPath, subargs)
+	case "next-action":
+		handleContextNextAction(repoPath, subargs)
+	case "add-evidence":
+		handleContextAddEvidence(repoPath, subargs)
+	case "read":
+		handleContextRead(repoPath)
+	default:
+		fmt.Printf("Unknown context command: %s\n", subcmd)
+		printContextUsage()
+		os.Exit(1)
+	}
+}
+
+func printContextUsage() {
+	fmt.Println(`KDSE Context Handoff Commands
+
+Usage: kdse context <command> [options]
+
+Commands:
+  init           Initialize a new context
+  stage          Transition to a new stage
+  next-action    Set the next action directive
+  add-evidence   Add evidence file references
+  read           Display current context
+
+Examples:
+  kdse context init --project myapp --stage Concept
+  kdse context stage --to Architecture --evidence docs/arch.md
+  kdse context next-action "Review domain model"
+  kdse context add-evidence docs/screenshots/dashboard.png
+  kdse context read`)
+}
+
+func handleContextInit(repoPath string, args []string) {
+	project := "unknown"
+	stage := "Concept"
+	nextAction := "Initialize KDSE project"
+
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--project", "-p":
+			if i+1 < len(args) {
+				project = args[i+1]
+				i++
+			}
+		case "--stage", "-s":
+			if i+1 < len(args) {
+				stage = args[i+1]
+				i++
+			}
+		case "--next-action", "-n":
+			if i+1 < len(args) {
+				nextAction = args[i+1]
+				i++
+			}
+		}
+	}
+
+	ctx := context.NewHandoffContext(project, stage, nextAction)
+
+	// Set default allowed context
+	ctx.AllowedContext = []string{
+		".kdse/context.json",
+		"docs/",
+		"README.md",
+	}
+
+	if err := ctx.SaveHandoff(repoPath); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: Failed to initialize context: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Context initialized successfully.")
+	fmt.Printf("  Project: %s\n", project)
+	fmt.Printf("  Stage:   %s\n", stage)
+	fmt.Printf("  Next:    %s\n", nextAction)
+}
+
+func handleContextStage(repoPath string, args []string) {
+	newStage := ""
+	var evidence []string
+
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--to", "-t":
+			if i+1 < len(args) {
+				newStage = args[i+1]
+				i++
+			}
+		case "--evidence", "-e":
+			if i+1 < len(args) {
+				evidence = append(evidence, args[i+1])
+				i++
+			}
+		}
+	}
+
+	if newStage == "" {
+		fmt.Fprintf(os.Stderr, "Error: --to <stage> is required\n")
+		os.Exit(1)
+	}
+
+	ctx, err := context.LoadHandoff(repoPath)
+	if err != nil {
+		// Create new context if none exists
+		ctx = context.NewHandoffContext("unknown", "Concept", "Initialize project")
+	}
+
+	previousStage := ctx.CurrentStage
+	ctx.TransitionStage(newStage, evidence...)
+
+	if err := ctx.SaveHandoff(repoPath); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: Failed to save context: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Stage transition complete.")
+	fmt.Printf("  Previous: %s\n", previousStage)
+	fmt.Printf("  Current:  %s\n", newStage)
+	if len(evidence) > 0 {
+		fmt.Println("  Evidence:")
+		for _, e := range evidence {
+			fmt.Printf("    • %s\n", e)
+		}
+	}
+}
+
+func handleContextNextAction(repoPath string, args []string) {
+	if len(args) < 1 {
+		fmt.Fprintf(os.Stderr, "Error: next-action requires an argument\n")
+		os.Exit(1)
+	}
+
+	action := args[0]
+	// Join remaining args for multi-word actions
+	for i := 1; i < len(args); i++ {
+		action += " " + args[i]
+	}
+
+	ctx, err := context.LoadHandoff(repoPath)
+	if err != nil {
+		ctx = context.NewHandoffContext("unknown", "Unknown", action)
+	}
+
+	ctx.SetNextAction(action)
+
+	if err := ctx.SaveHandoff(repoPath); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: Failed to save context: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Next action set: %s\n", action)
+}
+
+func handleContextAddEvidence(repoPath string, args []string) {
+	if len(args) < 1 {
+		fmt.Fprintf(os.Stderr, "Error: add-evidence requires at least one file path\n")
+		os.Exit(1)
+	}
+
+	ctx, err := context.LoadHandoff(repoPath)
+	if err != nil {
+		ctx = context.NewHandoffContext("unknown", "Unknown", "Continue work")
+	}
+
+	ctx.AddEvidence(args...)
+
+	if err := ctx.SaveHandoff(repoPath); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: Failed to save context: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Evidence added:")
+	for _, e := range args {
+		fmt.Printf("  • %s\n", e)
+	}
+}
+
+func handleContextRead(repoPath string) {
+	ctx, err := context.LoadHandoff(repoPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: No context found. Run 'kdse context init' first.\n")
+		os.Exit(1)
+	}
+
+	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
+	fmt.Println("║                    KDSE Context Handoff                      ║")
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+
+	fmt.Printf("║ Project:         %s\n", ctx.Project)
+	fmt.Printf("║ Current Stage:   %s\n", ctx.CurrentStage)
+	if ctx.PreviousStage != nil {
+		fmt.Printf("║ Previous Stage:  %s\n", *ctx.PreviousStage)
+	}
+	fmt.Printf("║ Next Action:     %s\n", ctx.NextAction)
+
+	if len(ctx.StageHistory) > 0 {
+		fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+		fmt.Println("║ Stage History                                                 ║")
+		for _, entry := range ctx.StageHistory {
+			fmt.Printf("║   %s → %s\n", entry.CompletedAt, entry.Stage)
+		}
+	}
+
+	if len(ctx.Evidence) > 0 {
+		fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+		fmt.Println("║ Evidence                                                       ║")
+		for _, e := range ctx.Evidence {
+			fmt.Printf("║   • %s\n", e)
+		}
+	}
+
+	if len(ctx.AllowedContext) > 0 {
+		fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+		fmt.Println("║ Allowed Context                                                ║")
+		for _, p := range ctx.AllowedContext {
+			fmt.Printf("║   • %s\n", p)
+		}
+	}
+
+	if ctx.Session != nil {
+		fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+		fmt.Println("║ Session                                                         ║")
+		fmt.Printf("║   Session ID:  %s\n", ctx.Session.SessionID)
+		fmt.Printf("║   Started:     %s\n", ctx.Session.StartedAt)
+		fmt.Printf("║   Last Update: %s\n", ctx.Session.LastUpdated)
+	}
+
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+	fmt.Printf("║ Metadata                                                       ║")
+	fmt.Printf("║   Initialized: %s\n", ctx.Metadata.InitializedAt)
+	fmt.Printf("║   Transitions: %d\n", ctx.Metadata.TransitionsCount)
+	fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
 }

@@ -1,0 +1,33 @@
+{
+  "project": "KDSE",
+  "project_version": "1.0.0",
+  "schema": "https://kdse.dev/schemas/context-handoff/v1",
+  "current_stage": "Initialization",
+  "previous_stage": null,
+  "stage_history": [],
+  "evidence": [],
+  "next_action": "Review KDSE Foundation documentation",
+  "allowed_context": [
+    ".kdse/context.json",
+    "docs/foundation/",
+    "README.md"
+  ],
+  "restricted_paths": [],
+  "session": {
+    "session_id": null,
+    "started_at": null,
+    "last_updated": null,
+    "sandbox_id": null
+  },
+  "artifacts": {
+    "reports": ".kdse/reports/",
+    "screenshots": ".kdse/evidence/screenshots/",
+    "tests": ".kdse/evidence/tests/",
+    "benchmarks": ".kdse/evidence/benchmarks/"
+  },
+  "metadata": {
+    "initialized_at": "2026-07-14T00:00:00Z",
+    "last_transition": null,
+    "transitions_count": 0
+  }
+}

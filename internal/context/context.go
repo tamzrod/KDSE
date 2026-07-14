@@ -9,18 +9,67 @@ import (
 	"github.com/kdse/runtime/internal/types"
 )
 
-type RuntimeContext struct {
-	SessionID   string                 `json:"session_id"`
-	Timestamp   string                 `json:"timestamp"`
-	Repository  *types.Repository       `json:"repository"`
-	Phase       string                 `json:"phase"`
-	State       string                 `json:"state"`
-	Dimensions  map[string]float64     `json:"dimensions"`
-	Findings    []types.Finding        `json:"findings"`
-	NextAction  string                 `json:"next_action"`
-	Guidance    string                 `json:"guidance"`
+// HandoffContext represents the primary context handoff artifact
+// per CONTEXT_HANDOFF.md specification
+type HandoffContext struct {
+	Project         string          `json:"project"`
+	ProjectVersion  string          `json:"project_version,omitempty"`
+	Schema          string          `json:"schema"`
+	CurrentStage    string          `json:"current_stage"`
+	PreviousStage   *string         `json:"previous_stage,omitempty"`
+	StageHistory    []StageEntry    `json:"stage_history,omitempty"`
+	Evidence        []string        `json:"evidence,omitempty"`
+	NextAction      string          `json:"next_action"`
+	AllowedContext  []string        `json:"allowed_context,omitempty"`
+	RestrictedPaths []string        `json:"restricted_paths,omitempty"`
+	Session         *SessionInfo    `json:"session,omitempty"`
+	Artifacts       ArtifactPaths   `json:"artifacts"`
+	Metadata        ContextMetadata `json:"metadata"`
 }
 
+// StageEntry records a completed stage transition
+type StageEntry struct {
+	Stage       string `json:"stage"`
+	CompletedAt string `json:"completed_at"`
+}
+
+// SessionInfo captures current session metadata
+type SessionInfo struct {
+	SessionID    string  `json:"session_id"`
+	StartedAt    string  `json:"started_at"`
+	LastUpdated  string  `json:"last_updated"`
+	SandboxID    string  `json:"sandbox_id,omitempty"`
+}
+
+// ArtifactPaths defines artifact directory locations
+type ArtifactPaths struct {
+	Reports     string `json:"reports"`
+	Screenshots string `json:"screenshots"`
+	Tests       string `json:"tests"`
+	Benchmarks  string `json:"benchmarks"`
+}
+
+// ContextMetadata tracks lifecycle information
+type ContextMetadata struct {
+	InitializedAt    string `json:"initialized_at"`
+	LastTransition   string `json:"last_transition,omitempty"`
+	TransitionsCount int    `json:"transitions_count"`
+}
+
+// RuntimeContext maintains backward compatibility with existing code
+type RuntimeContext struct {
+	SessionID   string                  `json:"session_id"`
+	Timestamp  string                  `json:"timestamp"`
+	Repository *types.Repository       `json:"repository"`
+	Phase      string                  `json:"phase"`
+	State      string                  `json:"state"`
+	Dimensions map[string]float64      `json:"dimensions"`
+	Findings   []types.Finding         `json:"findings"`
+	NextAction string                  `json:"next_action"`
+	Guidance   string                  `json:"guidance"`
+}
+
+// Builder for RuntimeContext (backward compatible)
 type Builder struct {
 	repoPath   string
 	repository *types.Repository
@@ -54,6 +103,84 @@ func (b *Builder) Build() *RuntimeContext {
 	}
 
 	return ctx
+}
+
+// NewHandoffContext creates a new HandoffContext with defaults
+func NewHandoffContext(project string, currentStage string, nextAction string) *HandoffContext {
+	now := time.Now().Format(time.RFC3339)
+	return &HandoffContext{
+		Project:        project,
+		Schema:         "https://kdse.dev/schemas/context-handoff/v1",
+		CurrentStage:   currentStage,
+		Evidence:       []string{},
+		NextAction:     nextAction,
+		AllowedContext: []string{},
+		RestrictedPaths: []string{},
+		Artifacts: ArtifactPaths{
+			Reports:     ".kdse/reports/",
+			Screenshots: ".kdse/evidence/screenshots/",
+			Tests:       ".kdse/evidence/tests/",
+			Benchmarks:  ".kdse/evidence/benchmarks/",
+		},
+		Metadata: ContextMetadata{
+			InitializedAt:    now,
+			TransitionsCount: 0,
+		},
+	}
+}
+
+// TransitionStage moves to a new stage, recording history
+func (h *HandoffContext) TransitionStage(newStage string, evidence ...string) {
+	now := time.Now().Format(time.RFC3339)
+
+	// Record current stage in history
+	h.StageHistory = append(h.StageHistory, StageEntry{
+		Stage:       h.CurrentStage,
+		CompletedAt: now,
+	})
+
+	// Update stage
+	h.PreviousStage = &h.CurrentStage
+	h.CurrentStage = newStage
+
+	// Add evidence
+	h.Evidence = append(h.Evidence, evidence...)
+
+	// Update metadata
+	h.Metadata.LastTransition = now
+	h.Metadata.TransitionsCount++
+}
+
+// SetNextAction updates the next action directive
+func (h *HandoffContext) SetNextAction(action string) {
+	h.NextAction = action
+}
+
+// AddEvidence appends evidence file paths
+func (h *HandoffContext) AddEvidence(evidence ...string) {
+	h.Evidence = append(h.Evidence, evidence...)
+}
+
+// AddAllowedContext appends paths the AI may read
+func (h *HandoffContext) AddAllowedContext(paths ...string) {
+	h.AllowedContext = append(h.AllowedContext, paths...)
+}
+
+// StartSession initializes session metadata
+func (h *HandoffContext) StartSession(sessionID, sandboxID string) {
+	h.Session = &SessionInfo{
+		SessionID:   sessionID,
+		StartedAt:   time.Now().Format(time.RFC3339),
+		LastUpdated: time.Now().Format(time.RFC3339),
+		SandboxID:   sandboxID,
+	}
+}
+
+// UpdateSession updates session timestamp
+func (h *HandoffContext) UpdateSession() {
+	if h.Session != nil {
+		h.Session.LastUpdated = time.Now().Format(time.RFC3339)
+	}
 }
 
 func (b *Builder) assessDimensions() map[string]float64 {
@@ -203,4 +330,53 @@ func Load(repoPath string) (*RuntimeContext, error) {
 	}
 
 	return &ctx, nil
+}
+
+// SaveHandoff saves the HandoffContext to .kdse/context.json
+func (h *HandoffContext) SaveHandoff(repoPath string) error {
+	// Ensure .kdse directory exists
+	kdseDir := filepath.Join(repoPath, ".kdse")
+	if err := os.MkdirAll(kdseDir, 0755); err != nil {
+		return err
+	}
+
+	// Ensure evidence subdirectories exist
+	for _, subdir := range []string{"reports", "evidence/screenshots", "evidence/tests", "evidence/benchmarks"} {
+		if err := os.MkdirAll(filepath.Join(kdseDir, subdir), 0755); err != nil {
+			return err
+		}
+	}
+
+	ctxPath := filepath.Join(kdseDir, "context.json")
+	data, err := json.MarshalIndent(h, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(ctxPath, data, 0644)
+}
+
+// LoadHandoff loads the HandoffContext from .kdse/context.json
+func LoadHandoff(repoPath string) (*HandoffContext, error) {
+	ctxPath := filepath.Join(repoPath, ".kdse", "context.json")
+	data, err := os.ReadFile(ctxPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var ctx HandoffContext
+	if err := json.Unmarshal(data, &ctx); err != nil {
+		return nil, err
+	}
+
+	return &ctx, nil
+}
+
+// MustLoadHandoff loads HandoffContext or panics
+func MustLoadHandoff(repoPath string) *HandoffContext {
+	ctx, err := LoadHandoff(repoPath)
+	if err != nil {
+		panic("failed to load handoff context: " + err.Error())
+	}
+	return ctx
 }

@@ -1,5 +1,20 @@
 # KDSE Runtime artifacts
-.kdse/
+# Note: .kdse/context.json and .kdse/evidence/ are tracked for context handoff
+!.kdse/context.json
+!.kdse/reports/
+!.kdse/evidence/
+!.kdse/evidence/screenshots/
+!.kdse/evidence/tests/
+!.kdse/evidence/benchmarks/
+.kdse/*/
+!.kdse/architecture/
+!.kdse/assessments/
+!.kdse/bootstrap/
+!.kdse/knowledge/
+!.kdse/manifest.json
+!.kdse/phase0/
+!.kdse/runtime/
+!.kdse/verification/
 
 # Binary - only the compiled binary at root
 /kdse
