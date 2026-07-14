@@ -86,7 +86,7 @@ go run .
 ### Using Docker Compose (Development)
 
 ```bash
-cd mcp
+cd mcp/deploy/development
 
 # STDIO mode (local development)
 docker compose --profile stdio up -d
@@ -95,7 +95,7 @@ docker compose --profile stdio up -d
 docker compose --profile http up -d
 ```
 
-**Note:** For production deployment, use the configuration in `mcp/deploy/droplet_linux/`
+**Note:** For production deployment, use `mcp/deploy/droplet_linux/`
 
 ## Available Tools
 

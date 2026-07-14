@@ -1,13 +1,13 @@
 # KDSE MCP Server Docker Compose Configuration
 # Version: 0.2.0
 # DEVELOPMENT ONLY - Local development with Docker Compose
-# For production deployment, use mcp/deploy/droplet_linux/docker-compose.yml
+# For production deployment, use mcp/deploy/droplet_linux/
 
 services:
   # KDSE MCP Server - STDIO mode (local development)
   kdse-mcp-stdio:
     build:
-      context: .
+      context: ../..
       dockerfile: Dockerfile
     image: kdse-mcp:dev
     container_name: kdse-mcp-stdio
@@ -16,7 +16,7 @@ services:
       - MCP_TRANSPORT=stdio
     volumes:
       # Mount KDSE repository read-only
-      - ${KDSE_REPO_PATH:-../}:/workspace/project/KDSE:ro
+      - ${KDSE_REPO_PATH:-../../..}:/workspace/project/KDSE:ro
     stdin_open: true  # -i
     tty: true         # -t
     networks:
@@ -30,7 +30,7 @@ services:
   # KDSE MCP Server - HTTP mode (development server)
   kdse-mcp-http:
     build:
-      context: .
+      context: ../..
       dockerfile: Dockerfile
     image: kdse-mcp:dev
     container_name: kdse-mcp-http
@@ -40,7 +40,7 @@ services:
       - MCP_HTTP_PORT=${MCP_HTTP_PORT:-8080}
     volumes:
       # Mount KDSE repository read-only
-      - ${KDSE_REPO_PATH:-../}:/workspace/project/KDSE:ro
+      - ${KDSE_REPO_PATH:-../../..}:/workspace/project/KDSE:ro
     ports:
       - "${MCP_HTTP_PORT:-8080}:${MCP_HTTP_PORT:-8080}"
     networks:
