@@ -3,6 +3,9 @@
 
 services:
   kdse-mcp:
+    build:
+      context: ${KDSE_BUILD_CONTEXT:-../../../mcp-server}
+      dockerfile: ${KDSE_DOCKERFILE:-Dockerfile}
     image: ${KDSE_IMAGE:-kdse-mcp-server}:${KDSE_TAG:-latest}
     container_name: ${KDSE_CONTAINER_NAME:-kdse-mcp-server}
     restart: unless-stopped

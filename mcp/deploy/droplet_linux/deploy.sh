@@ -70,13 +70,9 @@ check_docker() {
 deploy() {
     log_info "Starting KDSE MCP Server deployment..."
     
-    # Pull latest image or build from local
-    if [ "${KDSE_TAG:-latest}" != "local" ]; then
-        log_info "Pulling Docker image: ${KDSE_IMAGE:-kdse-mcp-server}:${KDSE_TAG:-latest}"
-        docker compose pull
-    else
-        log_warning "Using local image (KDSE_TAG=local). Run 'docker build' first."
-    fi
+    # Build image locally from source
+    log_info "Building Docker image from source..."
+    docker compose build --no-cache
     
     # Create network if it doesn't exist
     log_info "Ensuring network exists..."
@@ -201,18 +197,24 @@ case "${1:-deploy}" in
         docker compose pull
         log_success "Images pulled"
         ;;
+    build)
+        check_docker
+        log_info "Building Docker image from source..."
+        docker compose build
+        log_success "Image built successfully"
+        ;;
     *)
-        echo "Usage: $0 {deploy|start|stop|restart|status|logs|health|pull}"
+        echo "Usage: $0 {deploy|start|stop|restart|status|logs|health|build}"
         echo ""
         echo "Commands:"
-        echo "  deploy  - Full deployment (pull, stop old, start new)"
+        echo "  deploy  - Full deployment (build, stop old, start new)"
         echo "  start   - Start the container"
         echo "  stop    - Stop the container"
         echo "  restart - Restart the container"
         echo "  status  - Show container status"
         echo "  logs    - View logs (follow mode)"
         echo "  health  - Run health verification"
-        echo "  pull    - Pull latest images"
+        echo "  build   - Build Docker image from source"
         exit 1
         ;;
 esac
