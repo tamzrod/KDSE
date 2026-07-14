@@ -122,7 +122,7 @@ Returns information about all available KDSE MCP tools.
   "result": {
     "content": [{
       "type": "text",
-      "text": "{\n  \"server\": {\n    \"name\": \"kdse-mcp-server\",\n    \"version\": \"0.2.0\",\n   ...\n  },\n  \"tools\": [...]\n}"
+      "text": "{\n  \"server\": {\n    \"name\": \"kdse-mcp\",\n    \"version\": \"0.2.0\",\n   ...\n  },\n  \"tools\": [...]\n}"
     }]
   }
 }

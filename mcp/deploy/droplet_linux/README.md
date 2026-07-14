@@ -193,7 +193,7 @@ curl -X POST http://localhost:8080/mcp \
   "result": {
     "protocolVersion": "2024-11-05",
     "serverInfo": {
-      "name": "kdse-mcp-server",
+      "name": "kdse-mcp",
       "version": "0.2.0"
     },
     "capabilities": {
