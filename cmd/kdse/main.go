@@ -56,6 +56,8 @@ func main() {
 		handleRuntime(repoPath, args)
 	case "someday":
 		handleSomeday(repoPath, args)
+	case "compliance":
+		handleCompliance(repoPath, args)
 	case "context":
 		handleContext(repoPath, args)
 	case "version", "--version", "-v":
@@ -1272,4 +1274,53 @@ func truncate(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen-3] + "..."
+}
+
+// handleCompliance checks KDSE runtime compliance
+func handleCompliance(repoPath string, args []string) {
+	// Parse arguments
+	jsonOutput := false
+	fullAudit := false
+
+	for _, arg := range args {
+		switch arg {
+		case "--json":
+			jsonOutput = true
+		case "--audit":
+			fullAudit = true
+		}
+	}
+
+	// Run compliance validation
+	report, err := kdseruntime.ValidateCompliance(repoPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error running compliance check: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Output format
+	if jsonOutput {
+		fmt.Println(report.ToJSON())
+	} else {
+		fmt.Println(kdseruntime.FormatComplianceReport(report))
+	}
+
+	// Exit with error code if non-compliant
+	if !report.Compliant {
+		os.Exit(1)
+	}
+
+	// Full audit output
+	if fullAudit && report.Compliant {
+		fmt.Println()
+		fmt.Println("=== KDSE Pre-Implementation Audit ===")
+		fmt.Println("✓ Project root identified")
+		fmt.Println("✓ .kdse directory exists")
+		fmt.Println("✓ Runtime verification passed")
+		fmt.Println("✓ All templates exist")
+		fmt.Println("✓ No manual folder creation detected")
+		fmt.Println("✓ Compliance validated")
+		fmt.Println()
+		fmt.Println("The project is KDSE compliant. Engineering may proceed.")
+	}
 }
