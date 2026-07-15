@@ -131,7 +131,7 @@ func FormatReport(result *CollectionResult) string {
 	b.WriteString(fmt.Sprintf("| Session ID | %s |\n", result.SessionID))
 	b.WriteString(fmt.Sprintf("| Repository | %s |\n", result.Repository))
 	b.WriteString(fmt.Sprintf("| Collection Date | %s |\n", result.StartedAt))
-	b.WriteString(fmt.Sprintf("| Report Version | 1.0 |\n\n")
+	b.WriteString("| Report Version | 1.0 |\n\n")
 
 	b.WriteString("## Summary\n\n")
 	b.WriteString(fmt.Sprintf("**Artifacts Discovered:** %d\n", len(result.ArtifactsFound)))

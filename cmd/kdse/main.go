@@ -11,6 +11,7 @@ import (
 	"github.com/kdse/runtime/internal/report"
 	"github.com/kdse/runtime/internal/normalize"
 	"github.com/kdse/runtime/internal/collect"
+	"github.com/kdse/runtime/internal/orchestration"
 )
 
 const version = "1.0.0"
@@ -40,6 +41,8 @@ func main() {
 		handleNormalize(repoPath)
 	case "run":
 		handleRun(repoPath, args)
+	case "orchestrate":
+		handleOrchestrate(repoPath, args)
 	case "status":
 		handleStatus(repoPath)
 	case "report":
@@ -132,6 +135,151 @@ func handleRun(repoPath string, args []string) {
 	}
 
 	fmt.Printf("\nSession initialized. Run 'kdse status' for details.\n")
+}
+
+// handleOrchestrate starts the state-based orchestration engine
+func handleOrchestrate(repoPath string, args []string) {
+	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
+	fmt.Println("║          KDSE State-Based Orchestration Engine                ║")
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+	fmt.Printf("║ Repository: %s\n", repoPath)
+	fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
+	fmt.Println()
+
+	// Parse command flags
+	maxCycles := 100
+	foundationThreshold := 0.7
+
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--max-cycles", "-m":
+			if i+1 < len(args) {
+				fmt.Sscanf(args[i+1], "%d", &maxCycles)
+				i++
+			}
+		case "--foundation-threshold", "-t":
+			if i+1 < len(args) {
+				fmt.Sscanf(args[i+1], "%f", &foundationThreshold)
+				i++
+			}
+		case "--temp-workspace":
+			// TODO: Implement temp workspace creation
+		}
+	}
+
+	// Create engine configuration
+	config := &orchestration.EngineConfig{
+		FoundationThreshold: foundationThreshold,
+		EvidenceThreshold:    0.6,
+		MaxCycles:           maxCycles,
+		TempWorkspaceBase:   "temp",
+		EnableMigration:     true,
+	}
+
+	// Create and initialize engine
+	engine, err := orchestration.NewEngine(config)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating engine: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := engine.Initialize(repoPath); err != nil {
+		fmt.Fprintf(os.Stderr, "Error initializing orchestration: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Orchestration engine initialized.")
+	fmt.Println()
+	fmt.Println("Each cycle performs:")
+	fmt.Println("  1. Resolve workspace")
+	fmt.Println("  2. Evaluate current state")
+	fmt.Println("  3. Evaluate confidence")
+	fmt.Println("  4. Evaluate missing evidence")
+	fmt.Println("  5. Decide next phase")
+	fmt.Println("  6. Execute only that phase")
+	fmt.Println("  7. Re-evaluate")
+	fmt.Println()
+
+	// Check Foundation status
+	ready, confidence, missing, err := engine.GetFoundationStatus()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Could not assess Foundation: %v\n", err)
+	} else {
+		fmt.Printf("Foundation Status:\n")
+		fmt.Printf("  Ready for Implementation: %v\n", ready)
+		fmt.Printf("  Current Confidence: %.2f\n", confidence)
+		fmt.Printf("  Threshold: %.2f\n", foundationThreshold)
+		if len(missing) > 0 {
+			fmt.Printf("  Missing Foundation Documents:\n")
+			for _, m := range missing {
+				fmt.Printf("    • %s\n", m)
+			}
+		}
+		fmt.Println()
+	}
+
+	// Check if implementation is blocked
+	if !engine.CanImplement() {
+		fmt.Println("⚠️  Implementation is BLOCKED until Foundation threshold is met.")
+		fmt.Println()
+	}
+
+	// Execute orchestration cycles
+	fmt.Println("Starting orchestration cycles...")
+	fmt.Println()
+
+	cycleCount := 0
+	for {
+		result, err := engine.ExecuteCycle()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error in cycle %d: %v\n", cycleCount+1, err)
+			break
+		}
+
+		cycleCount++
+		state := engine.GetState()
+
+		fmt.Printf("Cycle %d:\n", cycleCount)
+		fmt.Printf("  Phase: %s → %s\n", result.Decision.Reason, state.CurrentPhase)
+		fmt.Printf("  Confidence: %.2f (Foundation: %.2f)\n", 
+			state.Confidence.Overall, state.Confidence.Foundation)
+		fmt.Printf("  Evidence Completeness: %.0f%%\n", 
+			state.EvidenceState.Completeness*100)
+
+		if len(result.Decision.BlockingReasons) > 0 {
+			fmt.Printf("  Blocked: %v\n", result.Decision.BlockingReasons)
+		}
+
+		if !result.Continue {
+			fmt.Println()
+			fmt.Println("Orchestration complete.")
+			break
+		}
+
+		if cycleCount >= maxCycles {
+			fmt.Println()
+			fmt.Printf("Reached maximum cycles (%d).\n", maxCycles)
+			break
+		}
+	}
+
+	// Final state
+	state := engine.GetState()
+	fmt.Println()
+	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
+	fmt.Println("║                    Final State                                 ║")
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+	fmt.Printf("║ Cycles Executed: %d\n", cycleCount)
+	fmt.Printf("║ Final Phase: %s\n", state.CurrentPhase)
+	fmt.Printf("║ Foundation Confidence: %.2f\n", state.Confidence.Foundation)
+	fmt.Printf("║ Overall Confidence: %.2f\n", state.Confidence.Overall)
+	fmt.Printf("║ Can Implement: %v\n", engine.CanImplement())
+	fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
+
+	// Save final state
+	if err := engine.SaveState(); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Could not save orchestration state: %v\n", err)
+	}
 }
 
 func handleStatus(repoPath string) {

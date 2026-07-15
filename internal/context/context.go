@@ -215,7 +215,7 @@ func (b *Builder) scoreDimension(artifacts []string, indicators []string, weight
 	score := 2.0
 	for _, artifact := range artifacts {
 		for _, indicator := range indicators {
-			if artifact == indicator || artifact == indicator {
+			if artifact == indicator {
 				score += weight
 			}
 		}

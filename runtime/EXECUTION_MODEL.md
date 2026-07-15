@@ -1,381 +1,281 @@
 # KDSE Runtime Execution Model
 
-**Document Version:** 1.0  
+**Document Version:** 2.0  
 **Type:** Informative Reference Implementation  
-**Effective Date:** 2026-07-10
+**Effective Date:** 2026-07-15
 
 ---
 
 ## Purpose
 
-This document describes the lifecycle of the KDSE Runtime. The Runtime is the operational component that orchestrates KDSE sessions, consuming the Standard and producing actionable engineering guidance.
+This document describes the state-based orchestration engine of the KDSE Runtime. The Runtime is the operational component that orchestrates KDSE sessions, consuming the Standard and producing actionable engineering guidance.
+
+**Key Difference from v1.0**: This execution model is **state-based**, not linear. Each execute cycle evaluates the current state and decides what action to take next, rather than following a fixed sequence.
 
 ---
 
-## Relationship to KDSE Standard
+## State-Based Orchestration Principles
 
-The Runtime Execution Model references the KDSE Standard:
+### The Seven-Step Cycle
+
+Each execute cycle performs these steps in order:
 
 ```
+┌─────────────────────────────────────────────────────────────────┐
+│                    EXECUTE CYCLE                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. RESOLVE WORKSPACE                                            │
+│     ↓ Determine repository, project, or temporary workspace       │
+│                                                                  │
+│  2. EVALUATE CURRENT STATE                                        │
+│     ↓ Assess what phase we're in, what's blocked                 │
+│                                                                  │
+│  3. EVALUATE CONFIDENCE                                          │
+│     ↓ Calculate foundation, repository, evidence confidence       │
+│                                                                  │
+│  4. EVALUATE MISSING EVIDENCE                                    │
+│     ↓ Determine what evidence is required for current phase      │
+│                                                                  │
+│  5. DECIDE NEXT PHASE                                            │
+│     ↓ Based on state, confidence, evidence - what's next?        │
+│                                                                  │
+│  6. EXECUTE ONLY THAT PHASE                                      │
+│     ↓ Take action only on the decided phase                       │
+│                                                                  │
+│  7. RE-EVALUATE                                                   │
+│     ↓ After execution, re-assess everything                       │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### State-Based vs Linear
+
+| Aspect | Linear Model | State-Based Model |
+|--------|--------------|-------------------|
+| Path | Fixed sequence | Dynamic decision |
+| Phase Selection | Determined by previous | Determined by state |
+| Confidence | Calculated once | Re-evaluated each cycle |
+| Evidence | Tracked manually | Auto-evaluated |
+| Implementation Gate | Manual check | Automatic threshold |
+
+---
+
+## Workspace Resolution Hierarchy
+
+The orchestrator supports a three-level workspace hierarchy:
+
+```
+Repository
+    ↓
+Project Folder
+    ↓
+Temporary Workspace
+```
+
+### Workspace Types
+
+1. **Repository**: A git repository or directory containing source code
+2. **Project**: A subdirectory within repository representing a specific project
+3. **Temporary**: A workspace created under `./temp/.kdse/` for isolated work
+
+### Temporary Workspace Rules
+
+- Temporary workspaces are created under `./temp/.kdse/<project>/`
+- **Never hardcode** `/app` or `/workspace` paths
+- All filesystem paths come from the **Workspace Resolver**
+- When a project is later created, `.kdse` is migrated automatically
+
+---
+
+## Orchestration Phases
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     PHASE HIERARCHY                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌─────────┐                                                    │
+│  │  Idle   │ ← No active session                                │
+│  └────┬────┘                                                    │
+│       │ Initialize                                              │
+│       ▼                                                         │
+│  ┌───────────┐                                                  │
+│  │  Resolve  │ ← Resolve workspace hierarchy                      │
+│  └─────┬─────┘                                                  │
+│        │ Workspace resolved                                     │
+│        ▼                                                        │
+│  ┌───────────┐                                                  │
+│  │  Assess   │ ← Evaluate current repository state               │
+│  └─────┬─────┘                                                  │
+│        │ Assessment complete                                     │
+│        ▼                                                        │
+│  ┌─────────────┐                                                │
+│  │ Foundation  │ ← Verify/establish Foundation documents         │
+│  └──────┬──────┘                                                │
+│         │ Foundation threshold met (REQUIRED GATE)               │
+│         ▼                                                       │
+│  ┌───────────┐                                                  │
+│  │  Collect  │ ← Gather evidence for next phases                 │
+│  └─────┬─────┘                                                  │
+│        │ Evidence sufficient                                    │
+│        ▼                                                        │
+│  ┌───────────┐                                                  │
+│  │  Analyze  │ ← Analyze collected evidence                      │
+│  └─────┬─────┘                                                  │
+│        │ Analysis complete                                       │
+│        ▼                                                        │
+│  ┌───────────┐                                                  │
+│  │  Design   │ ← Design solution based on analysis              │
+│  └─────┬─────┘                                                  │
+│        │ Design complete                                         │
+│        ▼                                                        │
+│  ┌─────────────┐ ← Only if Foundation threshold met             │
+│  │ Implement   │                                                  │
+│  └─────┬───────┘                                                  │
+│        │ Implementation complete                                 │
+│        ▼                                                        │
+│  ┌───────────┐                                                  │
+│  │  Verify   │ ← Verify implementation results                  │
+│  └─────┬─────┘                                                  │
+│        │ Verification passes                                     │
+│        ▼                                                        │
+│  ┌───────────┐                                                  │
+│  │ Complete  │ ← Session complete                                │
+│  └───────────┘                                                  │
+│                                                                  │
+│         OR                                                       │
+│                                                                  │
+│  ┌───────────┐                                                  │
+│  │ Blocked   │ ← Missing evidence/confidence threshold           │
+│  └───────────┘                                                  │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Confidence Evaluation
+
+### Confidence Dimensions
+
+| Dimension | Weight | Description |
+|-----------|--------|-------------|
+| Foundation | 50% | Foundation document completeness |
+| Repository | 30% | Repository structure and artifacts |
+| Evidence | 20% | Evidence collected for current phase |
+
+### Foundation Threshold Gate
+
+**CRITICAL**: Implementation is **forbidden** until the Foundation threshold is met.
+
+```
+Implementation Gate:
 ┌─────────────────────────────────────────────────────────────┐
-│                     KDSE Standard                           │
-│                                                             │
-│  • Foundation Audit (docs/audit/FOUNDATION_AUDIT.md)       │
-│  • Compliance Audit (docs/audit/COMPLIANCE_AUDIT.md)        │
-│  • Audit Scoring (docs/audit/AUDIT_SCORING.md)             │
-│  • Engineering Model (docs/foundation/004-engineering-model)│
-│                                                             │
-│  ⚠️ The Runtime references these documents.                  │
-│     It does not redefine them.                              │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    Runtime Execution Model                   │
-│                                                             │
-│  Defines: Session lifecycle, State transitions, Workflow     │
-│  References: Standard documents                            │
-│  Produces: Runtime Reports, Recommendations                 │
+│                                                              │
+│   Foundation Confidence ≥ Threshold?                          │
+│         │                                                    │
+│         ├── YES → Implementation ALLOWED                     │
+│         │                                                    │
+│         └── NO  → Implementation BLOCKED                     │
+│                      Return to Foundation phase              │
+│                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
+The default Foundation threshold is **0.7 (70%)**, but this can be configured.
+
 ---
 
-## Runtime States
+## Evidence Evaluation
 
+### Per-Phase Evidence Requirements
+
+Each phase has specific evidence requirements:
+
+| Phase | Required Evidence | Critical |
+|-------|-------------------|----------|
+| Resolve | Repository manifest | Yes |
+| Assess | README, SPEC | Yes |
+| Foundation | Foundation docs (6 files) | Yes |
+| Collect | Evidence directory | Yes |
+| Analyze | Collected evidence | Yes |
+| Design | Analysis results, Architecture | Yes |
+| Implement | Design spec, Context handoff | Yes |
+| Verify | Implementation, Tests | Yes |
+
+### Evidence Completeness
+
+Evidence completeness is calculated as:
 ```
-┌─────────┐
-│  Idle   │
-└────┬────┘
-     │ Run KDSE
-     ▼
-┌─────────────┐
-│  Loading    │
-└────┬────┘
-     │ Standards loaded
-     ▼
-┌─────────────┐
-│ Verification│
-└────┬────┘
-     │ Verification complete
-     ▼
-┌─────────────┐
-│ Assessment  │
-└────┬────┘
-     │ Assessment complete
-     ▼
-┌─────────────┐
-│  Reporting  │
-└────┬────┘
-     │ Report generated
-     ▼
-┌─────────────┐
-│  Pending    │◀─────────────────┐
-│  Approval   │                  │
-└────┬────┘                   │
-     │ Approved               │ Rejected
-     ▼                        ▼
-┌─────────────┐         ┌─────────────┐
-│Implementation│         │  Reassess   │
-└────┬────┘          └──────┬──────┘
-     │                      │
-     │ Implemented          │ New recommendation
-     ▼                      │
-┌─────────────┐              │
-│Artifact     │◀─────────────┘
-│Verification │   (if failed)
-└────┬────┘
-     │
-     │ Verification Passed
-     ▼
-┌─────────────┐
-│  Verifying  │
-└────┬────┘
-     │
-     │ Re-assessment complete
-     ▼
-┌─────────────┐
-│Artifact     │◀─────────────┐
-│Verification │   (if failed)│
-└────┬────┘              │
-     │                   │
-     │ Verification Passed
-     │
-     ├──────────────┐
-     │              │
-     ▼              ▼
-┌─────────┐    ┌─────────────┐
-│Complete │    │   Repeat    │
-└─────────┘    └─────────────┘
+Completeness = Evidence Present / Evidence Required
 ```
 
 ---
 
-## State Definitions
+## Decision Logic
 
-### Idle
-
-The Runtime is not executing. No session is active.
-
-**Entry:** Runtime initialized  
-**Exit:** `Run KDSE` command received  
-**Activities:** None
-
----
-
-### Loading
-
-The Runtime loads the KDSE Standard and establishes session context.
-
-**Entry:** `Run KDSE` command  
-**Exit:** Standard loaded, session initialized  
-**Activities:**
-- Load KDSE Foundation documents
-- Load Audit templates and criteria
-- Establish session parameters
-- Verify Standard accessibility
-
-**References:**
-- [docs/foundation/](../docs/foundation/)
-- [docs/audit/README.md](../docs/audit/README.md)
-
----
-
-### Verification
-
-The Runtime performs Foundation Verification to confirm the Standard is accessible and consistent.
-
-**Entry:** Loading complete  
-**Exit:** Verification complete  
-**Activities:**
-- Verify all Foundation documents present
-- Confirm cross-reference integrity
-- Check terminology consistency
-- Validate audit standards availability
-
-**References:**
-- [FOUNDATION_AUDIT.md - Dimensions 1-5](../docs/audit/FOUNDATION_AUDIT.md)
-
-**Note:** This is a subset of the full Foundation Audit, focused on Standards accessibility.
-
----
-
-### Assessment
-
-The Runtime assesses the target repository against the Standard.
-
-**Entry:** Verification complete  
-**Exit:** Assessment complete  
-**Activities:**
-- Inventory repository artifacts
-- Map artifact relationships
-- Identify steward assignments
-- Execute Compliance Audit
-
-**References:**
-- [COMPLIANCE_AUDIT.md - All Dimensions](../docs/audit/COMPLIANCE_AUDIT.md)
-- [AUDIT_SCORING.md](../docs/audit/AUDIT_SCORING.md)
-
----
-
-### Reporting
-
-The Runtime generates a Runtime Report summarizing assessment results.
-
-**Entry:** Assessment complete  
-**Exit:** Report presented to Operator  
-**Activities:**
-- Generate Runtime Report (per [REPORT_SPEC.md](REPORT_SPEC.md))
-- Summarize findings
-- Identify highest-priority recommendation
-- Calculate expected impact
-
-**Outputs:**
-- Runtime Report
-- Recommendation
-- Expected impact
-
----
-
-### Pending Approval
-
-The Runtime awaits Operator authorization before proceeding with implementation.
-
-**Entry:** Report generated  
-**Exit:** Operator decision received  
-**Activities:**
-- Present recommendation
-- Await approval, rejection, or modification
-- Record decision
-
-**Decision Options:**
-| Decision | Action |
-|----------|--------|
-| APPROVE | Proceed with recommendation |
-| APPROVE WITH MODIFICATIONS | Proceed with specified changes |
-| REJECT | Present alternative recommendation |
-| DEFER | Postpone to later session |
-| CLOSE | End session |
-
----
-
-### Implementation
-
-The Runtime facilitates implementation of the approved action.
-
-**Entry:** Approval received  
-**Exit:** Artifact Verification Passed  
-**Activities:**
-- Execute approved action
-- Maintain traceability
-- Document decisions
-- Update artifacts
-
-**Artifact Verification:**
-After implementation, the Runtime MUST verify artifacts per [ARTIFACT_VERIFICATION.md](ARTIFACT_VERIFICATION.md):
-- Expected files exist
-- Files are tracked by Git (or intentionally untracked)
-- Commands exist if commands were reported
-- Documentation exists if documentation was reported
-- Git working tree is consistent
-
-**If Verification Passes:** Proceed to Verifying state  
-**If Verification Fails:** Report "IMPLEMENTATION INCOMPLETE", remain in Implementation
-
-**Constraints:**
-- Must follow authority hierarchy (per [006-chain-of-authority.md](../docs/foundation/006-chain-of-authority.md))
-- Must maintain derivation rules (per [004-engineering-model.md](../docs/foundation/004-engineering-model.md))
-
----
-
-### Verifying
-
-The Runtime verifies implementation results through re-assessment.
-
-**Entry:** Artifact Verification Passed (Implementation)  
-**Exit:** Artifact Verification Passed (Verification)  
-**Activities:**
-- Re-run relevant audit dimensions
-- Compare scores to baseline
-- Document improvement
-- Assess readiness for continuation
-
-**Artifact Verification:**
-After verification, the Runtime MUST verify artifacts per [ARTIFACT_VERIFICATION.md](ARTIFACT_VERIFICATION.md):
-- Re-verify all expected files still exist
-- Confirm no new untracked files introduced issues
-- Verify working tree remains consistent
-
-**If Verification Passes:** Proceed to session decision  
-**If Verification Fails:** Report "VERIFICATION INCOMPLETE", re-run verification
-
-**References:**
-- [COMPLIANCE_AUDIT.md - Verification Dimensions](../docs/audit/COMPLIANCE_AUDIT.md)
-- [ARTIFACT_VERIFICATION.md](ARTIFACT_VERIFICATION.md)
-
----
-
-## Workflow Execution
-
-### Standard Execution Sequence
+The orchestrator uses the following decision logic:
 
 ```
-Run KDSE
-    ↓
-Load KDSE Standard
-    ↓
-Foundation Verification
-    ↓
-Repository Assessment
-    ↓
-Compliance Audit
-    ↓
-Generate Runtime Report
-    ↓
-Recommend Next Action
-    ↓
-Await Human Approval
-    ↓
-Implement Approved Work
-    ↓
-[REQUIRED] Artifact Verification ← NEW
-    ↓
-Verify Results
-    ↓
-[REQUIRED] Artifact Verification ← NEW
-    ↓
-Re-run Compliance Audit
-    ↓
-Repeat until target maturity
-```
-
-**Artifact Verification Gate:**
-Per [ARTIFACT_VERIFICATION.md](ARTIFACT_VERIFICATION.md), the Runtime MUST verify artifacts exist and are properly tracked BEFORE reporting completion of any phase.
-
-### Session Decision Points
-
-After each verification:
-
-```
-Artifact Verification Passed?
-    │
-    ├── NO → Return to Implementation
-    │
-    └── YES
-            │
-            ▼
-Target maturity reached?
-    │
-    ├── YES → Complete Session
-    │
-    └── NO
-            │
-            ▼
-        More high-value actions available?
-            │
-            ├── YES → Return to Assessment
-            │
-            └── NO
-                    │
-                    ▼
-            Diminishing returns threshold reached?
-                    │
-                    ├── YES → Complete Session
-                    │
-                    └── NO → Return to Assessment
+decideNextPhase():
+    if blocked_by_missing_evidence:
+        return STAY (cannot progress)
+    
+    if current_phase == Implement and not foundation_threshold_met:
+        return Foundation (blocked gate)
+    
+    if current_phase_complete:
+        return next_phase_in_sequence
+    
+    return current_phase (continue working)
 ```
 
 ---
 
 ## Session Parameters
 
-Each session requires:
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| foundation_threshold | 0.7 | Min Foundation confidence for Implementation |
+| evidence_threshold | 0.6 | Min evidence completeness to proceed |
+| max_cycles | 100 | Maximum orchestration cycles |
+| temp_workspace_base | "temp" | Base directory for temp workspaces |
 
-| Parameter | Description | Required |
-|-----------|-------------|----------|
-| repository | Target repository path/URL | Yes |
-| target_maturity | Desired compliance score (0-10) | Yes |
-| operator | Human responsible for approvals | Yes |
-| scope | Specific dimensions to focus on | No |
-| constraints | Resource limits, deadlines | No |
+---
+
+## Workspace Resolver API
+
+All filesystem paths are obtained through the Workspace Resolver:
+
+```go
+// Resolve workspace hierarchy
+workspace := resolver.ResolveWorkspace("/path/to/start")
+
+// Create temporary workspace
+tempWorkspace := resolver.ResolveTemporaryWorkspace("project-name")
+
+// Migrate .kdse to project
+resolver.MigrateToProject(tempKDSEPath, projectPath)
+
+// Get subdirectory path
+subPath := resolver.ResolveSubPath(workspacePath, "foundation")
+```
+
+**Rule**: Never hardcode paths like `/app` or `/workspace`. Always use the resolver.
 
 ---
 
 ## Progress Measurement
 
-The Runtime measures progress through audit scores:
+Progress is measured through:
 
 | Metric | Description |
 |--------|-------------|
-| Baseline Score | Compliance score at session start |
-| Current Score | Compliance score at any point |
-| Delta | Current - Baseline |
-| Target Score | Operator-defined goal |
-| Progress % | (Current - Baseline) / (Target - Baseline) × 100 |
-
-**References:**
-- [AUDIT_SCORING.md - Score Calculation](../docs/audit/AUDIT_SCORING.md)
-- [AUDIT_MATURITY.md - Maturity Levels](../docs/audit/AUDIT_MATURITY.md)
+| Confidence Score | Weighted composite of dimension scores |
+| Foundation Score | Specific Foundation document coverage |
+| Evidence Completeness | Evidence gathered vs required |
+| Phase Progress | Cycles spent in each phase |
 
 ---
 
@@ -383,73 +283,50 @@ The Runtime measures progress through audit scores:
 
 A session completes when:
 
-1. **Target Reached**: Compliance score ≥ target maturity
-2. **No Actions**: No more high-value actions identified
-3. **Diminishing Returns**: Additional actions would cost more than the benefit
-4. **Operator Closes**: Human decides to end session
-5. **Timeout**: Session exceeds defined duration
+1. **Complete Phase Reached**: All phases verified
+2. **Max Cycles**: Reached configured maximum
+3. **Operator Closes**: Human ends session
+4. **No Progress**: Repeated cycles without state change
 
 ---
 
-## Runtime Report Summary
+## Key Differences from Linear Model
 
-The Runtime produces a Runtime Report per [REPORT_SPEC.md](REPORT_SPEC.md).
-
-The report summarizes:
-- Current compliance status
-- Audit findings
-- Recommendations
-- Expected impact
-- Required approval
-
-**Note:** The Runtime Report summarizes audits. It does not replace them.
+| Feature | Linear v1 | State-Based v2 |
+|---------|-----------|-----------------|
+| Phase Selection | Sequential | Dynamic based on state |
+| Confidence Check | Manual | Automatic each cycle |
+| Implementation Gate | Per-decision | Automatic threshold |
+| Evidence Tracking | Separate process | Integrated in cycle |
+| Path Resolution | Potentially hardcoded | Always through resolver |
 
 ---
 
-## Principles
+## Implementation Notes
 
-The Runtime follows these principles:
+### For Developers
 
-1. **Standard-First**: Always reference the KDSE Standard
-2. **Evidence-Based**: All recommendations trace to audit evidence
-3. **Human-Authorized**: No implementation without Operator approval
-4. **Measurable Progress**: Score improvements are the primary metric
-5. **Transparent Process**: All decisions documented
+1. **Never hardcode paths** - Use `WorkspaceResolver` for all filesystem operations
+2. **Check confidence before implement** - The engine blocks Implementation until threshold met
+3. **Track evidence per phase** - Each phase has specific requirements
+4. **Re-evaluate in each cycle** - Don't assume state persists between cycles
 
----
+### For Operators
 
-## Document Relationships
-
-```
-README.md
-    │
-    ├── EXECUTION_MODEL.md (this document)
-    │       │
-    │       ├── References: Foundation Audit, Compliance Audit
-    │       ├── References: ARTIFACT_VERIFICATION.md
-    │       └── Defines: State machine, workflow
-    │
-    ├── SESSION_PROTOCOL.md
-    │       │
-    │       └── Defines: Session lifecycle details
-    │
-    ├── REPORT_SPEC.md
-    │       │
-    │       └── Defines: Runtime Report structure
-    │
-    ├── ARTIFACT_VERIFICATION.md
-    │       │
-    │       └── Defines: Artifact verification requirements
-    │
-    ├── PROMPTS.md
-    │       │
-    │       └── Provides: Command templates
-    │
-    └── WORKFLOW.md
-            │
-            └── Shows: Visual workflow diagrams
-```
+1. **Monitor confidence** - Watch Foundation score during session
+2. **Provide evidence** - Help collect missing evidence when blocked
+3. **Understand the gate** - Implementation requires Foundation at threshold
 
 ---
 
-*This document is an informative reference implementation. It defines how the KDSE Runtime operates, not what KDSE requires.*
+## References
+
+- [SESSION_PROTOCOL.md](SESSION_PROTOCOL.md) - Session lifecycle details
+- [REPORT_SPEC.md](REPORT_SPEC.md) - Runtime Report structure
+- [ARTIFACT_VERIFICATION.md](ARTIFACT_VERIFICATION.md) - Artifact verification
+- [docs/foundation/](../docs/foundation/) - Foundation documents
+- [docs/audit/](../docs/audit/) - Audit standards
+
+---
+
+*This document describes the state-based execution model (v2.0). It replaces the linear model from v1.0.*
