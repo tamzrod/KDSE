@@ -12,13 +12,13 @@ This is a production-ready deployment configuration for the KDSE MCP Server on L
 1. **STDIO mode** - For local development and debugging
 2. **HTTP mode** - For remote MCP client connections over the network
 
-The deployment uses **Docker host networking** for direct access from the host, making it ideal for integration with reverse proxies like Nginx Proxy Manager.
+The deployment joins an **external Docker network** for seamless integration with reverse proxies like Nginx Proxy Manager.
 
 ### Features
 
 - Local build from source (no registry required)
 - Dual transport support (STDIO + HTTP)
-- Docker host networking (no bridge network required)
+- Joins existing Docker network (e.g., nginx-proxy-manager_default)
 - Auto-restart on failure or system reboot
 - Log rotation to prevent disk space issues
 - Healthcheck support for HTTP mode
@@ -36,7 +36,20 @@ The deployment uses **Docker host networking** for direct access from the host, 
 - **RAM:** 512MB minimum (1GB recommended)
 - **Disk:** 5GB minimum
 - **Network:** Internet connectivity for Docker base images
-- **Port:** 18181 (or custom) open for HTTP transport
+- **Port:** 18181 (or custom) for HTTP transport
+- **Docker Network:** External network (e.g., `nginx-proxy-manager_default`)
+
+### Docker Network Setup
+
+The deployment requires an external Docker network. If you have Nginx Proxy Manager running, use its network:
+
+```bash
+# Check existing networks
+docker network ls
+
+# Create the default network if it doesn't exist
+docker network create nginx-proxy-manager_default
+```
 
 ### Required Software
 
@@ -130,7 +143,8 @@ cd /opt/kdse/mcp/deploy/droplet_linux
 
 This will:
 1. Build the Docker image locally from `mcp/Dockerfile`
-2. Start the HTTP server container on port 18181 (using host networking)
+2. Join the external Docker network
+3. Start the HTTP server container on port 18181
 
 ### Using the Deploy Script
 
@@ -447,8 +461,11 @@ docker compose logs
 # Verify .env exists
 ls -la .env
 
-# Check port availability
-netstat -tlnp | grep 18181
+# Check if external network exists
+docker network ls | grep nginx-proxy-manager
+
+# If network doesn't exist, create it or set KDSE_DOCKER_NETWORK in .env
+docker network create nginx-proxy-manager_default 2>/dev/null || true
 ```
 
 ### Build Fails
@@ -467,11 +484,17 @@ ls -la ../../Dockerfile
 # Check if container is running
 docker ps | grep kdse-mcp
 
-# Check firewall rules
-sudo ufw allow 18181/tcp
+# Check if container is on the external network
+docker inspect kdse-mcp --format='{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}'
+
+# Check external network exists
+docker network ls | grep nginx-proxy-manager
 
 # Verify port binding
 docker port kdse-mcp
+
+# From another container on same network:
+# curl http://kdse-mcp:18181/health
 ```
 
 ### Permission Denied
@@ -498,25 +521,23 @@ df -h
 ┌─────────────────────────────────────────────────────────────┐
 │                    Linux Droplet                              │
 │                                                              │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │              Docker Container (kdse-mcp)             │    │
-│  │  ┌───────────────────────────────────────────────┐  │    │
-│  │  │         KDSE MCP Server (HTTP mode)            │  │    │
-│  │  │         • /health - Health check              │  │    │
-│  │  │         • /mcp   - MCP JSON-RPC endpoint       │  │    │
-│  │  └───────────────────────────────────────────────┘  │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                          │                                  │
-│                     HOST NETWORK                             │
-│                          │                                  │
-│  ┌───────────────────────┴───────────────────────────┐    │
-│  │              /data/kdse (read-only volume)        │    │
-│  └───────────────────────────────────────────────────┘    │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │            Docker Network (nginx-proxy-manager)       │   │
+│  │                                                          │   │
+│  │  ┌────────────────┐       ┌────────────────────────┐ │   │
+│  │  │ Nginx Proxy    │       │  Docker Container       │ │   │
+│  │  │ Manager        │──────►│  (kdse-mcp)            │ │   │
+│  │  └────────────────┘       │  ┌──────────────────┐  │ │   │
+│  │                             │  │ KDSE MCP Server  │  │ │   │
+│  │                             │  │ • /health        │  │ │   │
+│  │                             │  │ • /mcp           │  │ │   │
+│  │                             │  └──────────────────┘  │ │   │
+│  │                             └────────────────────────┘ │   │
+│  └──────────────────────────────────────────────────────┘   │
 │                                                              │
-│  Direct Access: http://127.0.0.1:18181                      │
-│                                                              │
-│  Reverse Proxy ──────────────────────► Port 18181           │
-│  (Nginx, Caddy, etc.)                                       │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │              /data/kdse (read-only volume)           │   │
+│  └──────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -557,20 +578,20 @@ df -h
 1. **Data is read-only:** The KDSE data is mounted as read-only
 2. **Non-root user:** The container runs as UID 1000
 3. **Minimal image:** Based on Alpine Linux
-4. **Host networking:** Container uses Docker host network directly
+4. **Shared network:** Container on same Docker network as reverse proxy
 5. **CORS enabled:** For cross-origin requests from web clients
 6. **No authentication:** Currently no auth (add reverse proxy/AuthN for production)
 
 ### Reverse Proxy Integration
 
-The deployment uses Docker host networking, making it directly accessible at `http://127.0.0.1:18181`. This simplifies integration with reverse proxies like Nginx, Nginx Proxy Manager, Caddy, or Traefik.
+The deployment joins the **external Docker network** (e.g., `nginx-proxy-manager_default`), allowing the reverse proxy to reach the container by its container name.
 
 **Nginx Proxy Manager Configuration:**
 
 1. Navigate to Nginx Proxy Manager → Proxy Hosts → Add Proxy Host
 2. Set **Domain Names** to your subdomain (e.g., `kdse.example.com`)
 3. Set **Scheme** to `http`
-4. Set **Forward Hostname/IP** to `127.0.0.1`
+4. Set **Forward Hostname/IP** to `kdse-mcp` (the container name)
 5. Set **Forward Port** to `18181`
 6. Enable **Block Common Exploits**
 7. For SSL, request a Let's Encrypt certificate
@@ -586,7 +607,7 @@ server {
     ssl_certificate_key /etc/letsencrypt/live/kdse.example.com/privkey.pem;
 
     location / {
-        proxy_pass http://127.0.0.1:18181;
+        proxy_pass http://kdse-mcp:18181;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -600,7 +621,7 @@ server {
 ```bash
 # Caddyfile
 kdse.example.com {
-    reverse_proxy localhost:18181 {
+    reverse_proxy kdse-mcp:18181 {
         header_up X-Real-IP {remote_host}
     }
     
@@ -615,7 +636,7 @@ kdse.example.com {
 For production deployments without authentication on the MCP server itself, consider:
 
 - **Reverse proxy with authentication:** Put Nginx or Caddy in front with Basic Auth or JWT
-- **Firewall:** Restrict port 18181 to localhost (reverse proxy only) via UFW
+- **Firewall:** Restrict port 18181 to internal network via UFW
 - **TLS:** Add HTTPS via reverse proxy (let's encrypt)
 - **Rate limiting:** Configure at reverse proxy level
 

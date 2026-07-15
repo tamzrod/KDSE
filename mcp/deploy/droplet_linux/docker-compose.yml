@@ -4,7 +4,7 @@
 
 services:
   # HTTP mode - for remote MCP client connections (default)
-  # Uses Docker host networking for direct access from the host
+  # Joins external Docker network for reverse proxy integration
   kdse-mcp:
     build:
       context: ${KDSE_BUILD_CONTEXT:-../..}
@@ -12,13 +12,14 @@ services:
     image: ${KDSE_IMAGE:-kdse-mcp}:${KDSE_TAG:-latest}
     container_name: ${KDSE_HTTP_CONTAINER_NAME:-kdse-mcp}
     restart: unless-stopped
-    network_mode: host
     environment:
       - MCP_TRANSPORT=http
       - MCP_HTTP_PORT=${MCP_HTTP_PORT:-18181}
       - KDSE_REPO_ROOT=${KDSE_REPO_ROOT:-/data/kdse}
     volumes:
       - ${KDSE_DATA_PATH:-/data/kdse}:/data/kdse:ro
+    ports:
+      - "${MCP_HTTP_PORT:-18181}:${MCP_HTTP_PORT:-18181}"
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:${MCP_HTTP_PORT:-18181}/health"]
       interval: 30s
@@ -39,7 +40,6 @@ services:
     image: ${KDSE_IMAGE:-kdse-mcp}:${KDSE_TAG:-latest}
     container_name: ${KDSE_STDIO_CONTAINER_NAME:-kdse-mcp-stdio}
     restart: unless-stopped
-    network_mode: host
     environment:
       - MCP_TRANSPORT=stdio
       - KDSE_REPO_ROOT=${KDSE_REPO_ROOT:-/data/kdse}
@@ -49,3 +49,8 @@ services:
     tty: true
     profiles:
       - stdio
+
+networks:
+  default:
+    external: true
+    name: ${KDSE_DOCKER_NETWORK:-nginx-proxy-manager_default}
