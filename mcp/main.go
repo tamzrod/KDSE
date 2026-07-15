@@ -146,14 +146,14 @@ func (s *KDSEService) handleInitialize(req *MCPRequest) map[string]interface{} {
 		"protocolVersion": ProtocolVersion,
 		"serverInfo": map[string]interface{}{
 			"name":    "kdse-mcp",
-			"version": "0.3.0",
+			"version": "0.4.0",
 		},
 		"capabilities": map[string]interface{}{
 			"tools": map[string]interface{}{
 				"listChanged": false,
 			},
 		},
-		"instructions": "KDSE MCP Server v0.3 - Provides access to Knowledge-Driven Software Engineering repository information. All artifacts stored under .kdse/. Available tools: help, initialize, status, collect, foundation, audit, migrate",
+		"instructions": "KDSE MCP Server v0.4 - Orchestration Engine for Knowledge-Driven Software Engineering. After initialization, the LLM must NEVER decide which KDSE tool to call. Use the 'execute' tool with your objective. KDSE decides the workflow: Problem → Knowledge → Foundation → Audit → Assessment → Architecture → Implementation. STRICT mode is enabled by default.",
 	}
 }
 
@@ -168,8 +168,22 @@ func (s *KDSEService) handleListTools() map[string]interface{} {
 			},
 		},
 		{
+			"name":        "execute",
+			"description": "PRIMARY ORCHESTRATION TOOL. Takes a user objective and automatically orchestrates the KDSE workflow. The LLM should NOT manually choose KDSE tools - execute decides which internal operations to invoke based on session state. Example: Build an inventory management system.",
+			"inputSchema": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"objective": map[string]interface{}{
+						"type":        "string",
+						"description": "The user objective or request to orchestrate",
+					},
+				},
+				"required": []string{"objective"},
+			},
+		},
+		{
 			"name":        "initialize",
-			"description": "Initializes the KDSE .kdse/ workspace. Creates the workspace directory structure if it doesn't exist. Returns workspace information.",
+			"description": "Initializes the KDSE .kdse/ workspace AND starts a new orchestration session. Enables STRICT mode by default - all engineering requests must pass through execute.",
 			"inputSchema": map[string]interface{}{
 				"type":       "object",
 				"properties": map[string]interface{}{},
@@ -177,7 +191,15 @@ func (s *KDSEService) handleListTools() map[string]interface{} {
 		},
 		{
 			"name":        "status",
-			"description": "Returns current repository status information including git state, file counts, KDSE workspace state, and compliance indicators",
+			"description": "Returns current repository status information including git state, file counts, KDSE workspace state, compliance indicators, and orchestration session state",
+			"inputSchema": map[string]interface{}{
+				"type":       "object",
+				"properties": map[string]interface{}{},
+			},
+		},
+		{
+			"name":        "session_status",
+			"description": "Returns detailed orchestration session status including current phase, confidence, phase history, and blocked reasons",
 			"inputSchema": map[string]interface{}{
 				"type":       "object",
 				"properties": map[string]interface{}{},
@@ -185,7 +207,7 @@ func (s *KDSEService) handleListTools() map[string]interface{} {
 		},
 		{
 			"name":        "collect",
-			"description": "Collects and catalogs engineering artifacts into .kdse/artifacts/",
+			"description": "[DEBUG] Collects and catalogs engineering artifacts into .kdse/artifacts/. Prefer using execute for orchestration.",
 			"inputSchema": map[string]interface{}{
 				"type":       "object",
 				"properties": map[string]interface{}{},
@@ -193,7 +215,7 @@ func (s *KDSEService) handleListTools() map[string]interface{} {
 		},
 		{
 			"name":        "foundation",
-			"description": "Returns or creates foundation documentation under .kdse/foundation/",
+			"description": "[DEBUG] Returns or creates foundation documentation under .kdse/foundation/. Prefer using execute for orchestration.",
 			"inputSchema": map[string]interface{}{
 				"type":       "object",
 				"properties": map[string]interface{}{},
@@ -201,7 +223,7 @@ func (s *KDSEService) handleListTools() map[string]interface{} {
 		},
 		{
 			"name":        "audit",
-			"description": "Generates audit reports under .kdse/reports/",
+			"description": "[DEBUG] Generates audit reports under .kdse/reports/. Prefer using execute for orchestration.",
 			"inputSchema": map[string]interface{}{
 				"type":       "object",
 				"properties": map[string]interface{}{},
@@ -232,10 +254,19 @@ func (s *KDSEService) handleToolCall(req *MCPRequest) (interface{}, *MCPError) {
 	switch params.Name {
 	case "help":
 		result = s.tools.Help()
+	case "execute":
+		// Primary orchestration tool - takes objective from arguments
+		objective := ""
+		if args, ok := params.Arguments["objective"].(string); ok {
+			objective = args
+		}
+		result = s.tools.Execute(objective)
 	case "initialize":
 		result = s.tools.Initialize()
 	case "status":
 		result = s.tools.Status()
+	case "session_status":
+		result = s.tools.SessionStatus()
 	case "collect":
 		result = s.tools.Collect()
 	case "foundation":

@@ -1,13 +1,16 @@
-// KDSE MCP Server Tools - v0.3 MCP communication with .kdse/ workspace support
+// KDSE MCP Server Tools - v0.4 MCP communication with .kdse/ workspace support
+// Transformed from toolbox to orchestration engine
 package tools
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 
+	"github.com/kdse/mcp/internal/orchestration"
 	"github.com/kdse/mcp/internal/workspace"
 )
 
@@ -15,15 +18,18 @@ import (
 type ToolHandler struct {
 	repoPath string
 	ws       *workspace.Workspace
+	orch     *orchestration.Manager
 }
 
 // NewToolHandler creates a new ToolHandler
 func NewToolHandler() *ToolHandler {
 	repoPath, _ := os.Getwd()
 	ws := workspace.New(repoPath)
+	orch := orchestration.NewManager(repoPath)
 	return &ToolHandler{
 		repoPath: repoPath,
 		ws:       ws,
+		orch:     orch,
 	}
 }
 
@@ -32,9 +38,16 @@ func (h *ToolHandler) Help() map[string]interface{} {
 	return map[string]interface{}{
 		"server": map[string]interface{}{
 			"name":        "kdse-mcp",
-			"version":     "0.3.0",
-			"description": "Model Context Protocol server for Knowledge-Driven Software Engineering",
+			"version":     "0.4.0",
+			"description": "Model Context Protocol server for Knowledge-Driven Software Engineering - Orchestration Engine",
 			"protocol":    "2024-11-05",
+			"mode":        "orchestration",
+		},
+		"orchestration": map[string]interface{}{
+			"description": "KDSE has been transformed from a toolbox into an orchestration engine",
+			"principle":   "After initialization, the LLM must never decide which KDSE tool to call. KDSE decides.",
+			"primary_tool": "execute",
+			"strict_mode": "Enabled by default after initialization. All engineering requests must pass through execute.",
 		},
 		"tools": []map[string]interface{}{
 			{
@@ -45,43 +58,58 @@ func (h *ToolHandler) Help() map[string]interface{} {
 				"example":     `{"name": "help"}`,
 			},
 			{
+				"name":        "execute",
+				"description": "PRIMARY ORCHESTRATION TOOL. Takes a user objective and automatically orchestrates the KDSE workflow. The LLM should NOT manually choose KDSE tools - execute decides which internal operations to invoke based on session state.",
+				"category":    "orchestration",
+				"parameters":  []string{"objective"},
+				"example":     `{"name": "execute", "arguments": {"objective": "Build an inventory management system"}}`,
+			},
+			{
 				"name":        "initialize",
-				"description": "Initializes the KDSE .kdse/ workspace. Creates the workspace directory structure if it doesn't exist. Returns workspace information.",
-				"category":    "workspace",
+				"description": "Initializes the KDSE .kdse/ workspace AND starts a new orchestration session. Enables STRICT mode by default.",
+				"category":    "orchestration",
 				"parameters":  []string{},
 				"example":     `{"name": "initialize"}`,
 			},
 			{
 				"name":        "status",
-				"description": "Returns current repository status including git state, file counts, KDSE workspace state, and compliance indicators",
-				"category":    "workspace",
+				"description": "Returns current repository status and orchestration session state including current phase, confidence, and next allowed actions",
+				"category":    "orchestration",
 				"parameters":  []string{},
 				"example":     `{"name": "status"}`,
 			},
 			{
+				"name":        "session_status",
+				"description": "Returns detailed orchestration session status including phase history and blocked reasons",
+				"category":    "orchestration",
+				"parameters":  []string{},
+				"example":     `{"name": "session_status"}`,
+			},
+			// Legacy tools - available for debugging in STRICT mode
+			{
 				"name":        "collect",
-				"description": "Collects and catalogs engineering artifacts into .kdse/artifacts/",
-				"category":    "workspace",
+				"description": "[DEBUG] Collects and catalogs engineering artifacts. Prefer using execute for orchestration.",
+				"category":    "debug",
 				"parameters":  []string{},
 				"example":     `{"name": "collect"}`,
 			},
 			{
 				"name":        "foundation",
-				"description": "Returns or creates foundation documentation under .kdse/foundation/",
-				"category":    "workspace",
+				"description": "[DEBUG] Returns or creates foundation documentation. Prefer using execute for orchestration.",
+				"category":    "debug",
 				"parameters":  []string{},
 				"example":     `{"name": "foundation"}`,
 			},
 			{
 				"name":        "audit",
-				"description": "Generates audit reports under .kdse/reports/",
-				"category":    "workspace",
+				"description": "[DEBUG] Generates audit reports. Prefer using execute for orchestration.",
+				"category":    "debug",
 				"parameters":  []string{},
 				"example":     `{"name": "audit"}`,
 			},
 			{
 				"name":        "migrate",
-				"description": "Migrates any legacy KDSE directories (foundation/, knowledge/, context/, artifacts/) from repository root to .kdse/",
+				"description": "Migrates any legacy KDSE directories from repository root to .kdse/",
 				"category":    "migration",
 				"parameters":  []string{},
 				"example":     `{"name": "migrate"}`,
@@ -98,19 +126,24 @@ func (h *ToolHandler) Help() map[string]interface{} {
 			"language": "en",
 			"format":   "Use JSON-RPC 2.0 over stdio",
 			"note":     "All KDSE artifacts are stored under .kdse/ to avoid polluting the repository",
+			"workflow": "initialize → execute (with objective) → KDSE orchestrates automatically",
 		},
 	}
 }
 
-// Initialize initializes the KDSE .kdse/ workspace
+// Initialize initializes the KDSE .kdse/ workspace AND starts an orchestration session
+// STRICT mode is enabled by default - all engineering requests must pass through execute
 func (h *ToolHandler) Initialize() map[string]interface{} {
 	// Initialize workspace
 	h.ws.Initialize()
 
+	// Initialize orchestration session with STRICT mode enabled
+	orchState, orchErr := h.orch.Initialize()
+
 	// Check for legacy directories
 	migrationReport := h.ws.CheckMigration()
 
-	return map[string]interface{}{
+	result := map[string]interface{}{
 		"repository": map[string]interface{}{
 			"root":   h.repoPath,
 			"exists": true,
@@ -127,20 +160,38 @@ func (h *ToolHandler) Initialize() map[string]interface{} {
 			"recommendations": migrationReport.Recommendations,
 		},
 		"module":              "github.com/kdse/runtime",
-		"version":             "0.3.0",
+		"version":             "0.4.0",
 		"goVersion":           runtime.Version(),
-		"features":            []string{"help", "initialize", "status", "collect", "foundation", "audit", "migrate"},
+		"features":            []string{"help", "initialize", "status", "execute", "session_status", "collect", "foundation", "audit", "migrate"},
 		"supported_protocols": []string{"2024-11-05"},
 		"components": map[string]interface{}{
 			"commands":    []string{"kdse"},
-			"packages":    []string{"collect", "config", "context", "detection", "normalize", "report", "state", "types", "workspace"},
+			"packages":    []string{"collect", "config", "context", "detection", "normalize", "report", "state", "types", "workspace", "orchestration"},
 			"docs_sections": []string{"audit", "evolution", "execution", "foundation", "runtime"},
 			"runtime_docs":  []string{"ARCHITECTURE", "BUILD", "COMMANDS", "EXECUTION_MODEL", "SESSION_PROTOCOL", "WORKFLOW"},
 		},
 	}
+
+	// Add orchestration session info
+	if orchErr == nil && orchState != nil {
+		result["orchestration"] = map[string]interface{}{
+			"session_id":         orchState.SessionID,
+			"current_phase":      orchState.CurrentPhase,
+			"next_allowed_phases": orchState.NextAllowedPhases,
+			"execution_mode":     orchState.ExecutionMode,
+			"strict_mode":        true,
+			"mode_note":          "STRICT mode enabled - all engineering requests must pass through execute tool",
+		}
+	} else {
+		result["orchestration"] = map[string]interface{}{
+			"error": fmt.Sprintf("Failed to initialize orchestration session: %v", orchErr),
+		}
+	}
+
+	return result
 }
 
-// Status returns current repository status information
+// Status returns current repository status information including orchestration state
 func (h *ToolHandler) Status() map[string]interface{} {
 	gitInfo := h.getGitInfo()
 	fileInfo := h.getFileCounts()
@@ -168,7 +219,243 @@ func (h *ToolHandler) Status() map[string]interface{} {
 	// Check workspace compliance
 	status["kdse"].(map[string]interface{})["compliant"] = len(legacyDirs) == 0
 
+	// Add orchestration session status
+	orchState, err := h.orch.Load()
+	if err == nil && orchState != nil {
+		status["orchestration"] = map[string]interface{}{
+			"session_active":     true,
+			"current_phase":      orchState.CurrentPhase,
+			"confidence":         orchState.Confidence,
+			"execution_mode":     orchState.ExecutionMode,
+			"strict_mode":        orchState.ExecutionMode == orchestration.ModeStrict,
+			"next_allowed_phases": orchState.NextAllowedPhases,
+			"completed_phases":   orchState.CompletedPhases,
+		}
+		if orchState.BlockedReason != "" {
+			status["orchestration"].(map[string]interface{})["blocked_reason"] = orchState.BlockedReason
+		}
+	} else {
+		status["orchestration"] = map[string]interface{}{
+			"session_active": false,
+			"note":           "No active session. Run initialize to start.",
+		}
+	}
+
 	return status
+}
+
+// SessionStatus returns detailed orchestration session status
+func (h *ToolHandler) SessionStatus() map[string]interface{} {
+	orchState, err := h.orch.Load()
+	if err != nil {
+		return map[string]interface{}{
+			"error": "No active orchestration session",
+			"hint":  "Run initialize to start a new session",
+		}
+	}
+
+	return map[string]interface{}{
+		"session": map[string]interface{}{
+			"session_id":          orchState.SessionID,
+			"started_at":          orchState.StartedAt,
+			"updated_at":          orchState.UpdatedAt,
+		},
+		"phase": map[string]interface{}{
+			"current":             orchState.CurrentPhase,
+			"completed":           orchState.CompletedPhases,
+			"next_allowed":        orchState.NextAllowedPhases,
+			"confidence":          orchState.Confidence,
+			"confidence_threshold": orchestration.PhaseConfidenceThreshold[orchState.CurrentPhase],
+		},
+		"execution": map[string]interface{}{
+			"mode":        orchState.ExecutionMode,
+			"strict_mode": orchState.ExecutionMode == orchestration.ModeStrict,
+		},
+		"workspace": orchState.Workspace,
+		"evidence":  orchState.Evidence,
+		"history":   orchState.PhaseHistory,
+		"last_action": orchState.LastAction,
+	}
+	if orchState.BlockedReason != "" {
+		return map[string]interface{}{
+			"session":          orchState.SessionID,
+			"current_phase":   orchState.CurrentPhase,
+			"confidence":      orchState.Confidence,
+			"blocked":          true,
+			"blocked_reason":  orchState.BlockedReason,
+			"next_allowed":    orchState.NextAllowedPhases,
+		}
+	}
+
+	return map[string]interface{}{
+		"session":       orchState.SessionID,
+		"current_phase": orchState.CurrentPhase,
+		"confidence":    orchState.Confidence,
+		"next_allowed":  orchState.NextAllowedPhases,
+		"blocked":        false,
+	}
+}
+
+// Execute is the PRIMARY ORCHESTRATION TOOL.
+// Takes a user objective and automatically orchestrates the KDSE workflow.
+// The LLM should NOT manually choose KDSE tools - execute decides which internal operations to invoke.
+func (h *ToolHandler) Execute(objective string) map[string]interface{} {
+	// Initialize workspace if not already done
+	h.ws.Initialize()
+
+	// Get execution decision from orchestration engine
+	decision := h.orch.GetExecutionDecision(objective)
+
+	// Handle different decision types
+	switch decision.Action {
+	case "initialize":
+		return map[string]interface{}{
+			"action":         "initialize_required",
+			"message":        "No orchestration session active. Please initialize first.",
+			"recommendation": "Call initialize tool to start an orchestration session.",
+		}
+
+	case "set_objective":
+		// Set the objective
+		state, err := h.orch.SetObjective(objective)
+		if err != nil {
+			return map[string]interface{}{
+				"action":  "error",
+				"message": fmt.Sprintf("Failed to set objective: %v", err),
+			}
+		}
+		return h.executeTransition(state, decision, objective)
+
+	case "blocked":
+		// Implementation is blocked - return blocking info
+		state, _ := h.orch.Load()
+		return map[string]interface{}{
+			"action":          "blocked",
+			"current_phase":   state.CurrentPhase,
+			"confidence":      state.Confidence,
+			"blocked_reason":   decision.BlockedReason,
+			"required_action":  h.getRequiredAction(state),
+			"allowed_actions":  state.NextAllowedPhases,
+			"message":         "Cannot proceed to Implementation - prerequisites not met",
+			"do_not":          "DO NOT implement. Follow the required action below.",
+		}
+
+	default:
+		// Perform the next phase transition
+		state, err := h.orch.TransitionTo(decision.NextPhase, nil)
+		if err != nil {
+			return map[string]interface{}{
+				"action":  "error",
+				"message": fmt.Sprintf("Failed to transition phase: %v", err),
+			}
+		}
+		return h.executeTransition(state, decision, objective)
+	}
+}
+
+// executeTransition performs the actions for a phase transition
+func (h *ToolHandler) executeTransition(state *orchestration.SessionState, decision *orchestration.ExecutionDecision, objective string) map[string]interface{} {
+	// Update workspace state based on current phase
+	wsState := &orchestration.WorkspaceState{
+		Initialized:    true,
+		Root:          h.ws.Root(),
+		HasFoundation: h.wsExists("foundation"),
+		HasArtifacts:  h.wsExists("artifacts"),
+		HasAuditReport: h.wsExists("reports"),
+	}
+	h.orch.UpdateWorkspace(wsState)
+
+	// Calculate confidence based on current state
+	confidence := h.calculateConfidence(state.CurrentPhase, decision)
+	h.orch.UpdateConfidence(confidence)
+
+	result := map[string]interface{}{
+		"action":          decision.Action,
+		"reason":          decision.Reason,
+		"current_phase":   state.CurrentPhase,
+		"confidence":      confidence,
+		"next_phase":      decision.NextPhase,
+		"allowed_actions": state.NextAllowedPhases,
+		"operations":      decision.Operations,
+		"objective":       state.Objective,
+	}
+
+	// Add phase-specific guidance
+	result["guidance"] = h.getPhaseGuidance(state.CurrentPhase, decision)
+
+	// If we're done, add completion info
+	if decision.Action == "complete" {
+		result["session_complete"] = true
+		result["completed_phases"] = state.CompletedPhases
+	}
+
+	return result
+}
+
+// getRequiredAction returns the required action to unblock implementation
+func (h *ToolHandler) getRequiredAction(state *orchestration.SessionState) string {
+	switch {
+	case state.CurrentPhase != orchestration.PhaseArchitecture:
+		return "Complete Architecture phase first"
+	case state.Workspace == nil || !state.Workspace.HasFoundation:
+		return "Create foundation documentation"
+	case state.Workspace == nil || !state.Workspace.HasAuditReport:
+		return "Run audit to generate report"
+	case state.Confidence < orchestration.PhaseConfidenceThreshold[orchestration.PhaseImplementation]:
+		return fmt.Sprintf("Increase confidence to %.0f%% (currently %.0f%%)", 
+			orchestration.PhaseConfidenceThreshold[orchestration.PhaseImplementation]*100, 
+			state.Confidence*100)
+	default:
+		return "Review blocked reasons above"
+	}
+}
+
+// getPhaseGuidance returns guidance for the current phase
+func (h *ToolHandler) getPhaseGuidance(phase orchestration.Phase, decision *orchestration.ExecutionDecision) string {
+	switch phase {
+	case orchestration.PhaseProblem:
+		return "Analyzing the objective to define the problem scope and constraints."
+	case orchestration.PhaseKnowledge:
+		return "Collecting existing knowledge and artifacts from the repository."
+	case orchestration.PhaseFoundation:
+		return "Establishing foundational documentation including SPEC.md and architecture decisions."
+	case orchestration.PhaseAudit:
+		return "Running compliance audit against KDSE standards."
+	case orchestration.PhaseAssessment:
+		return "Assessing audit findings and identifying improvement opportunities."
+	case orchestration.PhaseArchitecture:
+		return "Defining system architecture and technical approach."
+	case orchestration.PhaseImplementation:
+		return "Implementing the solution based on approved architecture."
+	default:
+		return "Processing..."
+	}
+}
+
+// calculateConfidence calculates confidence based on current state
+func (h *ToolHandler) calculateConfidence(phase orchestration.Phase, decision *orchestration.ExecutionDecision) float64 {
+	baseConfidence := map[orchestration.Phase]float64{
+		orchestration.PhaseIdle:           0.0,
+		orchestration.PhaseProblem:        0.65,
+		orchestration.PhaseKnowledge:      0.72,
+		orchestration.PhaseFoundation:     0.78,
+		orchestration.PhaseAudit:          0.82,
+		orchestration.PhaseAssessment:     0.85,
+		orchestration.PhaseArchitecture:   0.88,
+		orchestration.PhaseImplementation: 0.92,
+	}
+
+	if base, ok := baseConfidence[phase]; ok {
+		return base
+	}
+	return 0.5
+}
+
+// wsExists checks if a workspace subdirectory exists
+func (h *ToolHandler) wsExists(subdir string) bool {
+	path := h.ws.SubPath(subdir)
+	info, err := os.Stat(path)
+	return err == nil && info.IsDir()
 }
 
 // Collect collects and catalogs artifacts into .kdse/artifacts/
