@@ -324,12 +324,20 @@ func (h *ToolHandler) Execute(objective string) map[string]interface{} {
 				"message": fmt.Sprintf("Failed to set objective: %v", err),
 			}
 		}
+		// Transition to the next phase
+		state, err = h.orch.TransitionTo(decision.NextPhase, nil)
+		if err != nil {
+			return map[string]interface{}{
+				"action":  "error",
+				"message": fmt.Sprintf("Failed to transition phase: %v", err),
+			}
+		}
 		return h.executeTransition(state, decision, objective)
 
 	case "blocked":
-		// Implementation is blocked - return blocking info
+		// Implementation is blocked - return blocking info with WorkOrder
 		state, _ := h.orch.Load()
-		return map[string]interface{}{
+		result := map[string]interface{}{
 			"action":          "blocked",
 			"current_phase":   state.CurrentPhase,
 			"confidence":      state.Confidence,
@@ -339,6 +347,11 @@ func (h *ToolHandler) Execute(objective string) map[string]interface{} {
 			"message":         "Cannot proceed to Implementation - prerequisites not met",
 			"do_not":          "DO NOT implement. Follow the required action below.",
 		}
+		// Include the WorkOrder even when blocked - it shows what needs to be done
+		if decision.WorkOrder != nil {
+			result["work_order"] = decision.WorkOrder
+		}
+		return result
 
 	default:
 		// Perform the next phase transition
@@ -378,6 +391,12 @@ func (h *ToolHandler) executeTransition(state *orchestration.SessionState, decis
 		"allowed_actions": state.NextAllowedPhases,
 		"operations":      decision.Operations,
 		"objective":       state.Objective,
+	}
+
+	// Include the WorkOrder - this is the KEY change for Runtime-Owns-Methodology
+	// The WorkOrder explicitly tells the LLM what to do, what to create, and what NOT to do
+	if decision.WorkOrder != nil {
+		result["work_order"] = decision.WorkOrder
 	}
 
 	// Add phase-specific guidance

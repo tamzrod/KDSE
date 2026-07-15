@@ -1,6 +1,6 @@
 # KDSE Runtime Execution Model
 
-**Document Version:** 2.0  
+**Document Version:** 3.0  
 **Type:** Informative Reference Implementation  
 **Effective Date:** 2026-07-15
 
@@ -10,11 +10,60 @@
 
 This document describes the state-based orchestration engine of the KDSE Runtime. The Runtime is the operational component that orchestrates KDSE sessions, consuming the Standard and producing actionable engineering guidance.
 
-**Key Difference from v1.0**: This execution model is **state-based**, not linear. Each execute cycle evaluates the current state and decides what action to take next, rather than following a fixed sequence.
+**Key Change in v3.0**: The Runtime now generates **explicit Work Orders** that tell the LLM exactly what to do. The LLM is an executor, not a decision-maker. This ensures KDSE owns the methodology.
+
+**Key Difference from v1.0/v2.0**: The execution model now returns **Work Orders** - explicit engineering directives that define:
+- What documents/artifacts to create
+- What the completion criteria are
+- What actions are blocked (not allowed)
+- What comes next
 
 ---
 
 ## State-Based Orchestration Principles
+
+### Work Orders: The Key to Runtime-Owns-Methodology
+
+Every `execute()` call returns a **Work Order** that explicitly defines what the LLM must do:
+
+```json
+{
+  "work_order": {
+    "phase": "Problem",
+    "phase_description": "Define and understand the problem scope",
+    "required_work": [
+      "Analyze the user objective",
+      "Identify the core problem being solved",
+      "Define explicit scope boundaries",
+      "Identify stakeholders and users",
+      "Document known constraints and requirements"
+    ],
+    "expected_deliverables": [
+      ".kdse/context/PROBLEM.md - Problem statement and scope"
+    ],
+    "completion_criteria": [
+      "PROBLEM.md exists in .kdse/context/",
+      "Problem statement clearly articulates the user's need",
+      "Scope boundaries are explicitly defined",
+      "At least one stakeholder/user is identified"
+    ],
+    "blocked_actions": [
+      "DO NOT generate any code or implementation",
+      "DO NOT create project structure or folders outside .kdse/",
+      "DO NOT design architecture or technical solutions",
+      "DO NOT write tests or configuration files"
+    ],
+    "next_phase": "Knowledge Collection",
+    "strict_mode_enforced": true
+  }
+}
+```
+
+**Runtime Rules**:
+- The Runtime decides: current phase, required work, required documents, completion criteria, blocked actions, transition conditions
+- The LLM decides: **none of these** - only executes the Work Order
+
+**STRICT Mode**: In STRICT mode the LLM must never create engineering artifacts unless they appear in the current Work Order. If the runtime blocks implementation, implementation is impossible.
 
 ### The Seven-Step Cycle
 
@@ -292,13 +341,15 @@ A session completes when:
 
 ## Key Differences from Linear Model
 
-| Feature | Linear v1 | State-Based v2 |
-|---------|-----------|-----------------|
-| Phase Selection | Sequential | Dynamic based on state |
-| Confidence Check | Manual | Automatic each cycle |
-| Implementation Gate | Per-decision | Automatic threshold |
-| Evidence Tracking | Separate process | Integrated in cycle |
-| Path Resolution | Potentially hardcoded | Always through resolver |
+| Feature | Linear v1 | State-Based v2 | Work Order v3 |
+|---------|-----------|-----------------|---------------|
+| Phase Selection | Sequential | Dynamic based on state | Dynamic + explicit |
+| Work Definition | Implicit | Implicit | **Explicit Work Order** |
+| LLM Role | Decides how | Decides how | **Only executes** |
+| Confidence Check | Manual | Automatic each cycle | Automatic each cycle |
+| Implementation Gate | Per-decision | Automatic threshold | **Runtime authorized only** |
+| Evidence Tracking | Separate process | Integrated in cycle | Integrated in cycle |
+| Path Resolution | Potentially hardcoded | Always through resolver | Always through resolver |
 
 ---
 
@@ -310,12 +361,14 @@ A session completes when:
 2. **Check confidence before implement** - The engine blocks Implementation until threshold met
 3. **Track evidence per phase** - Each phase has specific requirements
 4. **Re-evaluate in each cycle** - Don't assume state persists between cycles
+5. **Work Orders are authoritative** - The LLM must follow the Work Order exactly; it cannot decide what to do
 
 ### For Operators
 
 1. **Monitor confidence** - Watch Foundation score during session
 2. **Provide evidence** - Help collect missing evidence when blocked
 3. **Understand the gate** - Implementation requires Foundation at threshold
+4. **Watch Work Orders** - Each execute response includes explicit instructions for the LLM
 
 ---
 

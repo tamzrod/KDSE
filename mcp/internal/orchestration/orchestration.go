@@ -361,7 +361,8 @@ func (m *Manager) CheckImplementationReadiness() (bool, *SessionState) {
 	return true, state
 }
 
-// GetExecutionDecision determines what KDSE operations to invoke based on session state
+// GetExecutionDecision determines what KDSE operations to invoke based on session state.
+// Returns an ExecutionDecision with an attached WorkOrder that explicitly defines what the LLM must do.
 func (m *Manager) GetExecutionDecision(objective string) *ExecutionDecision {
 	state, err := m.Load()
 	if err != nil {
@@ -379,8 +380,10 @@ func (m *Manager) GetExecutionDecision(objective string) *ExecutionDecision {
 	// If no objective set, set it first
 	if state.Objective == "" && objective != "" {
 		decision.Action = "set_objective"
-		decision.NextPhase = state.CurrentPhase
+		decision.NextPhase = PhaseProblem // Always transition to Problem first
 		decision.Reason = "Setting objective before workflow"
+		// Generate WorkOrder for the next phase (Problem)
+		decision.WorkOrder = m.GenerateWorkOrder(PhaseProblem, objective)
 		return decision
 	}
 
@@ -391,36 +394,42 @@ func (m *Manager) GetExecutionDecision(objective string) *ExecutionDecision {
 		decision.NextPhase = PhaseProblem
 		decision.Reason = "Starting new KDSE workflow"
 		decision.Operations = []string{"analyze_objective"}
+		decision.WorkOrder = m.GenerateWorkOrder(PhaseProblem, state.Objective)
 
 	case PhaseProblem:
 		decision.Action = "knowledge"
 		decision.NextPhase = PhaseKnowledge
 		decision.Reason = "Problem defined, collecting knowledge"
 		decision.Operations = []string{"collect"}
+		decision.WorkOrder = m.GenerateWorkOrder(PhaseKnowledge, state.Objective)
 
 	case PhaseKnowledge:
 		decision.Action = "foundation"
 		decision.NextPhase = PhaseFoundation
 		decision.Reason = "Knowledge collected, establishing foundation"
 		decision.Operations = []string{"foundation"}
+		decision.WorkOrder = m.GenerateWorkOrder(PhaseFoundation, state.Objective)
 
 	case PhaseFoundation:
 		decision.Action = "audit"
 		decision.NextPhase = PhaseAudit
 		decision.Reason = "Foundation established, running audit"
 		decision.Operations = []string{"audit"}
+		decision.WorkOrder = m.GenerateWorkOrder(PhaseAudit, state.Objective)
 
 	case PhaseAudit:
 		decision.Action = "assessment"
 		decision.NextPhase = PhaseAssessment
 		decision.Reason = "Audit complete, assessing findings"
 		decision.Operations = []string{"assess"}
+		decision.WorkOrder = m.GenerateWorkOrder(PhaseAssessment, state.Objective)
 
 	case PhaseAssessment:
 		decision.Action = "architecture"
 		decision.NextPhase = PhaseArchitecture
 		decision.Reason = "Assessment complete, defining architecture"
 		decision.Operations = []string{"architecture"}
+		decision.WorkOrder = m.GenerateWorkOrder(PhaseArchitecture, state.Objective)
 
 	case PhaseArchitecture:
 		// Check if ready for implementation
@@ -429,12 +438,17 @@ func (m *Manager) GetExecutionDecision(objective string) *ExecutionDecision {
 			decision.NextPhase = PhaseImplementation
 			decision.Reason = "All prerequisites met, ready for implementation"
 			decision.Operations = []string{"implement"}
+			decision.WorkOrder = m.GenerateWorkOrder(PhaseImplementation, state.Objective)
 		} else {
 			decision.Action = "blocked"
 			decision.NextPhase = PhaseImplementation
 			decision.Blocked = true
 			decision.BlockedReason = state.BlockedReason
 			decision.Reason = "Implementation blocked - prerequisites not met"
+			// Include partial work order showing what blocks implementation
+			decision.WorkOrder = m.GenerateWorkOrder(PhaseArchitecture, state.Objective)
+			decision.WorkOrder.BlockedActions = append(decision.WorkOrder.BlockedActions, 
+				"IMPLEMENTATION BLOCKED: "+state.BlockedReason)
 		}
 
 	case PhaseImplementation:
@@ -461,6 +475,256 @@ type ExecutionDecision struct {
 	Blocked        bool        `json:"blocked,omitempty"`
 	BlockedReason  string      `json:"blocked_reason,omitempty"`
 	SessionState   *SessionState `json:"session_state,omitempty"`
+	WorkOrder      *WorkOrder   `json:"work_order,omitempty"`
+}
+
+// WorkOrder is an explicit engineering directive from KDSE runtime to the LLM.
+// The runtime owns the methodology; the LLM executes only the Work Order.
+type WorkOrder struct {
+	Phase               Phase              `json:"phase"`
+	PhaseDescription    string             `json:"phase_description"`
+	RequiredWork        []string           `json:"required_work"`
+	ExpectedDeliverables []string          `json:"expected_deliverables"`
+	CompletionCriteria  []string           `json:"completion_criteria"`
+	BlockedActions      []string           `json:"blocked_actions"`
+	NextPhase           Phase              `json:"next_phase"`
+	StrictModeEnforced  bool               `json:"strict_mode_enforced"`
+	ConfidenceGate      float64            `json:"confidence_gate,omitempty"`
+}
+
+// GenerateWorkOrder creates an explicit work order for the given phase
+func (m *Manager) GenerateWorkOrder(phase Phase, objective string) *WorkOrder {
+	switch phase {
+	case PhaseProblem:
+		return &WorkOrder{
+			Phase:               PhaseProblem,
+			PhaseDescription:    "Define and understand the problem scope and constraints",
+			RequiredWork: []string{
+				"Analyze the user objective: " + objective,
+				"Identify the core problem being solved",
+				"Define explicit scope boundaries",
+				"Identify stakeholders and users",
+				"Document known constraints and requirements",
+			},
+			ExpectedDeliverables: []string{
+				".kdse/context/PROBLEM.md - Problem statement and scope",
+			},
+			CompletionCriteria: []string{
+				"PROBLEM.md exists in .kdse/context/",
+				"Problem statement clearly articulates the user's need",
+				"Scope boundaries are explicitly defined",
+				"At least one stakeholder/user is identified",
+			},
+			BlockedActions: []string{
+				"DO NOT generate any code or implementation",
+				"DO NOT create project structure or folders outside .kdse/",
+				"DO NOT design architecture or technical solutions",
+				"DO NOT write tests or configuration files",
+			},
+			NextPhase:           PhaseKnowledge,
+			StrictModeEnforced:  true,
+		}
+
+	case PhaseKnowledge:
+		return &WorkOrder{
+			Phase:               PhaseKnowledge,
+			PhaseDescription:    "Collect existing knowledge and artifacts from the repository",
+			RequiredWork: []string{
+				"Scan the repository for existing documentation",
+				"Identify README files and project descriptions",
+				"Collect any existing specifications or requirements",
+				"Document the current state of the codebase",
+				"Note any existing patterns or conventions",
+			},
+			ExpectedDeliverables: []string{
+				".kdse/context/KNOWLEDGE.md - Repository knowledge summary",
+			},
+			CompletionCriteria: []string{
+				"KNOWLEDGE.md exists in .kdse/context/",
+				"Repository structure is documented",
+				"Existing documentation is cataloged",
+				"Relevant patterns/conventions are noted",
+			},
+			BlockedActions: []string{
+				"DO NOT modify any existing code",
+				"DO NOT create new source files",
+				"DO NOT design solutions or architecture",
+				"DO NOT write implementation code",
+			},
+			NextPhase:           PhaseFoundation,
+			StrictModeEnforced:  true,
+		}
+
+	case PhaseFoundation:
+		return &WorkOrder{
+			Phase:               PhaseFoundation,
+			PhaseDescription:    "Establish foundational documentation for the project",
+			RequiredWork: []string{
+				"Create SPEC.md with detailed specifications",
+				"Create REQUIREMENTS.md with functional requirements",
+				"Create ASSUMPTIONS.md documenting key assumptions",
+				"Create CONSTRAINTS.md listing project constraints",
+				"Create GLOSSARY.md defining domain terminology",
+			},
+			ExpectedDeliverables: []string{
+				".kdse/foundation/SPEC.md - Project specification",
+				".kdse/foundation/REQUIREMENTS.md - Functional requirements",
+				".kdse/foundation/ASSUMPTIONS.md - Key assumptions",
+				".kdse/foundation/CONSTRAINTS.md - Project constraints",
+				".kdse/foundation/GLOSSARY.md - Domain terminology",
+			},
+			CompletionCriteria: []string{
+				"All 5 foundation documents exist in .kdse/foundation/",
+				"SPEC.md contains detailed project specification",
+				"REQUIREMENTS.md lists functional requirements",
+				"ASSUMPTIONS.md documents at least 3 key assumptions",
+				"CONSTRAINTS.md lists technical and business constraints",
+				"GLOSSARY.md defines domain terminology",
+			},
+			BlockedActions: []string{
+				"DO NOT generate any source code",
+				"DO NOT create project directory structure",
+				"DO NOT write implementation files",
+				"DO NOT create configuration files",
+				"DO NOT write tests or build scripts",
+			},
+			NextPhase:           PhaseAudit,
+			StrictModeEnforced:  true,
+		}
+
+	case PhaseAudit:
+		return &WorkOrder{
+			Phase:               PhaseAudit,
+			PhaseDescription:    "Run compliance audit against KDSE standards",
+			RequiredWork: []string{
+				"Verify all foundation documents are complete",
+				"Check that SPEC.md meets quality standards",
+				"Validate REQUIREMENTS.md completeness",
+				"Identify any gaps or missing information",
+				"Generate audit report with findings",
+			},
+			ExpectedDeliverables: []string{
+				".kdse/reports/audit-[timestamp].md - Audit report",
+			},
+			CompletionCriteria: []string{
+				"Audit report exists in .kdse/reports/",
+				"All foundation documents are verified",
+				"Any gaps are identified with remediation steps",
+				"Audit score/rating is provided",
+			},
+			BlockedActions: []string{
+				"DO NOT modify any foundation documents during audit",
+				"DO NOT generate code or implementation",
+				"DO NOT create project structure",
+			},
+			NextPhase:           PhaseAssessment,
+			StrictModeEnforced:  true,
+		}
+
+	case PhaseAssessment:
+		return &WorkOrder{
+			Phase:               PhaseAssessment,
+			PhaseDescription:    "Assess audit findings and identify improvement opportunities",
+			RequiredWork: []string{
+				"Review all audit findings",
+				"Prioritize identified issues by severity",
+				"Document assessment of foundation quality",
+				"Identify specific improvements needed",
+				"Create remediation plan if issues found",
+			},
+			ExpectedDeliverables: []string{
+				".kdse/reports/assessment-[timestamp].md - Assessment report",
+			},
+			CompletionCriteria: []string{
+				"Assessment report exists in .kdse/reports/",
+				"All critical issues are documented",
+				"Improvement recommendations are provided",
+				"Remediation plan is documented if needed",
+			},
+			BlockedActions: []string{
+				"DO NOT implement any fixes during assessment",
+				"DO NOT generate code or implementation",
+				"DO NOT modify foundation documents",
+			},
+			NextPhase:           PhaseArchitecture,
+			StrictModeEnforced:  true,
+		}
+
+	case PhaseArchitecture:
+		return &WorkOrder{
+			Phase:               PhaseArchitecture,
+			PhaseDescription:    "Define system architecture and technical approach",
+			RequiredWork: []string{
+				"Design system architecture based on SPEC.md",
+				"Define component structure and responsibilities",
+				"Document technology choices and rationale",
+				"Create architectural diagrams (if applicable)",
+				"Define interfaces and data flows",
+			},
+			ExpectedDeliverables: []string{
+				".kdse/foundation/ARCHITECTURE.md - System architecture document",
+			},
+			CompletionCriteria: []string{
+				"ARCHITECTURE.md exists in .kdse/foundation/",
+				"System components are defined",
+				"Technology stack is documented",
+				"Data flows are described",
+				"Architectural decisions are justified",
+			},
+			BlockedActions: []string{
+				"DO NOT generate implementation code",
+				"DO NOT create source files",
+				"DO NOT set up project build structure",
+				"DO NOT write configuration files",
+			},
+			NextPhase:           PhaseImplementation,
+			StrictModeEnforced:  true,
+			ConfidenceGate:      PhaseConfidenceThreshold[PhaseImplementation],
+		}
+
+	case PhaseImplementation:
+		return &WorkOrder{
+			Phase:               PhaseImplementation,
+			PhaseDescription:    "Implement the solution based on approved architecture",
+			RequiredWork: []string{
+				"Follow ARCHITECTURE.md for implementation",
+				"Implement components as specified",
+				"Write unit tests for core functionality",
+				"Ensure code follows defined patterns",
+				"Document implementation decisions",
+			},
+			ExpectedDeliverables: []string{
+				"Source code files in project directory",
+				"Unit tests for core functionality",
+				"Configuration files as needed",
+			},
+			CompletionCriteria: []string{
+				"Code compiles without errors",
+				"Core functionality is implemented per SPEC.md",
+				"Unit tests cover critical paths",
+				"Code follows project conventions",
+			},
+			BlockedActions: []string{
+				"DO NOT deviate from ARCHITECTURE.md",
+				"DO NOT implement features not in REQUIREMENTS.md",
+				"DO NOT skip testing",
+			},
+			NextPhase:           PhaseComplete,
+			StrictModeEnforced:  true,
+		}
+
+	default:
+		return &WorkOrder{
+			Phase:               phase,
+			PhaseDescription:    "Unknown phase",
+			RequiredWork:        []string{},
+			ExpectedDeliverables: []string{},
+			CompletionCriteria:  []string{},
+			BlockedActions:      []string{"DO NOT perform any actions"},
+			NextPhase:           PhaseComplete,
+			StrictModeEnforced:  true,
+		}
+	}
 }
 
 // statePath returns the path to the session state file
