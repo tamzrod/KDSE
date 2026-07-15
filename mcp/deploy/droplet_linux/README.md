@@ -94,7 +94,7 @@ nano .env
 | `KDSE_DOCKERFILE` | `Dockerfile` | Dockerfile name |
 | `KDSE_IMAGE` | `kdse-mcp` | Docker image name |
 | `KDSE_TAG` | `latest` | Image tag |
-| `KDSE_HTTP_CONTAINER_NAME` | `kdse-mcp-http` | HTTP container name |
+| `KDSE_HTTP_CONTAINER_NAME` | `kdse-mcp` | HTTP container name |
 | `KDSE_STDIO_CONTAINER_NAME` | `kdse-mcp-stdio` | STDIO container name |
 | `KDSE_DATA_PATH` | `/data/kdse` | Host path for KDSE data |
 | `KDSE_REPO_ROOT` | `/data/kdse` | Container path for KDSE data |
@@ -414,7 +414,7 @@ curl http://localhost:8080/health
 
 ```bash
 # Check Docker health status
-docker inspect --format='{{.State.Health.Status}}' kdse-mcp-http
+docker inspect --format='{{.State.Health.Status}}' kdse-mcp
 ```
 
 ---
@@ -469,7 +469,7 @@ docker ps | grep kdse-mcp
 sudo ufw allow 8080/tcp
 
 # Verify port binding
-docker port kdse-mcp-http
+docker port kdse-mcp
 ```
 
 ### Permission Denied
@@ -497,7 +497,7 @@ df -h
 │                    Linux Droplet                              │
 │                                                              │
 │  ┌─────────────────────────────────────────────────────┐    │
-│  │              Docker Container (kdse-mcp-http)         │    │
+│  │              Docker Container (kdse-mcp)         │    │
 │  │  ┌───────────────────────────────────────────────┐  │    │
 │  │  │         KDSE MCP Server (HTTP mode)            │  │    │
 │  │  │         • /health - Health check              │  │    │

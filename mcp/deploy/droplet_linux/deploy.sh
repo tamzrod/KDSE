@@ -29,13 +29,9 @@ fi
 # Transport mode: stdio or http
 TRANSPORT_MODE="${MCP_TRANSPORT:-http}"
 
-# Container names based on transport
-if [ "$TRANSPORT_MODE" = "http" ]; then
-    CONTAINER_NAME="${KDSE_HTTP_CONTAINER_NAME:-kdse-mcp-http}"
-    HTTP_PORT="${MCP_HTTP_PORT:-8080}"
-else
-    CONTAINER_NAME="${KDSE_STDIO_CONTAINER_NAME:-kdse-mcp-stdio}"
-fi
+# Container name (always kdse-mcp for default HTTP service)
+CONTAINER_NAME="${KDSE_HTTP_CONTAINER_NAME:-kdse-mcp}"
+HTTP_PORT="${MCP_HTTP_PORT:-8080}"
 
 # =============================================================================
 # HELPER FUNCTIONS
@@ -95,7 +91,7 @@ deploy() {
     log_info "Starting KDSE MCP Server in ${TRANSPORT_MODE} mode..."
     
     if [ "$TRANSPORT_MODE" = "http" ]; then
-        docker compose --profile http up -d
+        docker compose up -d
         log_info "HTTP server will be available on port ${HTTP_PORT}"
     else
         docker compose --profile stdio up -d
@@ -204,7 +200,7 @@ switch_mode() {
     
     # Restart with new mode
     if [ "$new_mode" = "http" ]; then
-        docker compose --profile http up -d
+        docker compose up -d
     else
         docker compose --profile stdio up -d
     fi
@@ -226,7 +222,7 @@ case "${1:-deploy}" in
     start)
         check_docker
         if [ "$TRANSPORT_MODE" = "http" ]; then
-            docker compose --profile http up -d
+            docker compose up -d
         else
             docker compose --profile stdio up -d
         fi
