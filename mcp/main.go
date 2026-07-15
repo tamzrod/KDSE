@@ -146,14 +146,14 @@ func (s *KDSEService) handleInitialize(req *MCPRequest) map[string]interface{} {
 		"protocolVersion": ProtocolVersion,
 		"serverInfo": map[string]interface{}{
 			"name":    "kdse-mcp",
-			"version": "0.2.0",
+			"version": "0.3.0",
 		},
 		"capabilities": map[string]interface{}{
 			"tools": map[string]interface{}{
 				"listChanged": false,
 			},
 		},
-		"instructions": "KDSE MCP Server v0.1 - Provides access to Knowledge-Driven Software Engineering repository information. Available tools: help, initialize, status",
+		"instructions": "KDSE MCP Server v0.3 - Provides access to Knowledge-Driven Software Engineering repository information. All artifacts stored under .kdse/. Available tools: help, initialize, status, collect, foundation, audit, migrate",
 	}
 }
 
@@ -169,7 +169,7 @@ func (s *KDSEService) handleListTools() map[string]interface{} {
 		},
 		{
 			"name":        "initialize",
-			"description": "Returns repository initialization information including module name, version, and supported features",
+			"description": "Initializes the KDSE .kdse/ workspace. Creates the workspace directory structure if it doesn't exist. Returns workspace information.",
 			"inputSchema": map[string]interface{}{
 				"type":       "object",
 				"properties": map[string]interface{}{},
@@ -177,7 +177,39 @@ func (s *KDSEService) handleListTools() map[string]interface{} {
 		},
 		{
 			"name":        "status",
-			"description": "Returns current repository status information including git state, file counts, and KDSE compliance",
+			"description": "Returns current repository status information including git state, file counts, KDSE workspace state, and compliance indicators",
+			"inputSchema": map[string]interface{}{
+				"type":       "object",
+				"properties": map[string]interface{}{},
+			},
+		},
+		{
+			"name":        "collect",
+			"description": "Collects and catalogs engineering artifacts into .kdse/artifacts/",
+			"inputSchema": map[string]interface{}{
+				"type":       "object",
+				"properties": map[string]interface{}{},
+			},
+		},
+		{
+			"name":        "foundation",
+			"description": "Returns or creates foundation documentation under .kdse/foundation/",
+			"inputSchema": map[string]interface{}{
+				"type":       "object",
+				"properties": map[string]interface{}{},
+			},
+		},
+		{
+			"name":        "audit",
+			"description": "Generates audit reports under .kdse/reports/",
+			"inputSchema": map[string]interface{}{
+				"type":       "object",
+				"properties": map[string]interface{}{},
+			},
+		},
+		{
+			"name":        "migrate",
+			"description": "Migrates any legacy KDSE directories (foundation/, knowledge/, context/, artifacts/) from repository root to .kdse/",
 			"inputSchema": map[string]interface{}{
 				"type":       "object",
 				"properties": map[string]interface{}{},
@@ -204,6 +236,14 @@ func (s *KDSEService) handleToolCall(req *MCPRequest) (interface{}, *MCPError) {
 		result = s.tools.Initialize()
 	case "status":
 		result = s.tools.Status()
+	case "collect":
+		result = s.tools.Collect()
+	case "foundation":
+		result = s.tools.Foundation()
+	case "audit":
+		result = s.tools.Audit()
+	case "migrate":
+		result = s.tools.Migrate()
 	default:
 		return nil, &MCPError{Code: -32602, Message: fmt.Sprintf("Unknown tool: %s", params.Name)}
 	}

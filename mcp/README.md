@@ -1,6 +1,6 @@
 # KDSE MCP Server
 
-**Version:** 0.2.0  
+**Version:** 0.3.0  
 **Protocol:** Model Context Protocol (MCP) 2024-11-05
 
 ---
@@ -12,14 +12,21 @@ The KDSE MCP Server provides a Model Context Protocol interface for Knowledge-Dr
 1. **STDIO transport** - For local development
 2. **HTTP transport** - For remote deployment
 
-This v0.2 release adds HTTP transport for remote MCP client connections while maintaining STDIO support for local development.
+This v0.3 release introduces the **.kdse/ workspace architecture** - a core architectural principle that KDSE owns only its own workspace and never pollutes the user's repository.
+
+## Architectural Principle
+
+**The repository is the user's library. The `.kdse` directory is the librarian's workspace.**
+
+KDSE may observe, analyze, index, and document the repository. KDSE must not reorganize or pollute the repository outside its own `.kdse` workspace unless explicitly instructed by the user.
 
 ## Design Principles
 
-1. **Dual Transport Architecture**: Same server binary supports STDIO (local) and HTTP (remote)
-2. **Protocol Isolation**: MCP protocol handling is strictly separated from KDSE service logic
-3. **Structured Output**: All responses are structured JSON, suitable for programmatic consumption
-4. **Foundation Only**: Repository reading and advanced features are out of scope for v0.1
+1. **Workspace Isolation**: All KDSE artifacts are stored under `.kdse/` to avoid polluting the repository
+2. **Dual Transport Architecture**: Same server binary supports STDIO (local) and HTTP (remote)
+3. **Protocol Isolation**: MCP protocol handling is strictly separated from KDSE service logic
+4. **Structured Output**: All responses are structured JSON, suitable for programmatic consumption
+5. **Legacy Migration**: Automatic detection and migration of legacy KDSE directories
 
 ## Architecture
 
@@ -41,15 +48,41 @@ This v0.2 release adds HTTP transport for remote MCP client connections while ma
 │                            ▼                                 │
 │  ┌────────────────────────────────────────────────────────┐ │
 │  │               KDSE Service Layer                        │ │
-│  │  • initialize()  • help()  • status()                  │ │
+│  │  • initialize()  • help()  • status()  • collect()     │ │
+│  │  • foundation()  • audit()  • migrate()                │ │
 │  └────────────────────────────────────────────────────────┘ │
 │                            │                                 │
 │                            ▼                                 │
 │  ┌────────────────────────────────────────────────────────┐ │
-│  │              Tool Implementations                       │ │
+│  │              Workspace Manager (.kdse/)                 │ │
+│  │  • foundation/  • knowledge/  • context/               │ │
+│  │  • artifacts/   • runtime/   • sessions/               │ │
+│  │  • reports/     • cache/     • confidence/             │ │
 │  └────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+## .kdse Workspace Structure
+
+All KDSE-managed artifacts reside under the `.kdse/` directory:
+
+```
+.kdse/
+├── foundation/      # Foundation documentation
+├── knowledge/       # Derived engineering knowledge
+├── context/         # Context handoff files
+├── artifacts/       # Collected artifacts inventory
+├── runtime/         # Runtime state and configuration
+├── sessions/        # Session management
+├── confidence/      # Confidence metrics
+├── operational/     # Operational knowledge
+├── developmental/   # Development experience
+├── reports/         # Audit and analysis reports
+├── cache/           # Cached analysis results
+└── normalized/      # Normalized documentation
+```
+
+**Key Principle**: The repository root should remain untouched except for files explicitly requested by the user.
 
 ## Transport Configuration
 
@@ -115,22 +148,9 @@ Returns information about all available KDSE MCP tools.
 }
 ```
 
-**Response:**
-```json
-{
-  "jsonrpc": "2.0",
-  "result": {
-    "content": [{
-      "type": "text",
-      "text": "{\n  \"server\": {\n    \"name\": \"kdse-mcp\",\n    \"version\": \"0.2.0\",\n   ...\n  },\n  \"tools\": [...]\n}"
-    }]
-  }
-}
-```
-
 ### initialize
 
-Returns repository initialization information (static).
+Initializes the KDSE `.kdse/` workspace. Creates the workspace directory if it doesn't exist. Returns workspace information including migration status for legacy directories.
 
 **Request:**
 ```json
@@ -144,22 +164,9 @@ Returns repository initialization information (static).
 }
 ```
 
-**Response:**
-```json
-{
-  "jsonrpc": "2.0",
-  "result": {
-    "content": [{
-      "type": "text",
-      "text": "{\n  \"repository\": {\"root\": \"/workspace/project/KDSE\", \"exists\": true},\n  \"module\": \"github.com/kdse/runtime\",\n  \"version\": \"0.2.0\",\n  \"goVersion\": \"1.22.5\",\n  \"features\": [\"help\", \"initialize\", \"status\"],\n  \"components\": {...}\n}"
-    }]
-  }
-}
-```
-
 ### status
 
-Returns repository status information (static).
+Returns current repository status including workspace state and compliance indicators.
 
 **Request:**
 ```json
@@ -173,16 +180,67 @@ Returns repository status information (static).
 }
 ```
 
-**Response:**
+### collect
+
+Collects and catalogs engineering artifacts into `.kdse/artifacts/`.
+
+**Request:**
 ```json
 {
   "jsonrpc": "2.0",
-  "result": {
-    "content": [{
-      "type": "text",
-      "text": "{\n  \"repository\": {\"root\": \"/workspace/project/KDSE\", \"exists\": true},\n  \"git\": {\"available\": true, \"branch\": \"main\", ...},\n  \"kdse\": {\"compliant\": true, ...}\n}"
-    }]
-  }
+  "method": "tools/call",
+  "params": {
+    "name": "collect"
+  },
+  "id": 4
+}
+```
+
+### foundation
+
+Returns or creates foundation documentation under `.kdse/foundation/`.
+
+**Request:**
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "foundation"
+  },
+  "id": 5
+}
+```
+
+### audit
+
+Generates audit reports under `.kdse/reports/`.
+
+**Request:**
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "audit"
+  },
+  "id": 6
+}
+```
+
+### migrate
+
+Migrates any legacy KDSE directories from repository root to `.kdse/`.
+
+**Request:**
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "migrate"
+  },
+  "id": 7
 }
 ```
 
@@ -242,16 +300,31 @@ List available tools with `tools/list`:
 }
 ```
 
-## Future Extensions
+## Legacy Migration
 
-This is v0.2 establishing dual transport support. Planned additions:
+If your repository has legacy KDSE directories in the root:
 
-- [ ] Repository reading for dynamic responses
-- [ ] Development Experience tool
-- [ ] Audit tool for compliance checks
-- [ ] Architecture search capabilities
-- [ ] AI reasoning integration
-- [ ] Streaming responses for long-running operations
+```
+foundation/
+knowledge/
+context/
+artifacts/
+```
+
+Run the `migrate` tool to move them to `.kdse/`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "migrate"
+  },
+  "id": 8
+}
+```
+
+This ensures all KDSE artifacts reside under `.kdse/` per the architectural principle.
 
 ## License
 
