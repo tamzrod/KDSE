@@ -79,10 +79,6 @@ deploy() {
     log_info "Building Docker image from source..."
     docker compose build --no-cache
     
-    # Create network if it doesn't exist
-    log_info "Ensuring network exists..."
-    docker network create "${KDSE_NETWORK:-kdse-mcp-network}" 2>/dev/null || true
-    
     # Stop existing containers
     log_info "Stopping any existing containers..."
     docker compose down 2>/dev/null || true

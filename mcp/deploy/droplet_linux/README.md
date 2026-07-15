@@ -12,10 +12,13 @@ This is a production-ready deployment configuration for the KDSE MCP Server on L
 1. **STDIO mode** - For local development and debugging
 2. **HTTP mode** - For remote MCP client connections over the network
 
+The deployment uses **Docker host networking** for direct access from the host, making it ideal for integration with reverse proxies like Nginx Proxy Manager.
+
 ### Features
 
 - Local build from source (no registry required)
 - Dual transport support (STDIO + HTTP)
+- Docker host networking (no bridge network required)
 - Auto-restart on failure or system reboot
 - Log rotation to prevent disk space issues
 - Healthcheck support for HTTP mode
@@ -127,8 +130,7 @@ cd /opt/kdse/mcp/deploy/droplet_linux
 
 This will:
 1. Build the Docker image locally from `mcp/Dockerfile`
-2. Create the network
-3. Start the HTTP server container on port 18181
+2. Start the HTTP server container on port 18181 (using host networking)
 
 ### Using the Deploy Script
 
@@ -497,20 +499,24 @@ df -h
 │                    Linux Droplet                              │
 │                                                              │
 │  ┌─────────────────────────────────────────────────────┐    │
-│  │              Docker Container (kdse-mcp)         │    │
+│  │              Docker Container (kdse-mcp)             │    │
 │  │  ┌───────────────────────────────────────────────┐  │    │
 │  │  │         KDSE MCP Server (HTTP mode)            │  │    │
 │  │  │         • /health - Health check              │  │    │
 │  │  │         • /mcp   - MCP JSON-RPC endpoint       │  │    │
 │  │  └───────────────────────────────────────────────┘  │    │
 │  └─────────────────────────────────────────────────────┘    │
-│                              │                              │
-│  ┌───────────────────────────┴───────────────────────┐    │
+│                          │                                  │
+│                     HOST NETWORK                             │
+│                          │                                  │
+│  ┌───────────────────────┴───────────────────────────┐    │
 │  │              /data/kdse (read-only volume)        │    │
-│  └─────────────────────────────────────────────────────┘    │
+│  └───────────────────────────────────────────────────┘    │
 │                                                              │
-│  Remote MCP Clients ──────────────────► Port 18181          │
-│  (Claude Desktop, OpenHands, etc.)                         │
+│  Direct Access: http://127.0.0.1:18181                      │
+│                                                              │
+│  Reverse Proxy ──────────────────────► Port 18181           │
+│  (Nginx, Caddy, etc.)                                       │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -551,20 +557,45 @@ df -h
 1. **Data is read-only:** The KDSE data is mounted as read-only
 2. **Non-root user:** The container runs as UID 1000
 3. **Minimal image:** Based on Alpine Linux
-4. **Network isolation:** Dedicated bridge network
+4. **Host networking:** Container uses Docker host network directly
 5. **CORS enabled:** For cross-origin requests from web clients
 6. **No authentication:** Currently no auth (add reverse proxy/AuthN for production)
 
-### Production Hardening (Recommended)
+### Reverse Proxy Integration
 
-For production deployments without authentication on the MCP server itself, consider:
+The deployment uses Docker host networking, making it directly accessible at `http://127.0.0.1:18181`. This simplifies integration with reverse proxies like Nginx, Nginx Proxy Manager, Caddy, or Traefik.
 
-- **Reverse proxy with authentication:** Put Nginx or Caddy in front with Basic Auth or JWT
-- **Firewall:** Restrict port 18181 to specific IPs via UFW
-- **TLS:** Add HTTPS via reverse proxy (let's encrypt)
-- **Rate limiting:** Configure at reverse proxy level
+**Nginx Proxy Manager Configuration:**
 
-Example with Caddy:
+1. Navigate to Nginx Proxy Manager → Proxy Hosts → Add Proxy Host
+2. Set **Domain Names** to your subdomain (e.g., `kdse.example.com`)
+3. Set **Scheme** to `http`
+4. Set **Forward Hostname/IP** to `127.0.0.1`
+5. Set **Forward Port** to `18181`
+6. Enable **Block Common Exploits**
+7. For SSL, request a Let's Encrypt certificate
+
+**Example Nginx configuration:**
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name kdse.example.com;
+
+    ssl_certificate /etc/letsencrypt/live/kdse.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/kdse.example.com/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:18181;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+**Example Caddy configuration:**
 
 ```bash
 # Caddyfile
@@ -578,6 +609,15 @@ kdse.example.com {
     }
 }
 ```
+
+### Production Hardening (Recommended)
+
+For production deployments without authentication on the MCP server itself, consider:
+
+- **Reverse proxy with authentication:** Put Nginx or Caddy in front with Basic Auth or JWT
+- **Firewall:** Restrict port 18181 to localhost (reverse proxy only) via UFW
+- **TLS:** Add HTTPS via reverse proxy (let's encrypt)
+- **Rate limiting:** Configure at reverse proxy level
 
 ---
 
