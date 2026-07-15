@@ -1,0 +1,40 @@
+{
+  "version": "1.0",
+  "created": "2026-07-15T00:00:00Z",
+  "updated": "2026-07-15T00:00:00Z",
+  
+  "inventory": {
+    "total_count": 0,
+    "by_category": {},
+    "by_status": {
+      "active": 0,
+      "deprecated": 0,
+      "archived": 0
+    }
+  },
+  
+  "categories": {
+    "foundation": {
+      "description": "Project foundation documents",
+      "count": 0
+    },
+    "knowledge": {
+      "description": "Engineering knowledge documents",
+      "count": 0
+    },
+    "traceability": {
+      "description": "Traceability records",
+      "count": 0
+    },
+    "evidence": {
+      "description": "Engineering evidence",
+      "count": 0
+    },
+    "reports": {
+      "description": "Generated reports",
+      "count": 0
+    }
+  },
+  
+  "recent": []
+}

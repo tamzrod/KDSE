@@ -1,0 +1,26 @@
+# KDSE Session State
+# Tracks the current session and project state
+
+session:
+  current:
+    id: null
+    status: "idle"
+    started_at: null
+    ended_at: null
+    
+  history:
+    sessions: []
+    total: 0
+    
+state:
+  phase: "idle"
+  confidence:
+    overall: 0.0
+    foundation: 0.0
+    evidence: 0.0
+    
+  digest:
+    baseline_knowledge: 15
+    project_knowledge: 0
+    total_knowledge: 15
+    last_updated: null

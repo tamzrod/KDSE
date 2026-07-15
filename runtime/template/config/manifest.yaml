@@ -1,0 +1,20 @@
+# KDSE Project Manifest
+# This file identifies the KDSE configuration for this project
+
+manifest:
+  version: "1.0"
+  kdse_version: "1.0.0"
+  source: "https://github.com/kdse/runtime"
+  
+  project:
+    name: ""
+    initialized: "2026-07-15T00:00:00Z"
+    last_activity: null
+    
+  template:
+    name: "default"
+    version: "1.0"
+    
+  runtime:
+    mode: "standard"
+    strict_mode: true
