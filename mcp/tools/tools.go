@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/kdse/runtime/internal/workspace"
+	"github.com/kdse/mcp/internal/workspace"
 )
 
 // ToolHandler provides MCP tools with workspace-aware responses
