@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0",
+  "created_at": "{{created_at}}",
+  "last_updated": "{{last_updated}}",
+  "ideas": [],
+  "total_count": 0,
+  "by_status": {
+    "SOMEDAY": 0,
+    "LABORATORY": 0,
+    "PROMOTED": 0,
+    "IMPLEMENTED": 0,
+    "ARCHIVED": 0,
+    "REJECTED": 0
+  },
+  "by_priority": {
+    "priority-1": 0,
+    "priority-2": 0,
+    "priority-3": 0,
+    "priority-4": 0,
+    "priority-5": 0
+  },
+  "next_idea_id": 1
+}

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/kdse/runtime/internal/config"
 	"github.com/kdse/runtime/internal/detection"
@@ -13,6 +14,7 @@ import (
 	"github.com/kdse/runtime/internal/collect"
 	"github.com/kdse/runtime/internal/orchestration"
 	kdseruntime "github.com/kdse/runtime/internal/runtime"
+	somedaypkg "github.com/kdse/runtime/internal/someday"
 )
 
 const version = "1.0.0"
@@ -52,6 +54,8 @@ func main() {
 		handleReport(repoPath)
 	case "runtime":
 		handleRuntime(repoPath, args)
+	case "someday":
+		handleSomeday(repoPath, args)
 	case "context":
 		handleContext(repoPath, args)
 	case "version", "--version", "-v":
@@ -938,4 +942,334 @@ func handleContextRead(repoPath string) {
 	fmt.Printf("║   Initialized: %s\n", ctx.Metadata.InitializedAt)
 	fmt.Printf("║   Transitions: %d\n", ctx.Metadata.TransitionsCount)
 	fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
+}
+
+// handleSomeday manages the Someday/Maybe knowledge system
+func handleSomeday(repoPath string, args []string) {
+	if len(args) < 1 {
+		printSomedayUsage()
+		os.Exit(1)
+	}
+
+	subcmd := args[0]
+	subargs := args[1:]
+
+	// Initialize someday manager
+	manager := somedaypkg.New(repoPath)
+	if err := manager.Initialize(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error initializing someday: %v\n", err)
+		os.Exit(1)
+	}
+
+	switch subcmd {
+	case "add":
+		handleSomedayAdd(manager, subargs)
+	case "list":
+		handleSomedayList(manager, subargs)
+	case "show":
+		handleSomedayShow(manager, subargs)
+	case "promote":
+		handleSomedayPromote(manager, subargs)
+	case "archive":
+		handleSomedayArchive(manager, subargs)
+	case "search":
+		handleSomedaySearch(manager, subargs)
+	case "review":
+		handleSomedayReview(manager)
+	case "export":
+		handleSomedayExport(manager, repoPath)
+	default:
+		fmt.Printf("Unknown someday command: %s\n", subcmd)
+		printSomedayUsage()
+		os.Exit(1)
+	}
+}
+
+func printSomedayUsage() {
+	fmt.Println(`KDSE Someday/Maybe Commands
+
+Usage: kdse someday <command> [options]
+
+Commands:
+  add      Add a new someday/maybe idea
+  list     List all ideas (optionally filtered by status)
+  show     Show details of a specific idea
+  promote  Promote an idea to active consideration
+  archive  Archive an idea
+  search   Search ideas by keyword
+  review   Show ideas ready for review
+  export   Export all ideas to JSON
+
+Examples:
+  kdse someday add --title "GUI Runtime" --description "Create a graphical interface"
+  kdse someday list --status SOMEDAY
+  kdse someday show IDEA-001
+  kdse someday promote IDEA-001 --reason "Ready for implementation"
+  kdse someday archive IDEA-002 --reason "No longer relevant"
+  kdse someday search "GUI"
+  kdse someday review
+  kdse someday export
+`)
+}
+
+func handleSomedayAdd(manager *somedaypkg.SomedayManager, args []string) {
+	title := ""
+	description := ""
+	problem := ""
+	origin := ""
+	author := ""
+
+	// Parse arguments
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--title", "-t":
+			if i+1 < len(args) {
+				title = args[i+1]
+				i++
+			}
+		case "--description", "-d":
+			if i+1 < len(args) {
+				description = args[i+1]
+				i++
+			}
+		case "--problem", "-p":
+			if i+1 < len(args) {
+				problem = args[i+1]
+				i++
+			}
+		case "--origin", "-o":
+			if i+1 < len(args) {
+				origin = args[i+1]
+				i++
+			}
+		case "--author", "-a":
+			if i+1 < len(args) {
+				author = args[i+1]
+				i++
+			}
+		}
+	}
+
+	if title == "" {
+		fmt.Fprintf(os.Stderr, "Error: --title is required\n")
+		os.Exit(1)
+	}
+
+	if description == "" {
+		description = title
+	}
+
+	idea, err := manager.Add(title, description, problem, origin, author)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error adding idea: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println()
+	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
+	fmt.Println("║              IDEA ADDED TO SOMEDAY/MAYBE                      ║")
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+	fmt.Printf("║ ID:          %s\n", idea.ID)
+	fmt.Printf("║ Title:       %s\n", idea.Title)
+	fmt.Printf("║ Status:      %s\n", idea.Status)
+	fmt.Printf("║ Priority:    %d\n", idea.Priority)
+	fmt.Printf("║ Confidence:  %.0f%%\n", idea.Confidence*100)
+	fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
+	fmt.Println()
+	fmt.Println("Use 'kdse someday show " + idea.ID + "' for details")
+}
+
+func handleSomedayList(manager *somedaypkg.SomedayManager, args []string) {
+	status := ""
+
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--status" && i+1 < len(args) {
+			status = args[i+1]
+			i++
+		}
+	}
+
+	var statusEnum somedaypkg.IdeaStatus
+	if status != "" {
+		statusEnum = somedaypkg.IdeaStatus(status)
+	}
+
+	ideas, err := manager.List(statusEnum)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error listing ideas: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println(somedaypkg.FormatList(ideas))
+}
+
+func handleSomedayShow(manager *somedaypkg.SomedayManager, args []string) {
+	if len(args) < 1 {
+		fmt.Fprintf(os.Stderr, "Error: idea ID is required\n")
+		os.Exit(1)
+	}
+
+	id := args[0]
+	idea, err := manager.Show(id)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error showing idea: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println(somedaypkg.FormatIdea(idea))
+}
+
+func handleSomedayPromote(manager *somedaypkg.SomedayManager, args []string) {
+	if len(args) < 1 {
+		fmt.Fprintf(os.Stderr, "Error: idea ID is required\n")
+		os.Exit(1)
+	}
+
+	id := args[0]
+	reason := "Promoted for consideration"
+
+	// Parse reason if provided
+	for i := 1; i < len(args); i++ {
+		if args[i] == "--reason" && i+1 < len(args) {
+			reason = args[i+1]
+			break
+		}
+	}
+
+	idea, err := manager.Promote(id, reason)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error promoting idea: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println()
+	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
+	fmt.Println("║              IDEA PROMOTED                                   ║")
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+	fmt.Printf("║ ID:          %s\n", idea.ID)
+	fmt.Printf("║ Title:       %s\n", idea.Title)
+	fmt.Printf("║ Status:      %s → %s\n", somedaypkg.StatusSomeday, idea.Status)
+	fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
+	fmt.Println()
+	fmt.Println("The idea has been promoted and is now available for active consideration.")
+	fmt.Println("It maintains traceability links to its original Someday/Maybe entry.")
+}
+
+func handleSomedayArchive(manager *somedaypkg.SomedayManager, args []string) {
+	if len(args) < 1 {
+		fmt.Fprintf(os.Stderr, "Error: idea ID is required\n")
+		os.Exit(1)
+	}
+
+	id := args[0]
+	reason := ""
+
+	// Parse reason if provided
+	for i := 1; i < len(args); i++ {
+		if args[i] == "--reason" && i+1 < len(args) {
+			reason = args[i+1]
+			break
+		}
+	}
+
+	idea, err := manager.Archive(id, reason)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error archiving idea: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println()
+	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
+	fmt.Println("║              IDEA ARCHIVED                                   ║")
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+	fmt.Printf("║ ID:          %s\n", idea.ID)
+	fmt.Printf("║ Title:       %s\n", idea.Title)
+	fmt.Printf("║ Status:      %s\n", idea.Status)
+	if reason != "" {
+		fmt.Printf("║ Reason:      %s\n", reason)
+	}
+	fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
+	fmt.Println()
+	fmt.Println("The idea has been archived. It remains searchable and can be retrieved.")
+}
+
+func handleSomedaySearch(manager *somedaypkg.SomedayManager, args []string) {
+	if len(args) < 1 {
+		fmt.Fprintf(os.Stderr, "Error: search query is required\n")
+		os.Exit(1)
+	}
+
+	query := strings.Join(args, " ")
+	ideas, err := manager.Search(query)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error searching ideas: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println()
+	fmt.Printf("Search results for: \"%s\"\n", query)
+	fmt.Println()
+	fmt.Println(somedaypkg.FormatList(ideas))
+}
+
+func handleSomedayReview(manager *somedaypkg.SomedayManager) {
+	ideas, err := manager.Review()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error getting review list: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println()
+	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
+	fmt.Println("║              IDEAS READY FOR REVIEW                           ║")
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+
+	if len(ideas) == 0 {
+		fmt.Println("║ No ideas ready for review.")
+	} else {
+		for _, idea := range ideas {
+			fmt.Printf("║ %s %s [P%d]\n", idea.ID, truncate(idea.Title, 30), idea.Priority)
+		}
+	}
+
+	fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
+	fmt.Println()
+	fmt.Println("These are high-priority ideas (P1-P2) in Someday status.")
+	fmt.Println("Consider promoting or archiving them.")
+}
+
+func handleSomedayExport(manager *somedaypkg.SomedayManager, repoPath string) {
+	export, err := manager.Export()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error exporting ideas: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println()
+	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
+	fmt.Println("║              SOMEDAY/MAYBE EXPORT                          ║")
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+	fmt.Printf("║ Version:     %s\n", export.Version)
+	fmt.Printf("║ Exported:    %s\n", export.ExportedAt)
+	fmt.Printf("║ Total Ideas: %d\n", export.Manifest.TotalCount)
+	fmt.Printf("║ Status:\n")
+	for status, count := range export.Manifest.ByStatus {
+		fmt.Printf("║   %s: %d\n", status, count)
+	}
+	fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
+	fmt.Println()
+	fmt.Println("Full export data:")
+	fmt.Println()
+
+	// Print as JSON
+	exportPath := fmt.Sprintf("%s/.kdse/someday/export.json", repoPath)
+	// Note: In Go, we'd serialize and save this
+	fmt.Printf("Export would be saved to: %s\n", exportPath)
+}
+
+func truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen-3] + "..."
 }

@@ -88,6 +88,7 @@ const (
 	DirSessions       = "sessions"
 	DirNormalized     = "normalized"
 	DirCache          = "cache"
+	DirSomeday       = "someday"
 )
 
 // Standard runtime files
@@ -164,6 +165,7 @@ func (r *Runtime) executeDirectoryCreation(result *InitializeResult) {
 		DirSessions,
 		DirNormalized,
 		DirCache,
+		DirSomeday,
 	}
 
 	for _, dir := range directories {
@@ -177,6 +179,22 @@ func (r *Runtime) executeDirectoryCreation(result *InitializeResult) {
 				Timestamp: time.Now().Format(time.RFC3339),
 			})
 			result.Errors = append(result.Errors, fmt.Sprintf("Failed to create directory %s: %v", dir, err))
+		}
+	}
+
+	// Create someday subdirectories
+	somedaySubdirs := []string{"ideas", "archived", "promoted"}
+	for _, subdir := range somedaySubdirs {
+		path := filepath.Join(r.kdsePath, DirSomeday, subdir)
+		if err := os.MkdirAll(path, 0755); err != nil {
+			result.Verification = append(result.Verification, VerificationResult{
+				Artifact:  DirSomeday + "/" + subdir,
+				Path:      path,
+				Status:    "FAIL",
+				Error:     err.Error(),
+				Timestamp: time.Now().Format(time.RFC3339),
+			})
+			result.Errors = append(result.Errors, fmt.Sprintf("Failed to create directory %s/%s: %v", DirSomeday, subdir, err))
 		}
 	}
 }
@@ -204,6 +222,20 @@ func (r *Runtime) executeFileCreation(result *InitializeResult) {
 			result.Errors = append(result.Errors, fmt.Sprintf("Failed to create file %s: %v", filename, err))
 		}
 	}
+
+	// Create someday manifest
+	somedayManifestPath := filepath.Join(r.kdsePath, DirSomeday, "someday.yaml")
+	somedayContent := r.generateSomedayManifestContent()
+	if err := os.WriteFile(somedayManifestPath, []byte(somedayContent), 0644); err != nil {
+		result.Verification = append(result.Verification, VerificationResult{
+			Artifact:  DirSomeday + "/someday.yaml",
+			Path:      somedayManifestPath,
+			Status:    "FAIL",
+			Error:     err.Error(),
+			Timestamp: time.Now().Format(time.RFC3339),
+		})
+		result.Errors = append(result.Errors, fmt.Sprintf("Failed to create file %s: %v", DirSomeday+"/someday.yaml", err))
+	}
 }
 
 // verifyAllArtifacts verifies every created artifact
@@ -213,12 +245,19 @@ func (r *Runtime) verifyAllArtifacts(result *InitializeResult) {
 		DirRuntime, DirFoundation, DirKnowledge, DirLaboratory,
 		DirEvidence, DirReferences, DirTraceability, DirReports,
 		DirConfig, DirState, DirArtifacts, DirSessions,
-		DirNormalized, DirCache,
+		DirNormalized, DirCache, DirSomeday,
 	}
 
 	for _, dir := range directories {
 		path := filepath.Join(r.kdsePath, dir)
 		result.Verification = append(result.Verification, r.verifyDirectory(path, dir))
+	}
+
+	// Verify someday subdirectories
+	somedaySubdirs := []string{"ideas", "archived", "promoted"}
+	for _, subdir := range somedaySubdirs {
+		path := filepath.Join(r.kdsePath, DirSomeday, subdir)
+		result.Verification = append(result.Verification, r.verifyDirectory(path, DirSomeday+"/"+subdir))
 	}
 
 	// Verify files
@@ -231,6 +270,10 @@ func (r *Runtime) verifyAllArtifacts(result *InitializeResult) {
 		path := filepath.Join(r.kdsePath, file)
 		result.Verification = append(result.Verification, r.verifyFile(path, file))
 	}
+
+	// Verify someday manifest
+	somedayManifestPath := filepath.Join(r.kdsePath, DirSomeday, "someday.yaml")
+	result.Verification = append(result.Verification, r.verifyFile(somedayManifestPath, DirSomeday+"/someday.yaml"))
 
 	// Add evidence for successful verifications
 	for _, v := range result.Verification {
@@ -370,6 +413,13 @@ func (r *Runtime) Verify() *VerificationReport {
 	// Check state
 	report.Components = append(report.Components, r.verifyDirectory(filepath.Join(r.kdsePath, DirState), DirState))
 
+	// Check someday
+	report.Components = append(report.Components, r.verifyDirectory(filepath.Join(r.kdsePath, DirSomeday), DirSomeday))
+	report.Components = append(report.Components, r.verifyDirectory(filepath.Join(r.kdsePath, DirSomeday, "ideas"), DirSomeday+"/ideas"))
+	report.Components = append(report.Components, r.verifyDirectory(filepath.Join(r.kdsePath, DirSomeday, "archived"), DirSomeday+"/archived"))
+	report.Components = append(report.Components, r.verifyDirectory(filepath.Join(r.kdsePath, DirSomeday, "promoted"), DirSomeday+"/promoted"))
+	report.Components = append(report.Components, r.verifyFile(filepath.Join(r.kdsePath, DirSomeday, "someday.yaml"), DirSomeday+"/someday.yaml"))
+
 	// Check manifest
 	report.Components = append(report.Components, r.verifyFile(filepath.Join(r.kdsePath, FileManifest), FileManifest))
 
@@ -452,6 +502,7 @@ func DefaultManifest() *RuntimeManifest {
 			{Path: DirSessions, Required: true, Purpose: "Session history"},
 			{Path: DirNormalized, Required: true, Purpose: "Normalized documentation"},
 			{Path: DirCache, Required: true, Purpose: "Cached computations"},
+			{Path: DirSomeday, Required: true, Purpose: "Someday/Maybe knowledge repository"},
 		},
 		Files: []ManifestFile{
 			{Path: FileManifest, Required: true, Purpose: "Runtime manifest definition"},
@@ -551,6 +602,35 @@ func (r *Runtime) generateArtifactIndexContent() string {
 		"total_count": 0,
 	}
 	data, _ := json.MarshalIndent(index, "", "  ")
+	return string(data)
+}
+
+// generateSomedayManifestContent generates the initial someday manifest
+func (r *Runtime) generateSomedayManifestContent() string {
+	manifest := map[string]interface{}{
+		"version":      "1.0.0",
+		"created_at":   time.Now().Format(time.RFC3339),
+		"last_updated": time.Now().Format(time.RFC3339),
+		"ideas":        []string{},
+		"total_count":  0,
+		"by_status": map[string]int{
+			"SOMEDAY":     0,
+			"LABORATORY":  0,
+			"PROMOTED":    0,
+			"IMPLEMENTED": 0,
+			"ARCHIVED":    0,
+			"REJECTED":    0,
+		},
+		"by_priority": map[string]int{
+			"priority-1": 0,
+			"priority-2": 0,
+			"priority-3": 0,
+			"priority-4": 0,
+			"priority-5": 0,
+		},
+		"next_idea_id": 1,
+	}
+	data, _ := json.MarshalIndent(manifest, "", "  ")
 	return string(data)
 }
 
