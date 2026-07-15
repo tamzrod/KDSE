@@ -1,7 +1,7 @@
 # SPEC.md
 ## Project Specification
 
-**Objective:** Create a full inventory management system
+**Objective:** Create a complete supermarket inventory management system
 
 ### Overview
 
@@ -29,6 +29,6 @@
 ---
 
 *This document provides project overview. It guides but does not prescribe implementation.*
-*Created: 2026-07-15T13:21:49.266809*
+*Created: 2026-07-15T13:28:37.608641*
 *State: DRAFT*
 *Evidence Strength: ● (Initial specification, may change)*

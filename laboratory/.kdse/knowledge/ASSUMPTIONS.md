@@ -1,7 +1,7 @@
 # ASSUMPTIONS.md
 ## Documented Assumptions
 
-**Objective:** Create a full inventory management system
+**Objective:** Create a complete supermarket inventory management system
 
 ### Critical Assumptions
 
@@ -32,5 +32,5 @@
 ---
 
 *This document tracks assumptions. Nothing silently becomes a fact.*
-*Created: 2026-07-15T13:21:49.266900*
+*Created: 2026-07-15T13:28:37.608715*
 *State: DRAFT*

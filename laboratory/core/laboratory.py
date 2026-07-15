@@ -491,12 +491,14 @@ class LaboratoryRunner:
         self.report.forbidden_actions = forbidden_found
 
 
-def create_lab001_scenario() -> LaboratoryScenario:
+def create_lab001_scenario(objective: str = None) -> LaboratoryScenario:
     """Create LAB-001: Inventory Management scenario."""
+    if objective is None:
+        objective = "Create a full inventory management system"
     return LaboratoryScenario(
         id="LAB-001",
-        title="Inventory Management System",
-        objective="Create a full inventory management system",
+        title="Supermarket Inventory Management System",
+        objective=objective,
         expected_behavior={
             "creates_foundation": True,
             "identifies_facts": True,

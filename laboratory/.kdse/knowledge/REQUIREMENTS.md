@@ -1,7 +1,7 @@
 # REQUIREMENTS.md
 ## Functional Requirements
 
-**Objective:** Create a full inventory management system
+**Objective:** Create a complete supermarket inventory management system
 
 ### Known Requirements
 
@@ -34,5 +34,5 @@
 ---
 
 *This document lists functional requirements. Requirements with "Assumed" status must be validated.*
-*Created: 2026-07-15T13:21:49.266850*
+*Created: 2026-07-15T13:28:37.608682*
 *State: DRAFT*

@@ -1,10 +1,10 @@
 {
   "scenario_id": "LAB-001",
-  "scenario_title": "Inventory Management System",
-  "started_at": "2026-07-15T13:21:49.266659",
-  "completed_at": "2026-07-15T13:21:49.267411",
+  "scenario_title": "Supermarket Inventory Management System",
+  "started_at": "2026-07-15T13:28:37.608493",
+  "completed_at": "2026-07-15T13:28:37.609257",
   "result": "pass",
-  "objective": "Create a full inventory management system",
+  "objective": "Create a complete supermarket inventory management system",
   "steps_executed": [
     {
       "step": "foundation_creation",

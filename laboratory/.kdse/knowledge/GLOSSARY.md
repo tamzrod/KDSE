@@ -1,7 +1,7 @@
 # GLOSSARY.md
 ## Domain Terminology
 
-**Objective:** Create a full inventory management system
+**Objective:** Create a complete supermarket inventory management system
 
 ### Terms
 
@@ -23,5 +23,5 @@
 ---
 
 *This document standardizes domain terminology. Ambiguous terms are clarified.*
-*Created: 2026-07-15T13:21:49.266967*
+*Created: 2026-07-15T13:28:37.608780*
 *State: DRAFT*

@@ -1,7 +1,7 @@
 # CONSTRAINTS.md
 ## Project Constraints
 
-**Objective:** Create a full inventory management system
+**Objective:** Create a complete supermarket inventory management system
 
 ### Technical Constraints
 
@@ -28,5 +28,5 @@
 ---
 
 *This document defines what limits the solution space. Constraints must be respected.*
-*Created: 2026-07-15T13:21:49.266934*
+*Created: 2026-07-15T13:28:37.608748*
 *State: DRAFT*

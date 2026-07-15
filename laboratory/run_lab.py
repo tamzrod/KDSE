@@ -21,7 +21,7 @@ from core.laboratory import (
 
 
 def run_scenario(scenario_id: str, workspace_root: str = ".kdse", 
-                 output_dir: str = "results") -> bool:
+                 output_dir: str = "results", objective: str = None) -> bool:
     """
     Run a laboratory scenario.
     
@@ -29,6 +29,7 @@ def run_scenario(scenario_id: str, workspace_root: str = ".kdse",
         scenario_id: ID of scenario to run (e.g., "LAB-001")
         workspace_root: Root directory for KDSE workspace
         output_dir: Directory to write results
+        objective: Custom objective for the scenario
         
     Returns:
         True if experiment passed, False otherwise
@@ -36,11 +37,13 @@ def run_scenario(scenario_id: str, workspace_root: str = ".kdse",
     print(f"KDSE Slim Laboratory Runner")
     print(f"Scenario: {scenario_id}")
     print(f"Workspace: {workspace_root}")
+    if objective:
+        print(f"Objective: {objective}")
     print("=" * 60)
     
     # Create scenario based on ID
     if scenario_id == "LAB-001":
-        scenario = create_lab001_scenario()
+        scenario = create_lab001_scenario(objective)
     else:
         print(f"Unknown scenario: {scenario_id}")
         return False
@@ -256,10 +259,11 @@ def main():
     parser.add_argument('--scenario', default='LAB-001', help='Scenario ID to run')
     parser.add_argument('--workspace', default='.kdse', help='KDSE workspace root')
     parser.add_argument('--output', default='results', help='Output directory for reports')
+    parser.add_argument('--objective', default=None, help='Custom objective for the scenario')
     
     args = parser.parse_args()
     
-    success = run_scenario(args.scenario, args.workspace, args.output)
+    success = run_scenario(args.scenario, args.workspace, args.output, args.objective)
     sys.exit(0 if success else 1)
 
 
