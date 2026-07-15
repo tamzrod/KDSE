@@ -31,7 +31,7 @@ TRANSPORT_MODE="${MCP_TRANSPORT:-http}"
 
 # Container name (always kdse-mcp for default HTTP service)
 CONTAINER_NAME="${KDSE_HTTP_CONTAINER_NAME:-kdse-mcp}"
-HTTP_PORT="${MCP_HTTP_PORT:-8080}"
+HTTP_PORT="${MCP_HTTP_PORT:-18181}"
 
 # =============================================================================
 # HELPER FUNCTIONS
@@ -282,7 +282,7 @@ case "${1:-deploy}" in
         echo ""
         echo "Environment Variables:"
         echo "  MCP_TRANSPORT     - Transport mode: 'stdio' or 'http' (default: http)"
-        echo "  MCP_HTTP_PORT     - HTTP port for remote mode (default: 8080)"
+        echo "  MCP_HTTP_PORT     - HTTP port for remote mode (default: 18181)"
         echo ""
         echo "Current mode: ${TRANSPORT_MODE}"
         exit 1

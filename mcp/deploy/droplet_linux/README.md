@@ -33,7 +33,7 @@ This is a production-ready deployment configuration for the KDSE MCP Server on L
 - **RAM:** 512MB minimum (1GB recommended)
 - **Disk:** 5GB minimum
 - **Network:** Internet connectivity for Docker base images
-- **Port:** 8080 (or custom) open for HTTP transport
+- **Port:** 18181 (or custom) open for HTTP transport
 
 ### Required Software
 
@@ -72,8 +72,8 @@ cat > .env << 'EOF'
 # Transport mode: 'stdio' or 'http' (default: http for remote access)
 MCP_TRANSPORT=http
 
-# HTTP server port (default: 8080)
-MCP_HTTP_PORT=8080
+# HTTP server port (default: 18181)
+MCP_HTTP_PORT=18181
 
 # KDSE data paths
 KDSE_DATA_PATH=/data/kdse
@@ -89,7 +89,7 @@ nano .env
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `MCP_TRANSPORT` | `http` | Transport mode: `stdio` or `http` |
-| `MCP_HTTP_PORT` | `8080` | HTTP port for remote mode |
+| `MCP_HTTP_PORT` | `18181` | HTTP port for remote mode |
 | `KDSE_BUILD_CONTEXT` | `../..` | Path to MCP source |
 | `KDSE_DOCKERFILE` | `Dockerfile` | Dockerfile name |
 | `KDSE_IMAGE` | `kdse-mcp` | Docker image name |
@@ -128,7 +128,7 @@ cd /opt/kdse/mcp/deploy/droplet_linux
 This will:
 1. Build the Docker image locally from `mcp/Dockerfile`
 2. Create the network
-3. Start the HTTP server container on port 8080
+3. Start the HTTP server container on port 18181
 
 ### Using the Deploy Script
 
@@ -176,10 +176,10 @@ cd /opt/kdse/mcp/deploy/droplet_linux
 
 ```bash
 # Check health
-curl http://localhost:8080/health
+curl http://localhost:18181/health
 
 # Test MCP initialization
-curl -X POST http://localhost:8080/mcp \
+curl -X POST http://localhost:18181/mcp \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"initialize","params":{},"id":0}'
 ```
@@ -221,7 +221,7 @@ Add to your Claude Desktop configuration file (`~/.claude/settings.json`):
       "args": [
         "-y",
         "@modelcontextprotocol/server-http",
-        "http://YOUR_DROPLET_IP:8080/mcp"
+        "http://YOUR_DROPLET_IP:18181/mcp"
       ]
     }
   }
@@ -241,7 +241,7 @@ Then configure Claude Desktop:
   "mcpServers": {
     "kdse": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-http", "http://YOUR_DROPLET_IP:8080/mcp"]
+      "args": ["-y", "@modelcontextprotocol/server-http", "http://YOUR_DROPLET_IP:18181/mcp"]
     }
   }
 }
@@ -253,7 +253,7 @@ Configure OpenHands to use the HTTP endpoint:
 
 ```bash
 # Set the MCP endpoint via environment variable
-export OPENHANDS_MCP_SERVER=http://YOUR_DROPLET_IP:8080/mcp
+export OPENHANDS_MCP_SERVER=http://YOUR_DROPLET_IP:18181/mcp
 
 # Or in your OpenHands configuration file (~/.openhands/config.toml)
 cat >> ~/.openhands/config.toml << 'EOF'
@@ -262,7 +262,7 @@ servers = ["kdse"]
 
 [mcp.servers.kdse]
 type = "http"
-url = "http://YOUR_DROPLET_IP:8080/mcp"
+url = "http://YOUR_DROPLET_IP:18181/mcp"
 EOF
 ```
 
@@ -272,7 +272,7 @@ EOF
 #!/bin/bash
 # Simple MCP client using curl
 
-ENDPOINT="http://YOUR_DROPLET_IP:8080/mcp"
+ENDPOINT="http://YOUR_DROPLET_IP:18181/mcp"
 
 # Initialize
 echo "=== Initialize ==="
@@ -330,7 +330,7 @@ class KDSEMCPClient:
         }, 2)
 
 # Usage
-client = KDSEMCPClient("http://YOUR_DROPLET_IP:8080/mcp")
+client = KDSEMCPClient("http://YOUR_DROPLET_IP:18181/mcp")
 print(client.initialize())
 print(client.list_tools())
 ```
@@ -406,7 +406,7 @@ sudo git pull origin main
 ./deploy.sh health
 
 # Manual check
-curl http://localhost:8080/health
+curl http://localhost:18181/health
 # Expected: {"status":"healthy"}
 ```
 
@@ -446,7 +446,7 @@ docker compose logs
 ls -la .env
 
 # Check port availability
-netstat -tlnp | grep 8080
+netstat -tlnp | grep 18181
 ```
 
 ### Build Fails
@@ -466,7 +466,7 @@ ls -la ../../Dockerfile
 docker ps | grep kdse-mcp
 
 # Check firewall rules
-sudo ufw allow 8080/tcp
+sudo ufw allow 18181/tcp
 
 # Verify port binding
 docker port kdse-mcp
@@ -509,7 +509,7 @@ df -h
 │  │              /data/kdse (read-only volume)        │    │
 │  └─────────────────────────────────────────────────────┘    │
 │                                                              │
-│  Remote MCP Clients ──────────────────► Port 8080          │
+│  Remote MCP Clients ──────────────────► Port 18181          │
 │  (Claude Desktop, OpenHands, etc.)                         │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -560,7 +560,7 @@ df -h
 For production deployments without authentication on the MCP server itself, consider:
 
 - **Reverse proxy with authentication:** Put Nginx or Caddy in front with Basic Auth or JWT
-- **Firewall:** Restrict port 8080 to specific IPs via UFW
+- **Firewall:** Restrict port 18181 to specific IPs via UFW
 - **TLS:** Add HTTPS via reverse proxy (let's encrypt)
 - **Rate limiting:** Configure at reverse proxy level
 
@@ -569,7 +569,7 @@ Example with Caddy:
 ```bash
 # Caddyfile
 kdse.example.com {
-    reverse_proxy localhost:8080 {
+    reverse_proxy localhost:18181 {
         header_up X-Real-IP {remote_host}
     }
     
