@@ -12,6 +12,7 @@ import (
 	"github.com/kdse/runtime/internal/normalize"
 	"github.com/kdse/runtime/internal/collect"
 	"github.com/kdse/runtime/internal/orchestration"
+	kdseruntime "github.com/kdse/runtime/internal/runtime"
 )
 
 const version = "1.0.0"
@@ -35,6 +36,8 @@ func main() {
 		handleInstall()
 	case "update":
 		handleUpdate()
+	case "initialize":
+		handleInitialize(repoPath)
 	case "collect":
 		handleCollect(repoPath)
 	case "normalize":
@@ -47,6 +50,8 @@ func main() {
 		handleStatus(repoPath)
 	case "report":
 		handleReport(repoPath)
+	case "runtime":
+		handleRuntime(repoPath, args)
 	case "context":
 		handleContext(repoPath, args)
 	case "version", "--version", "-v":
@@ -66,14 +71,20 @@ func printUsage() {
 Usage: kdse <command> [options]
 
 Commands:
-  install     Install KDSE runtime configuration
-  update      Update KDSE runtime
-  collect     Collect engineering evidence
-  normalize   Normalize existing documentation to KDSE standard
-  run         Start a KDSE session
-  status      Show current session status
-  report      Generate runtime report
-  context     Context handoff management
+  initialize   Initialize evidence-driven KDSE runtime (EVIDENCE REQUIRED)
+  install      Install KDSE runtime configuration
+  update       Update KDSE runtime
+  collect      Collect engineering evidence
+  normalize    Normalize existing documentation to KDSE standard
+  run          Start a KDSE session
+  status       Show current session status
+  report       Generate runtime report
+  runtime      Runtime management (verify, invariant)
+  context      Context handoff management
+
+Runtime Commands:
+  kdse runtime verify          Verify runtime is operational
+  kdse runtime invariant       Check phase transition requirements
 
 Context Commands:
   kdse context init           Initialize context handoff
@@ -104,6 +115,206 @@ func handleInstall() {
 func handleUpdate() {
 	fmt.Println("Checking for updates...")
 	fmt.Printf("KDSE Runtime v%s is up to date.\n", version)
+}
+
+// handleInitialize creates an evidence-driven KDSE runtime
+func handleInitialize(repoPath string) {
+	fmt.Println()
+	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
+	fmt.Println("║     KDSE Evidence-Driven Runtime Initialization               ║")
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+	fmt.Printf("║ Repository: %s\n", repoPath)
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+	fmt.Println("║ PHASE 1: Execute                                              ║")
+	fmt.Println("║ Creating operational runtime structure...")
+
+	kdse := kdseruntime.New(repoPath)
+
+	// Execute: Create all directories and files
+	directories := []string{
+		kdseruntime.DirRuntime, kdseruntime.DirFoundation,
+		kdseruntime.DirKnowledge, kdseruntime.DirLaboratory,
+		kdseruntime.DirEvidence, kdseruntime.DirReferences,
+		kdseruntime.DirTraceability, kdseruntime.DirReports,
+		kdseruntime.DirConfig, kdseruntime.DirState,
+		kdseruntime.DirArtifacts, kdseruntime.DirSessions,
+		kdseruntime.DirNormalized, kdseruntime.DirCache,
+	}
+
+	for _, dir := range directories {
+		fmt.Printf("║   Creating: %s/\n", dir)
+	}
+
+	fmt.Println("║ PHASE 2: Verify                                              ║")
+
+	// Verify: Check every artifact
+	result := kdse.Initialize()
+
+	// Report: Evidence of what was created
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+	fmt.Println("║ VERIFICATION RESULTS                                         ║")
+
+	for _, v := range result.Verification {
+		statusIcon := "✓ PASS"
+		if v.Status == "FAIL" {
+			statusIcon = "✗ FAIL"
+		}
+		fmt.Printf("║ %s %-15s %s\n", statusIcon, v.Artifact, v.Path)
+	}
+
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+
+	// Calculate confidence
+	fmt.Printf("║ Confidence: %.2f\n", result.Confidence)
+
+	if result.Success {
+		fmt.Println("║ Status: OPERATIONAL                                          ║")
+		fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+		fmt.Println("║ EVIDENCE SUMMARY                                              ║")
+		for _, e := range result.Evidence {
+			fmt.Printf("║ ✓ %s\n", e)
+		}
+	} else {
+		fmt.Println("║ Status: INITIALIZATION FAILED                                 ║")
+		if len(result.Errors) > 0 {
+			fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+			fmt.Println("║ ERRORS                                                       ║")
+			for _, err := range result.Errors {
+				fmt.Printf("║ ✗ %s\n", err)
+			}
+		}
+	}
+
+	fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
+	fmt.Println()
+
+	if !result.Success {
+		os.Exit(1)
+	}
+}
+
+// handleRuntime manages runtime verification and invariants
+func handleRuntime(repoPath string, args []string) {
+	if len(args) < 1 {
+		printRuntimeUsage()
+		os.Exit(1)
+	}
+
+	subcmd := args[0]
+
+	switch subcmd {
+	case "verify":
+		handleRuntimeVerify(repoPath)
+	case "invariant":
+		handleRuntimeInvariant(repoPath, args[1:])
+	default:
+		fmt.Printf("Unknown runtime command: %s\n", subcmd)
+		printRuntimeUsage()
+		os.Exit(1)
+	}
+}
+
+func printRuntimeUsage() {
+	fmt.Println(`KDSE Runtime Commands
+
+Usage: kdse runtime <command> [options]
+
+Commands:
+  verify     Verify runtime is operational
+  invariant Check phase transition requirements
+
+Examples:
+  kdse runtime verify
+  kdse runtime invariant --phase Foundation
+`)
+}
+
+func handleRuntimeVerify(repoPath string) {
+	kdse := kdseruntime.New(repoPath)
+	report := kdse.Verify()
+
+	fmt.Println()
+	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
+	fmt.Println("║              KDSE Runtime Self-Audit                         ║")
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+
+	for _, c := range report.Components {
+		statusIcon := "PASS"
+		if c.Status == "FAIL" {
+			statusIcon = "FAIL"
+		}
+		fmt.Printf("║ %-12s %-8s %s\n", c.Artifact, statusIcon, c.Path)
+	}
+
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+	fmt.Printf("║ Confidence: %.2f\n", report.Confidence)
+
+	if report.Success {
+		fmt.Println("║ Status: OPERATIONAL                                          ║")
+	} else {
+		fmt.Println("║ Status: FAILED                                               ║")
+		if len(report.Failed) > 0 {
+			fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+			fmt.Println("║ Failed Components:                                           ║")
+			for _, f := range report.Failed {
+				fmt.Printf("║   • %s\n", f)
+			}
+		}
+	}
+
+	fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
+	fmt.Println()
+
+	if !report.Success {
+		os.Exit(1)
+	}
+}
+
+func handleRuntimeInvariant(repoPath string, args []string) {
+	phase := ""
+
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--phase" && i+1 < len(args) {
+			phase = args[i+1]
+			i++
+		}
+	}
+
+	if phase == "" {
+		fmt.Fprintf(os.Stderr, "Error: --phase <phase> is required\n")
+		printRuntimeUsage()
+		os.Exit(1)
+	}
+
+	kdse := kdseruntime.New(repoPath)
+
+	fmt.Println()
+	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
+	fmt.Println("║              KDSE Runtime Invariant Check                    ║")
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+	fmt.Printf("║ Phase: %s\n", phase)
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+
+	invariants := kdseruntime.DefaultInvariants()
+	for _, inv := range invariants {
+		if inv.Phase == phase {
+			fmt.Printf("║ Requirements:\n")
+			for _, req := range inv.Requires {
+				passed, msg := kdse.CheckInvariant(phase, req)
+				status := "PASS"
+				if !passed {
+					status = "FAIL"
+				}
+				fmt.Printf("║   %s %s\n", status, req)
+				fmt.Printf("║     → %s\n", msg)
+			}
+			fmt.Printf("║ Description: %s\n", inv.Description)
+			break
+		}
+	}
+
+	fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
+	fmt.Println()
 }
 
 func handleRun(repoPath string, args []string) {
