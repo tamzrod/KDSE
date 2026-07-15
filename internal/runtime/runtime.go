@@ -182,6 +182,38 @@ func (r *Runtime) executeDirectoryCreation(result *InitializeResult) {
 		}
 	}
 
+	// Create knowledge subdirectories
+	knowledgeSubdirs := []string{"general", "operational", "developmental"}
+	for _, subdir := range knowledgeSubdirs {
+		path := filepath.Join(r.kdsePath, DirKnowledge, subdir)
+		if err := os.MkdirAll(path, 0755); err != nil {
+			result.Verification = append(result.Verification, VerificationResult{
+				Artifact:  DirKnowledge + "/" + subdir,
+				Path:      path,
+				Status:    "FAIL",
+				Error:     err.Error(),
+				Timestamp: time.Now().Format(time.RFC3339),
+			})
+			result.Errors = append(result.Errors, fmt.Sprintf("Failed to create directory %s/%s: %v", DirKnowledge, subdir, err))
+		}
+	}
+
+	// Create laboratory subdirectories
+	labSubdirs := []string{"experiments", "reports"}
+	for _, subdir := range labSubdirs {
+		path := filepath.Join(r.kdsePath, DirLaboratory, subdir)
+		if err := os.MkdirAll(path, 0755); err != nil {
+			result.Verification = append(result.Verification, VerificationResult{
+				Artifact:  DirLaboratory + "/" + subdir,
+				Path:      path,
+				Status:    "FAIL",
+				Error:     err.Error(),
+				Timestamp: time.Now().Format(time.RFC3339),
+			})
+			result.Errors = append(result.Errors, fmt.Sprintf("Failed to create directory %s/%s: %v", DirLaboratory, subdir, err))
+		}
+	}
+
 	// Create someday subdirectories
 	somedaySubdirs := []string{"ideas", "archived", "promoted"}
 	for _, subdir := range somedaySubdirs {
@@ -199,8 +231,9 @@ func (r *Runtime) executeDirectoryCreation(result *InitializeResult) {
 	}
 }
 
-// executeFileCreation creates all required runtime files
+// executeFileCreation creates all required runtime files and templates
 func (r *Runtime) executeFileCreation(result *InitializeResult) {
+	// Core runtime files
 	files := map[string]string{
 		FileManifest:       r.generateManifestContent(),
 		FileSessionState:   r.generateSessionStateContent(),
@@ -236,6 +269,807 @@ func (r *Runtime) executeFileCreation(result *InitializeResult) {
 		})
 		result.Errors = append(result.Errors, fmt.Sprintf("Failed to create file %s: %v", DirSomeday+"/someday.yaml", err))
 	}
+
+	// Create all template files
+	r.createTemplateFiles(result)
+}
+
+// createTemplateFiles creates all engineering templates
+func (r *Runtime) createTemplateFiles(result *InitializeResult) {
+	// Foundation templates
+	foundationTemplates := map[string]string{
+		"README.md":         r.generateFoundationReadme(),
+		"PROBLEM.md":        r.generateProblemTemplate(),
+		"SPEC.md":           r.generateSpecTemplate(),
+		"ARCHITECTURE.md":   r.generateArchitectureTemplate(),
+		"ASSUMPTIONS.md":    r.generateAssumptionsTemplate(),
+		"REQUIREMENTS.md":   r.generateRequirementsTemplate(),
+	}
+
+	foundationPath := filepath.Join(r.kdsePath, DirFoundation)
+	for filename, content := range foundationTemplates {
+		r.writeTemplateFile(filepath.Join(foundationPath, filename), filename, result)
+	}
+
+	// Knowledge templates
+	knowledgeTemplates := map[string]string{
+		"README.md": r.generateKnowledgeReadme(),
+	}
+	knowledgePath := filepath.Join(r.kdsePath, DirKnowledge)
+	for filename, content := range knowledgeTemplates {
+		r.writeTemplateFile(filepath.Join(knowledgePath, filename), DirKnowledge+"/"+filename, result)
+	}
+
+	// Knowledge subdirectories
+	knowledgeSubs := map[string]map[string]string{
+		"general": {
+			"README.md": r.generateKnowledgeSubReadme("general", "General engineering knowledge, patterns, and principles"),
+		},
+		"operational": {
+			"README.md": r.generateKnowledgeSubReadme("operational", "Operational knowledge including runbooks and procedures"),
+		},
+		"developmental": {
+			"README.md": r.generateKnowledgeSubReadme("developmental", "Development-specific knowledge including patterns and practices"),
+		},
+	}
+	for subdir, files := range knowledgeSubs {
+		for filename, content := range files {
+			r.writeTemplateFile(filepath.Join(knowledgePath, subdir, filename), DirKnowledge+"/"+subdir+"/"+filename, result)
+		}
+	}
+
+	// Laboratory templates
+	labTemplates := map[string]string{
+		"README.md": r.generateLaboratoryReadme(),
+	}
+	labPath := filepath.Join(r.kdsePath, DirLaboratory)
+	for filename, content := range labTemplates {
+		r.writeTemplateFile(filepath.Join(labPath, filename), DirLaboratory+"/"+filename, result)
+	}
+
+	// Laboratory subdirectories
+	labSubs := map[string]map[string]string{
+		"experiments": {
+			"README.md": r.generateLabSubReadme("experiments", "Hypothesis-driven experiments with documented outcomes"),
+		},
+		"reports": {
+			"README.md": r.generateLabSubReadme("reports", "Laboratory reports and validation results"),
+		},
+	}
+	for subdir, files := range labSubs {
+		for filename, content := range files {
+			r.writeTemplateFile(filepath.Join(labPath, subdir, filename), DirLaboratory+"/"+subdir+"/"+filename, result)
+		}
+	}
+
+	// Evidence templates
+	evidenceTemplates := map[string]string{
+		"README.md": r.generateEvidenceReadme(),
+	}
+	evidencePath := filepath.Join(r.kdsePath, DirEvidence)
+	for filename, content := range evidenceTemplates {
+		r.writeTemplateFile(filepath.Join(evidencePath, filename), DirEvidence+"/"+filename, result)
+	}
+
+	// Reports templates
+	reportsTemplates := map[string]string{
+		"README.md": r.generateReportsReadme(),
+	}
+	reportsPath := filepath.Join(r.kdsePath, DirReports)
+	for filename, content := range reportsTemplates {
+		r.writeTemplateFile(filepath.Join(reportsPath, filename), DirReports+"/"+filename, result)
+	}
+
+	// References templates
+	referencesTemplates := map[string]string{
+		"README.md": r.generateReferencesReadme(),
+	}
+	referencesPath := filepath.Join(r.kdsePath, DirReferences)
+	for filename, content := range referencesTemplates {
+		r.writeTemplateFile(filepath.Join(referencesPath, filename), DirReferences+"/"+filename, result)
+	}
+
+	// Traceability templates
+	traceTemplates := map[string]string{
+		"README.md": r.generateTraceabilityReadme(),
+	}
+	tracePath := filepath.Join(r.kdsePath, DirTraceability)
+	for filename, content := range traceTemplates {
+		r.writeTemplateFile(filepath.Join(tracePath, filename), DirTraceability+"/"+filename, result)
+	}
+
+	// Artifacts templates
+	artifactsTemplates := map[string]string{
+		"README.md": r.generateArtifactsReadme(),
+	}
+	artifactsPath := filepath.Join(r.kdsePath, DirArtifacts)
+	for filename, content := range artifactsTemplates {
+		r.writeTemplateFile(filepath.Join(artifactsPath, filename), DirArtifacts+"/"+filename, result)
+	}
+}
+
+// writeTemplateFile writes a template file and records verification
+func (r *Runtime) writeTemplateFile(path, artifactName string, result *InitializeResult) {
+	content := r.getTemplateContent(path)
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		result.Verification = append(result.Verification, VerificationResult{
+			Artifact:  artifactName,
+			Path:      path,
+			Status:    "FAIL",
+			Error:     err.Error(),
+			Timestamp: time.Now().Format(time.RFC3339),
+		})
+		result.Errors = append(result.Errors, fmt.Sprintf("Failed to create template %s: %v", artifactName, err))
+	}
+}
+
+// getTemplateContent returns the template content based on filename
+func (r *Runtime) getTemplateContent(path string) string {
+	filename := filepath.Base(path)
+	dir := filepath.Base(filepath.Dir(path))
+
+	switch {
+	case filename == "PROBLEM.md":
+		return r.generateProblemTemplate()
+	case filename == "SPEC.md":
+		return r.generateSpecTemplate()
+	case filename == "ARCHITECTURE.md":
+		return r.generateArchitectureTemplate()
+	case filename == "ASSUMPTIONS.md":
+		return r.generateAssumptionsTemplate()
+	case filename == "REQUIREMENTS.md":
+		return r.generateRequirementsTemplate()
+	case dir == "knowledge" && filename == "README.md":
+		return r.generateKnowledgeReadme()
+	case filename == "README.md":
+		return r.generateReadmeForDir(dir)
+	default:
+		return r.generateDefaultReadme()
+	}
+}
+
+// Foundation templates
+
+func (r *Runtime) generateFoundationReadme() string {
+	return `# Foundation Directory
+
+This directory contains the project foundation documents that define the engineering work.
+
+## Contents
+
+| Document | Purpose | Phase |
+|----------|---------|-------|
+| PROBLEM.md | Problem statement | Problem |
+| SPEC.md | Solution specification | Foundation |
+| ARCHITECTURE.md | System architecture | Architecture |
+| ASSUMPTIONS.md | Project assumptions | Foundation |
+| REQUIREMENTS.md | Detailed requirements | Foundation |
+
+## Engineering Phases
+
+1. **Problem Phase** - Update PROBLEM.md
+2. **Foundation Phase** - Update SPEC.md, ASSUMPTIONS.md, REQUIREMENTS.md
+3. **Architecture Phase** - Update ARCHITECTURE.md
+
+## Rule
+
+DO NOT create new files in this directory.
+Only update the existing templates with project-specific content.
+`
+}
+
+func (r *Runtime) generateProblemTemplate() string {
+	return `# Problem Statement
+
+**Created:** ` + time.Now().Format("2006-01-02") + `
+**Phase:** Problem
+
+## Problem Summary
+
+[One paragraph describing the core problem being solved]
+
+## Problem Details
+
+### Background
+[Context and history that led to this problem]
+
+### Impact
+[Who is affected and how]
+
+### Symptoms
+[Observable symptoms of the problem]
+
+### Constraints
+[Known constraints and limitations]
+
+## Success Criteria
+
+- [Criterion 1]
+- [Criterion 2]
+- [Criterion 3]
+
+---
+*This is a template. Replace with project-specific content.*
+`
+}
+
+func (r *Runtime) generateSpecTemplate() string {
+	return `# Solution Specification
+
+**Created:** ` + time.Now().Format("2006-01-02") + `
+**Phase:** Foundation
+
+## Overview
+
+[High-level description of the solution]
+
+## Goals
+
+### Primary Goals
+1. [Goal 1]
+2. [Goal 2]
+3. [Goal 3]
+
+### Secondary Goals
+1. [Goal 1]
+2. [Goal 2]
+
+## Non-Goals
+
+- [What this solution will NOT address]
+
+## Approach
+
+[High-level approach to solving the problem]
+
+## Scope
+
+### In Scope
+- [Item 1]
+- [Item 2]
+
+### Out of Scope
+- [Item 1]
+- [Item 2]
+
+## Dependencies
+
+- [Dependency 1]
+- [Dependency 2]
+
+## Risks
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| [Risk 1] | [Impact] | [Mitigation] |
+
+---
+*This is a template. Replace with project-specific content.*
+`
+}
+
+func (r *Runtime) generateArchitectureTemplate() string {
+	return `# System Architecture
+
+**Created:** ` + time.Now().Format("2006-01-02") + `
+**Phase:** Architecture
+
+## Architecture Overview
+
+[High-level architectural description]
+
+## System Components
+
+### Component 1
+- **Purpose**: [Purpose]
+- **Responsibilities**: [Responsibilities]
+- **Dependencies**: [Dependencies]
+
+### Component 2
+- **Purpose**: [Purpose]
+- **Responsibilities**: [Responsibilities]
+- **Dependencies**: [Dependencies]
+
+## Data Model
+
+### Entity 1
+| Field | Type | Description |
+|-------|------|-------------|
+| [field] | [type] | [description] |
+
+## API Design
+
+### Endpoint 1
+- **Method**: [GET/POST/PUT/DELETE]
+- **Path**: [Path]
+- **Description**: [Description]
+
+## Technology Stack
+
+| Component | Technology | Version |
+|-----------|------------|---------|
+| [Component] | [Technology] | [Version] |
+
+## Security Considerations
+
+- [Security consideration 1]
+- [Security consideration 2]
+
+## Deployment Architecture
+
+[How the system will be deployed]
+
+---
+*This is a template. Replace with project-specific content.*
+`
+}
+
+func (r *Runtime) generateAssumptionsTemplate() string {
+	return `# Project Assumptions
+
+**Created:** ` + time.Now().Format("2006-01-02") + `
+**Phase:** Foundation
+
+## Technology Assumptions
+
+| Assumption | Rationale | Status |
+|------------|-----------|--------|
+| [Assumption 1] | [Why we assume this] | [Valid/Invalid] |
+| [Assumption 2] | [Why we assume this] | [Valid/Invalid] |
+
+## Environment Assumptions
+
+| Assumption | Rationale | Status |
+|------------|-----------|--------|
+| [Assumption 1] | [Why we assume this] | [Valid/Invalid] |
+
+## Business Assumptions
+
+| Assumption | Rationale | Status |
+|------------|-----------|--------|
+| [Assumption 1] | [Why we assume this] | [Valid/Invalid] |
+
+## Dependency Assumptions
+
+| Assumption | Rationale | Status |
+|------------|-----------|--------|
+| [Assumption 1] | [Why we assume this] | [Valid/Invalid] |
+
+## Review History
+
+| Date | Reviewer | Changes |
+|------|----------|---------|
+| [Date] | [Name] | [Changes made] |
+
+---
+*This is a template. Replace with project-specific content.*
+`
+}
+
+func (r *Runtime) generateRequirementsTemplate() string {
+	return `# Detailed Requirements
+
+**Created:** ` + time.Now().Format("2006-01-02") + `
+**Phase:** Foundation
+
+## Functional Requirements
+
+### FR-001: [Requirement Title]
+- **Description**: [Detailed description]
+- **Priority**: [High/Medium/Low]
+- **Acceptance Criteria**:
+  - [Criterion 1]
+  - [Criterion 2]
+
+### FR-002: [Requirement Title]
+- **Description**: [Detailed description]
+- **Priority**: [High/Medium/Low]
+- **Acceptance Criteria**:
+  - [Criterion 1]
+  - [Criterion 2]
+
+## Non-Functional Requirements
+
+### Performance
+- [Requirement 1]
+- [Requirement 2]
+
+### Security
+- [Requirement 1]
+- [Requirement 2]
+
+### Reliability
+- [Requirement 1]
+- [Requirement 2]
+
+### Usability
+- [Requirement 1]
+- [Requirement 2]
+
+## Constraints
+
+- [Constraint 1]
+- [Constraint 2]
+
+## Requirements Traceability
+
+| Requirement | Source | Related Artifacts |
+|-------------|--------|-------------------|
+| [ID] | [Source] | [Artifacts] |
+
+---
+*This is a template. Replace with project-specific content.*
+`
+}
+
+// Knowledge directory templates
+
+func (r *Runtime) generateKnowledgeReadme() string {
+	return `# Knowledge Directory
+
+This directory contains all collected engineering knowledge for the project.
+
+## Structure
+
+```
+knowledge/
+├── general/         # General engineering knowledge
+├── operational/     # Operational knowledge (runbooks, procedures)
+└── developmental/   # Development knowledge (patterns, practices)
+```
+
+## Purpose
+
+Knowledge artifacts provide context and guidance for engineering decisions.
+They are collected during the Knowledge Phase and referenced throughout the project.
+
+## Engineering Rule
+
+DO NOT create new subdirectories in this directory.
+Only add files to the existing subdirectories.
+
+## Categories
+
+### general/
+General engineering principles, patterns, and terminology.
+
+### operational/
+Runbooks, operational procedures, and incident response knowledge.
+
+### developmental/
+Development patterns, coding practices, and technical decisions.
+
+---
+*This is a template. Populate with project-specific knowledge.*
+`
+}
+
+func (r *Runtime) generateKnowledgeSubReadme(subdir, description string) string {
+	return `# ` + description + `
+
+**Category:** ` + subdir + `
+**Created:** ` + time.Now().Format("2006-01-02") + `
+
+## Purpose
+
+` + description + `
+
+## Contents
+
+[Add knowledge artifacts here]
+
+## Guidelines
+
+- Use clear, descriptive filenames
+- Include metadata (author, date, source)
+- Link related artifacts
+
+---
+*This is a template. Populate with project-specific content.*
+`
+}
+
+// Laboratory directory templates
+
+func (r *Runtime) generateLaboratoryReadme() string {
+	return `# Laboratory Directory
+
+This directory contains the experimental and validation workspace.
+
+## Structure
+
+```
+laboratory/
+├── experiments/    # Hypothesis-driven experiments
+└── reports/       # Laboratory reports and validation results
+```
+
+## Purpose
+
+The laboratory provides a controlled environment for:
+- Validating architectural decisions
+- Testing implementation approaches
+- Proving hypotheses
+- Documenting experiments
+
+## Engineering Rule
+
+DO NOT create new subdirectories in this directory.
+Only add files to the existing subdirectories.
+
+## Workflow
+
+1. Create experiment with clear hypothesis
+2. Document methodology
+3. Execute and record results
+4. Analyze and conclude
+5. Generate report
+
+---
+*This is a template. Populate with experimental results.*
+`
+}
+
+func (r *Runtime) generateLabSubReadme(subdir, description string) string {
+	return `# ` + description + `
+
+**Category:** ` + subdir + `
+**Created:** ` + time.Now().Format("2006-01-02") + `
+
+## Purpose
+
+` + description + `
+
+## Guidelines
+
+- Name experiments with clear identifiers (EXP-001, LAB-001, etc.)
+- Include hypothesis, methodology, and results
+- Reference related foundation documents
+
+---
+*This is a template. Populate with experimental content.*
+`
+}
+
+// Evidence directory templates
+
+func (r *Runtime) generateEvidenceReadme() string {
+	return `# Evidence Directory
+
+This directory contains all verification evidence for the project.
+
+## Purpose
+
+Evidence artifacts prove that engineering work meets requirements:
+- Test results
+- Performance metrics
+- Validation reports
+- Verification artifacts
+
+## Engineering Rule
+
+DO NOT create new files in this directory.
+Only add verification evidence during the Verification Phase.
+
+## Evidence Types
+
+| Type | Description |
+|------|-------------|
+| test-results | Test execution results |
+| metrics | Performance and quality metrics |
+| validation | Formal validation artifacts |
+| verification | Verification evidence |
+
+---
+*This is a template. Populate with verification evidence.*
+`
+}
+
+// Reports directory templates
+
+func (r *Runtime) generateReportsReadme() string {
+	return `# Reports Directory
+
+This directory contains all generated reports for the project.
+
+## Purpose
+
+Reports document engineering activities and outcomes:
+- Status reports
+- Progress reports
+- Final reports
+- Audit reports
+
+## Engineering Rule
+
+DO NOT create new files in this directory.
+Only add reports during the Documentation Phase.
+
+## Report Types
+
+| Type | Frequency | Audience |
+|------|-----------|----------|
+| Status | Weekly | Team |
+| Progress | Phase-based | Stakeholders |
+| Final | Project end | All |
+| Audit | As needed | Compliance |
+
+---
+*This is a template. Populate with project reports.*
+`
+}
+
+// References directory templates
+
+func (r *Runtime) generateReferencesReadme() string {
+	return `# References Directory
+
+This directory contains external reference materials for the project.
+
+## Purpose
+
+Reference materials provide context and guidance:
+- External documentation
+- Standards and specifications
+- External research
+- Training materials
+
+## Engineering Rule
+
+DO NOT create new files in this directory.
+Only add reference materials when relevant to the project.
+
+## Categories
+
+| Category | Description |
+|----------|-------------|
+| standards | Industry standards |
+| docs | External documentation |
+| research | Research papers and articles |
+| training | Training and learning materials |
+
+---
+*This is a template. Populate with reference materials.*
+`
+}
+
+// Traceability directory templates
+
+func (r *Runtime) generateTraceabilityReadme() string {
+	return `# Traceability Directory
+
+This directory contains requirement traceability artifacts.
+
+## Purpose
+
+Traceability links requirements to implementation:
+- Requirement → Design mappings
+- Design → Implementation mappings
+- Implementation → Test mappings
+
+## Engineering Rule
+
+DO NOT create new files in this directory.
+Only update traceability matrices during the project.
+
+## Traceability Matrix
+
+| Requirement | Design | Implementation | Test |
+|-------------|--------|----------------|------|
+| [Req ID] | [Design ref] | [Impl ref] | [Test ref] |
+
+---
+*This is a template. Populate with traceability mappings.*
+`
+}
+
+// Artifacts directory templates
+
+func (r *Runtime) generateArtifactsReadme() string {
+	return `# Artifacts Directory
+
+This directory contains project artifacts and deliverables.
+
+## Purpose
+
+Artifacts are the tangible outputs of engineering work:
+- Source code
+- Configuration files
+- Build artifacts
+- Deliverables
+
+## Engineering Rule
+
+DO NOT create new files in this directory.
+Only add artifacts during Implementation Phase.
+
+## Categories
+
+| Category | Description |
+|----------|-------------|
+| source | Source code |
+| config | Configuration files |
+| builds | Build artifacts |
+| docs | Generated documentation |
+
+---
+*This is a template. Populate with project artifacts.*
+`
+}
+
+// Generic README generator
+
+func (r *Runtime) generateDefaultReadme() string {
+	return `# Directory
+
+**Created:** ` + time.Now().Format("2006-01-02") + `
+
+## Purpose
+
+[Describe the purpose of this directory]
+
+## Contents
+
+[List contents]
+
+## Guidelines
+
+[Usage guidelines]
+
+---
+*This is a template. Replace with specific content.*
+`
+}
+
+func (r *Runtime) generateReadmeForDir(dir string) string {
+	switch dir {
+	case "runtime":
+		return `# Runtime Directory
+
+This directory contains runtime execution state and logs.
+`
+	case "config":
+		return `# Config Directory
+
+This directory contains runtime configuration files.
+`
+	case "state":
+		return `# State Directory
+
+This directory contains session and runtime state.
+`
+	case "sessions":
+		return `# Sessions Directory
+
+This directory contains session history.
+`
+	case "normalized":
+		return `# Normalized Directory
+
+This directory contains normalized documentation output.
+`
+	case "cache":
+		return `# Cache Directory
+
+This directory contains cached computations.
+`
+	case "someday":
+		return `# Someday/Maybe Directory
+
+This directory contains deferred engineering ideas.
+
+## Structure
+
+```
+someday/
+├── ideas/       # Active someday ideas
+├── archived/    # Archived ideas
+└── promoted/   # Promoted ideas
+```
+`
+	default:
+		return r.generateDefaultReadme()
+	}
 }
 
 // verifyAllArtifacts verifies every created artifact
@@ -253,6 +1087,20 @@ func (r *Runtime) verifyAllArtifacts(result *InitializeResult) {
 		result.Verification = append(result.Verification, r.verifyDirectory(path, dir))
 	}
 
+	// Verify knowledge subdirectories
+	knowledgeSubdirs := []string{"general", "operational", "developmental"}
+	for _, subdir := range knowledgeSubdirs {
+		path := filepath.Join(r.kdsePath, DirKnowledge, subdir)
+		result.Verification = append(result.Verification, r.verifyDirectory(path, DirKnowledge+"/"+subdir))
+	}
+
+	// Verify laboratory subdirectories
+	labSubdirs := []string{"experiments", "reports"}
+	for _, subdir := range labSubdirs {
+		path := filepath.Join(r.kdsePath, DirLaboratory, subdir)
+		result.Verification = append(result.Verification, r.verifyDirectory(path, DirLaboratory+"/"+subdir))
+	}
+
 	// Verify someday subdirectories
 	somedaySubdirs := []string{"ideas", "archived", "promoted"}
 	for _, subdir := range somedaySubdirs {
@@ -260,7 +1108,7 @@ func (r *Runtime) verifyAllArtifacts(result *InitializeResult) {
 		result.Verification = append(result.Verification, r.verifyDirectory(path, DirSomeday+"/"+subdir))
 	}
 
-	// Verify files
+	// Verify core runtime files
 	files := []string{
 		FileManifest, FileSessionState, FileRuntimeConfig,
 		FileKnowledgeIndex, FileArtifactIndex,
@@ -269,6 +1117,40 @@ func (r *Runtime) verifyAllArtifacts(result *InitializeResult) {
 	for _, file := range files {
 		path := filepath.Join(r.kdsePath, file)
 		result.Verification = append(result.Verification, r.verifyFile(path, file))
+	}
+
+	// Verify foundation templates
+	foundationTemplates := []string{"README.md", "PROBLEM.md", "SPEC.md", "ARCHITECTURE.md", "ASSUMPTIONS.md", "REQUIREMENTS.md"}
+	for _, tpl := range foundationTemplates {
+		path := filepath.Join(r.kdsePath, DirFoundation, tpl)
+		result.Verification = append(result.Verification, r.verifyFile(path, DirFoundation+"/"+tpl))
+	}
+
+	// Verify directory READMEs
+	readmeFiles := []string{
+		DirKnowledge + "/README.md",
+		DirLaboratory + "/README.md",
+		DirEvidence + "/README.md",
+		DirReports + "/README.md",
+		DirReferences + "/README.md",
+		DirTraceability + "/README.md",
+		DirArtifacts + "/README.md",
+	}
+	for _, readme := range readmeFiles {
+		path := filepath.Join(r.kdsePath, readme)
+		result.Verification = append(result.Verification, r.verifyFile(path, readme))
+	}
+
+	// Verify knowledge subdirectory READMEs
+	for _, subdir := range knowledgeSubdirs {
+		path := filepath.Join(r.kdsePath, DirKnowledge, subdir, "README.md")
+		result.Verification = append(result.Verification, r.verifyFile(path, DirKnowledge+"/"+subdir+"/README.md"))
+	}
+
+	// Verify laboratory subdirectory READMEs
+	for _, subdir := range labSubdirs {
+		path := filepath.Join(r.kdsePath, DirLaboratory, subdir, "README.md")
+		result.Verification = append(result.Verification, r.verifyFile(path, DirLaboratory+"/"+subdir+"/README.md"))
 	}
 
 	// Verify someday manifest
@@ -395,36 +1277,60 @@ func (r *Runtime) Verify() *VerificationReport {
 	// Check workspace
 	report.Components = append(report.Components, r.verifyWorkspace())
 
-	// Check runtime directory
-	report.Components = append(report.Components, r.verifyDirectory(filepath.Join(r.kdsePath, DirRuntime), DirRuntime))
+	// Check main directories
+	mainDirs := []string{DirRuntime, DirFoundation, DirKnowledge, DirLaboratory, DirEvidence, DirReferences, DirTraceability, DirReports, DirConfig, DirState, DirArtifacts, DirSomeday}
+	for _, dir := range mainDirs {
+		report.Components = append(report.Components, r.verifyDirectory(filepath.Join(r.kdsePath, dir), dir))
+	}
 
-	// Check foundation
-	report.Components = append(report.Components, r.verifyDirectory(filepath.Join(r.kdsePath, DirFoundation), DirFoundation))
+	// Check knowledge subdirectories
+	knowledgeSubs := []string{"general", "operational", "developmental"}
+	for _, sub := range knowledgeSubs {
+		report.Components = append(report.Components, r.verifyDirectory(filepath.Join(r.kdsePath, DirKnowledge, sub), DirKnowledge+"/"+sub))
+	}
 
-	// Check knowledge
-	report.Components = append(report.Components, r.verifyDirectory(filepath.Join(r.kdsePath, DirKnowledge), DirKnowledge))
+	// Check laboratory subdirectories
+	labSubs := []string{"experiments", "reports"}
+	for _, sub := range labSubs {
+		report.Components = append(report.Components, r.verifyDirectory(filepath.Join(r.kdsePath, DirLaboratory, sub), DirLaboratory+"/"+sub))
+	}
 
-	// Check laboratory
-	report.Components = append(report.Components, r.verifyDirectory(filepath.Join(r.kdsePath, DirLaboratory), DirLaboratory))
+	// Check someday subdirectories
+	somedaySubs := []string{"ideas", "archived", "promoted"}
+	for _, sub := range somedaySubs {
+		report.Components = append(report.Components, r.verifyDirectory(filepath.Join(r.kdsePath, DirSomeday, sub), DirSomeday+"/"+sub))
+	}
 
-	// Check configuration
-	report.Components = append(report.Components, r.verifyDirectory(filepath.Join(r.kdsePath, DirConfig), DirConfig))
+	// Check foundation templates
+	foundationTemplates := []string{"PROBLEM.md", "SPEC.md", "ARCHITECTURE.md", "ASSUMPTIONS.md", "REQUIREMENTS.md", "README.md"}
+	for _, tpl := range foundationTemplates {
+		report.Components = append(report.Components, r.verifyFile(filepath.Join(r.kdsePath, DirFoundation, tpl), DirFoundation+"/"+tpl))
+	}
 
-	// Check state
-	report.Components = append(report.Components, r.verifyDirectory(filepath.Join(r.kdsePath, DirState), DirState))
+	// Check directory READMEs
+	readmeDirs := []string{DirKnowledge, DirLaboratory, DirEvidence, DirReports, DirReferences, DirTraceability, DirArtifacts}
+	for _, dir := range readmeDirs {
+		report.Components = append(report.Components, r.verifyFile(filepath.Join(r.kdsePath, dir, "README.md"), dir+"/README.md"))
+	}
 
-	// Check someday
-	report.Components = append(report.Components, r.verifyDirectory(filepath.Join(r.kdsePath, DirSomeday), DirSomeday))
-	report.Components = append(report.Components, r.verifyDirectory(filepath.Join(r.kdsePath, DirSomeday, "ideas"), DirSomeday+"/ideas"))
-	report.Components = append(report.Components, r.verifyDirectory(filepath.Join(r.kdsePath, DirSomeday, "archived"), DirSomeday+"/archived"))
-	report.Components = append(report.Components, r.verifyDirectory(filepath.Join(r.kdsePath, DirSomeday, "promoted"), DirSomeday+"/promoted"))
+	// Check knowledge subdirectory READMEs
+	for _, sub := range knowledgeSubs {
+		report.Components = append(report.Components, r.verifyFile(filepath.Join(r.kdsePath, DirKnowledge, sub, "README.md"), DirKnowledge+"/"+sub+"/README.md"))
+	}
+
+	// Check laboratory subdirectory READMEs
+	for _, sub := range labSubs {
+		report.Components = append(report.Components, r.verifyFile(filepath.Join(r.kdsePath, DirLaboratory, sub, "README.md"), DirLaboratory+"/"+sub+"/README.md"))
+	}
+
+	// Check core runtime files
+	coreFiles := []string{FileManifest, FileSessionState, FileRuntimeConfig, FileKnowledgeIndex, FileArtifactIndex}
+	for _, file := range coreFiles {
+		report.Components = append(report.Components, r.verifyFile(filepath.Join(r.kdsePath, file), file))
+	}
+
+	// Check someday manifest
 	report.Components = append(report.Components, r.verifyFile(filepath.Join(r.kdsePath, DirSomeday, "someday.yaml"), DirSomeday+"/someday.yaml"))
-
-	// Check manifest
-	report.Components = append(report.Components, r.verifyFile(filepath.Join(r.kdsePath, FileManifest), FileManifest))
-
-	// Check session state
-	report.Components = append(report.Components, r.verifyFile(filepath.Join(r.kdsePath, FileSessionState), FileSessionState))
 
 	// Calculate confidence
 	report.Confidence = r.calculateConfidence(report.Components)
