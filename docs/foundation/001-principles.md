@@ -1,4 +1,8 @@
-# Core Principles
+# KDSE Principles
+
+## Overview
+
+KDSE (Knowledge-Driven Software Engineering) is a methodology where structured knowledge serves as the authoritative source from which all software artifacts are derived, maintained, and verified.
 
 ## Principles
 
@@ -94,14 +98,15 @@ When Reference Artifacts disagree, the contradiction shall be preserved. Contrad
 
 **Rationale**: Silent resolution hides uncertainty. Preserved contradictions inform future analysis. Resolution requires understanding the engineering significance of the disagreement.
 
+## Quick Reference
+
+| Principle | Key Message |
+|-----------|-------------|
+| Knowledge precedes architecture | Derive, don't assume |
+| Authority flows downward | Lower can't contradict higher |
+| Traceability enables authority | Every decision traces to knowledge |
+| Repository first | Analyze artifacts before asking |
+
 ## Principles Are Not Practices
 
-These principles are not practices. They do not prescribe:
-
-- How to capture knowledge
-- How to document architecture
-- How to write code
-- How to perform verification
-- What tools to use
-
-Practices are derived from principles for specific contexts. Principles guide practice selection; they do not replace it.
+These principles guide practice selection; they do not prescribe specific methods. Teams derive their own practices from these principles based on their context.

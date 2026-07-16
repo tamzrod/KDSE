@@ -14,9 +14,11 @@ import (
 	"github.com/kdse/runtime/internal/report"
 	"github.com/kdse/runtime/internal/normalize"
 	"github.com/kdse/runtime/internal/collect"
+	"github.com/kdse/runtime/internal/knowledge"
 	"github.com/kdse/runtime/internal/orchestration"
 	kdseruntime "github.com/kdse/runtime/internal/runtime"
 	somedaypkg "github.com/kdse/runtime/internal/someday"
+	"github.com/kdse/runtime/internal/workspace"
 )
 
 const version = "1.0.0"
@@ -40,6 +42,8 @@ func main() {
 		handleInstall()
 	case "update":
 		handleUpdate()
+	case "init":
+		handleInit(repoPath)
 	case "initialize":
 		handleInitialize(repoPath)
 	case "collect":
@@ -64,6 +68,10 @@ func main() {
 		handleContext(repoPath, args)
 	case "agreement":
 		handleAgreement(repoPath, args)
+	case "notebook":
+		handleNotebook(repoPath, args)
+	case "promote":
+		handlePromote(repoPath, args)
 	case "version", "--version", "-v":
 		fmt.Printf("KDSE Runtime v%s\n", version)
 	case "help", "--help", "-h":
@@ -76,32 +84,36 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Println(`KDSE Runtime v1.0.0 - Knowledge-Driven Software Engineering Runtime
+	fmt.Println(`KDSE Runtime v1.0.0 - Knowledge-Driven Software Engineering
 
 Usage: kdse <command> [options]
 
-Commands:
-  initialize   Initialize evidence-driven KDSE runtime (EVIDENCE REQUIRED)
-  install      Install KDSE runtime configuration
-  update       Update KDSE runtime
-  collect      Collect engineering evidence
-  normalize    Normalize existing documentation to KDSE standard
-  run          Start a KDSE session
-  status       Show current session status
-  report       Generate runtime report
-  runtime      Runtime management (verify, invariant)
-  context      Context handoff management
+Core Commands:
+  init         Initialize .kdse/ workspace
+  status       Show current workspace status
+  notebook     Engineering notebook management
+  promote      Knowledge promotion workflow
 
-Runtime Commands:
-  kdse runtime verify          Verify runtime is operational
-  kdse runtime invariant       Check phase transition requirements
+Notebook Commands:
+  kdse notebook add <title>     Add entry to notebook
+  kdse notebook list            List notebook entries
+  kdse notebook show <id>      Show entry details
 
-Context Commands:
-  kdse context init           Initialize context handoff
-  kdse context stage         Transition to new stage
-  kdse context next-action   Set next action directive
-  kdse context add-evidence  Add evidence files
-  kdse context read          Display current context
+Promote Commands:
+  kdse promote submit <id>     Submit entry as candidate
+  kdse promote review <id>      Review candidate (--accept/--reject)
+
+Agreement Commands:
+  kdse agreement init           Initialize project agreement
+  kdse agreement show          Display current agreement
+  kdse agreement phase <phase>  Update current phase
+
+Other Commands:
+  initialize   Full runtime initialization
+  runtime     Runtime management (verify, invariant)
+  context     Context handoff management
+  collect     Collect engineering evidence
+  normalize   Normalize documentation
 
 Options:
   -h, --help    Show this help message
@@ -504,37 +516,52 @@ func handleOrchestrate(repoPath string, args []string) {
 }
 
 func handleStatus(repoPath string) {
-	mgr := state.NewManager(repoPath)
-	st, err := mgr.LoadState()
-	if err != nil {
-		fmt.Println("No active KDSE session.")
-		fmt.Println("Run 'kdse run' to start a session.")
+	ws := workspace.New(repoPath)
+	paths := ws.GetPaths()
+
+	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
+	fmt.Println("║                    KDSE Workspace Status                      ║")
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+	fmt.Printf("║ Repository: %s\n", repoPath)
+	fmt.Printf("║ Workspace:  %s\n", paths.Root)
+
+	if !ws.Exists() {
+		fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+		fmt.Println("║ Workspace not initialized. Run 'kdse init' to start.")
+		fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
 		return
 	}
 
-	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
-	fmt.Println("║                    KDSE Session Status                         ║")
-	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
-
-	fmt.Printf("║ Session ID:    %s\n", st.SessionID)
-	fmt.Printf("║ Repository:   %s\n", st.Repository.Path)
-	fmt.Printf("║ Phase:        %s\n", st.Phase)
-	fmt.Printf("║ State:        %s\n", st.State)
-	fmt.Printf("║ Started:      %s\n", st.StartedAt)
-
-	if len(st.Artifacts) > 0 {
+	// Check for agreement
+	agreementMgr := agreement.NewManager(repoPath)
+	agreement, err := agreementMgr.Get()
+	if err == nil && agreement != nil {
 		fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
-		fmt.Println("║ Artifacts                                                    ║")
-		for _, a := range st.Artifacts {
-			fmt.Printf("║   • %s\n", a)
-		}
+		fmt.Println("║ Agreement                                                    ║")
+		fmt.Printf("║ Project:    %s\n", agreement.ProjectName)
+		fmt.Printf("║ Phase:      %s\n", agreement.CurrentPhase)
+		fmt.Printf("║ Assumptions: %d\n", len(agreement.Assumptions))
 	}
 
-	if len(st.Dimensions) > 0 {
+	// Check knowledge entries
+	knowledgeMgr := knowledge.NewManager(repoPath)
+	if err := knowledgeMgr.Load(); err == nil {
+		stats := knowledgeMgr.Stats()
 		fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
-		fmt.Println("║ Dimensions                                                   ║")
-		for dim, score := range st.Dimensions {
-			fmt.Printf("║   %s: %.1f/10\n", dim, score)
+		fmt.Println("║ Knowledge                                                    ║")
+		fmt.Printf("║ Total:      %d\n", stats["total"])
+		fmt.Printf("║ Notebook:   %d  |  Candidate: %d  |  Promoted: %d\n",
+			stats["notebook"], stats["candidate"], stats["promoted"])
+	}
+
+	// Check for legacy directories
+	legacyDirs := ws.DetectLegacyDirs()
+	if len(legacyDirs) > 0 {
+		fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+		fmt.Println("║ Legacy Directories Detected                                 ║")
+		fmt.Println("║ Run 'kdse migrate' to move them under .kdse/")
+		for _, dir := range legacyDirs {
+			fmt.Printf("║   • %s/\n", dir)
 		}
 	}
 
@@ -1474,4 +1501,355 @@ func handleAgreementValidate(mgr *agreement.Manager, args []string) {
 		fmt.Printf("✗ Constraint violation: %s\n", msg)
 		os.Exit(1)
 	}
+}
+
+// handleInit initializes the .kdse/ workspace (lightweight init)
+func handleInit(repoPath string) {
+	ws := workspace.New(repoPath)
+
+	fmt.Println()
+	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
+	fmt.Println("║              KDSE Workspace Initialization                   ║")
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+	fmt.Printf("║ Repository: %s\n", repoPath)
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+
+	if err := ws.Initialize(); err != nil {
+		fmt.Printf("║ ✗ Error: %s\n", err)
+		fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
+		os.Exit(1)
+	}
+
+	fmt.Println("║ ✓ Created .kdse/ directory")
+	fmt.Println("║ ✓ Workspace ready for KDSE operations")
+	fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
+	fmt.Println()
+	fmt.Println("Next steps:")
+	fmt.Println("  kdse agreement init      # Initialize project agreement")
+	fmt.Println("  kdse notebook add <title> # Add first knowledge entry")
+	fmt.Println("  kdse status              # View workspace status")
+}
+
+// handleNotebook manages the engineering notebook
+func handleNotebook(repoPath string, args []string) {
+	if len(args) < 1 {
+		printNotebookUsage()
+		os.Exit(1)
+	}
+
+	subcmd := args[0]
+	mgr := knowledge.NewManager(repoPath)
+	if err := mgr.Load(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading notebook: %v\n", err)
+		os.Exit(1)
+	}
+
+	switch subcmd {
+	case "add":
+		handleNotebookAdd(mgr, args[1:])
+	case "list":
+		handleNotebookList(mgr, args[1:])
+	case "show":
+		handleNotebookShow(mgr, args[1:])
+	default:
+		fmt.Printf("Unknown notebook command: %s\n", subcmd)
+		printNotebookUsage()
+		os.Exit(1)
+	}
+}
+
+func printNotebookUsage() {
+	fmt.Println(`Notebook Commands
+
+Usage: kdse notebook <command> [options]
+
+Commands:
+  add <title>              Add entry to notebook
+  list                     List all notebook entries
+  show <id>                Show entry details
+
+Examples:
+  kdse notebook add "Users need password reset"
+  kdse notebook add "API latency must be under 200ms" --source benchmark.json
+  kdse notebook list
+  kdse notebook show KDSE-KNOW-20240101-A
+`)
+}
+
+func handleNotebookAdd(mgr *knowledge.Manager, args []string) {
+	if len(args) < 1 {
+		fmt.Fprintf(os.Stderr, "Error: title required\n")
+		os.Exit(1)
+	}
+
+	title := args[0]
+	content := ""
+	source := ""
+	tags := []string{}
+
+	// Parse optional flags
+	for i := 1; i < len(args); i++ {
+		switch args[i] {
+		case "--source", "-s":
+			if i+1 < len(args) {
+				source = args[i+1]
+				i++
+			}
+		case "--tag", "-t":
+			if i+1 < len(args) {
+				tags = append(tags, args[i+1])
+				i++
+			}
+		default:
+			if !strings.HasPrefix(args[i], "-") {
+				content = strings.Join(args[i:], " ")
+				break
+			}
+		}
+	}
+
+	id, err := mgr.CreateNotebookEntry(title, content, source, tags)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Notebook entry created: %s\n", id)
+}
+
+func handleNotebookList(mgr *knowledge.Manager, args []string) {
+	entries := mgr.List("")
+	stats := mgr.Stats()
+
+	fmt.Println()
+	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
+	fmt.Println("║              Engineering Notebook                          ║")
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+	fmt.Printf("║ Total Entries: %d\n", stats["total"])
+	fmt.Printf("║ Notebook: %d  |  Candidate: %d  |  Promoted: %d  |  Rejected: %d\n",
+		stats["notebook"], stats["candidate"], stats["promoted"], stats["rejected"])
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+
+	if len(entries) == 0 {
+		fmt.Println("║ No entries yet. Run 'kdse notebook add <title>' to start.")
+	} else {
+		for _, e := range entries {
+			statusIcon := map[string]string{
+				"notebook":  "○",
+				"candidate": "◐",
+				"promoted":  "●",
+				"rejected":  "✗",
+			}[string(e.Status)]
+			fmt.Printf("║ %s %s %s\n", statusIcon, e.ID, truncate(e.Title, 40))
+		}
+	}
+
+	fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
+}
+
+func handleNotebookShow(mgr *knowledge.Manager, args []string) {
+	if len(args) < 1 {
+		fmt.Fprintf(os.Stderr, "Error: entry ID required\n")
+		os.Exit(1)
+	}
+
+	id := args[0]
+	entry := mgr.Get(id)
+	if entry == nil {
+		fmt.Fprintf(os.Stderr, "Entry not found: %s\n", id)
+		os.Exit(1)
+	}
+
+	fmt.Println()
+	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
+	fmt.Printf("║ %s\n", truncate(entry.Title, 52))
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+	fmt.Printf("║ ID:      %s\n", entry.ID)
+	fmt.Printf("║ Status:  %s\n", entry.Status)
+	if entry.EvidenceStrength > 0 {
+		fmt.Printf("║ Strength: %s\n", knowledge.StrengthToStars(entry.EvidenceStrength))
+	}
+	if entry.Source != "" {
+		fmt.Printf("║ Source:  %s\n", entry.Source)
+	}
+	fmt.Printf("║ Created: %s\n", entry.CreatedAt)
+	if entry.PromotedAt != "" {
+		fmt.Printf("║ Updated: %s\n", entry.PromotedAt)
+	}
+	if len(entry.EvidenceRefs) > 0 {
+		fmt.Printf("║ Evidence: %s\n", strings.Join(entry.EvidenceRefs, ", "))
+	}
+	if entry.ReviewRationale != "" {
+		fmt.Printf("║ Review:  %s\n", entry.ReviewRationale)
+	}
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+	fmt.Printf("║\n║ %s\n", strings.ReplaceAll(entry.Content, "\n", "\n║ "))
+	fmt.Println("║")
+	fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
+}
+
+// handlePromote manages knowledge promotion workflow
+func handlePromote(repoPath string, args []string) {
+	if len(args) < 1 {
+		printPromoteUsage()
+		os.Exit(1)
+	}
+
+	subcmd := args[0]
+	mgr := knowledge.NewManager(repoPath)
+	if err := mgr.Load(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading knowledge: %v\n", err)
+		os.Exit(1)
+	}
+
+	switch subcmd {
+	case "submit":
+		handlePromoteSubmit(mgr, args[1:])
+	case "review":
+		handlePromoteReview(mgr, args[1:])
+	case "list":
+		handlePromoteList(mgr, args[1:])
+	default:
+		fmt.Printf("Unknown promote command: %s\n", subcmd)
+		printPromoteUsage()
+		os.Exit(1)
+	}
+}
+
+func printPromoteUsage() {
+	fmt.Println(`Promote Commands
+
+Usage: kdse promote <command> [options]
+
+Commands:
+  submit <id>               Submit notebook entry as candidate
+  review <id>               Review candidate (requires --accept or --reject)
+  list                      List candidates
+
+Review Options:
+  --accept                  Accept the candidate
+  --reject                  Reject the candidate
+  --strength <1-5>          Set evidence strength (1-5 stars)
+  --rationale <text>        Review rationale
+
+Examples:
+  kdse promote submit KDSE-KNOW-20240101-A
+  kdse promote review KDSE-KNOW-20240101-A --accept --strength 4 --rationale "Well derived from benchmarks"
+`)
+}
+
+func handlePromoteSubmit(mgr *knowledge.Manager, args []string) {
+	if len(args) < 1 {
+		fmt.Fprintf(os.Stderr, "Error: entry ID required\n")
+		os.Exit(1)
+	}
+
+	id := args[0]
+	entry := mgr.Get(id)
+	if entry == nil {
+		fmt.Fprintf(os.Stderr, "Entry not found: %s\n", id)
+		os.Exit(1)
+	}
+
+	if entry.Status != knowledge.StatusNotebook {
+		fmt.Fprintf(os.Stderr, "Entry is not in notebook status: %s\n", entry.Status)
+		os.Exit(1)
+	}
+
+	if err := mgr.PromoteToCandidate(id); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Entry %s promoted to candidate\n", id)
+}
+
+func handlePromoteReview(mgr *knowledge.Manager, args []string) {
+	if len(args) < 1 {
+		fmt.Fprintf(os.Stderr, "Error: entry ID required\n")
+		os.Exit(1)
+	}
+
+	id := args[0]
+	entry := mgr.Get(id)
+	if entry == nil {
+		fmt.Fprintf(os.Stderr, "Entry not found: %s\n", id)
+		os.Exit(1)
+	}
+
+	if entry.Status != knowledge.StatusCandidate {
+		fmt.Fprintf(os.Stderr, "Entry is not a candidate: %s\n", entry.Status)
+		os.Exit(1)
+	}
+
+	// Parse flags
+	accept := false
+	rationale := ""
+	strength := knowledge.EvidenceStrength(3)
+
+	for i := 1; i < len(args); i++ {
+		switch args[i] {
+		case "--accept":
+			accept = true
+		case "--reject":
+			accept = false
+		case "--rationale":
+			if i+1 < len(args) {
+				rationale = args[i+1]
+				i++
+			}
+		case "--strength":
+			if i+1 < len(args) {
+				var s int
+				fmt.Sscanf(args[i+1], "%d", &s)
+				strength = knowledge.EvidenceStrength(s)
+				i++
+			}
+		}
+	}
+
+	if err := mgr.Review(id, accept, rationale, strength); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	if accept {
+		fmt.Printf("Entry %s accepted as knowledge (strength: %s)\n", id, knowledge.StrengthToStars(strength))
+	} else {
+		fmt.Printf("Entry %s rejected: %s\n", id, rationale)
+	}
+}
+
+func handlePromoteList(mgr *knowledge.Manager, args []string) {
+	candidates := mgr.List(knowledge.StatusCandidate)
+
+	fmt.Println()
+	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
+	fmt.Println("║              Knowledge Candidates                          ║")
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+
+	if len(candidates) == 0 {
+		fmt.Println("║ No candidates pending review.")
+	} else {
+		for _, e := range candidates {
+			fmt.Printf("║ %s %s\n", "◐", e.ID)
+			fmt.Printf("║   Title: %s\n", truncate(e.Title, 40))
+			if e.Source != "" {
+				fmt.Printf("║   Source: %s\n", e.Source)
+			}
+			fmt.Println("║")
+		}
+	}
+
+	fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
+	fmt.Println()
+	fmt.Println("To review: kdse promote review <id> --accept/--reject")
+}
+
+// truncate shortens a string to maxLen characters
+func truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen-3] + "..."
 }

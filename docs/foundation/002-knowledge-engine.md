@@ -1,36 +1,127 @@
-# Knowledge Derivation
+# Knowledge Engine
 
 ## Purpose
 
-This document defines how structured knowledge becomes architecture in KDSE. It describes the conceptual transformation from knowledge artifacts to architectural decisions and architectural artifacts.
+The Knowledge Engine transforms evidence into structured knowledge artifacts. It provides a clean derivation pipeline with explicit promotion workflows.
 
-## The Derivation Concept
+## The Derivation Pipeline
 
-Derivation is the process by which higher-authority artifacts produce lower-authority artifacts. Derivation is not translation or transcription. Derivation involves reasoning, analysis, and decision-making.
+```
+Evidence → Derivation → Knowledge Artifact → Evidence Strength
+```
 
-### What Derivation Is Not
+### Evidence
 
-Derivation is not:
+Evidence is raw domain information from Reference Artifacts:
+- Project documentation
+- Implementation code
+- Vendor specifications
+- Test results
+- Benchmark data
 
-- **Direct mapping**: Knowledge does not map directly to architecture. Architecture requires interpretation and reasoning about knowledge.
+Evidence is **not authoritative**. It supports knowledge; it does not replace it.
 
-- **Automated transformation**: Derivation involves judgment. Multiple architects deriving from the same knowledge may produce different architectures.
+### Derivation
 
-- **Deterministic process**: Given the same knowledge, derivation may produce different architectures based on different interpretations or priorities.
+Derivation is the process of transforming evidence into knowledge through analysis and reasoning.
 
-- **One-way conversion**: Derivation may reveal gaps in knowledge that require returning to the knowledge stage for clarification.
+**Derivation is not:**
+- Direct extraction or transcription
+- Automated transformation
+- Deterministic (same evidence → different knowledge possible)
 
-### What Derivation Is
+**Derivation is:**
+- Application of engineering judgment
+- Interpretation and analysis
+- Decision-making with documented rationale
 
-Derivation is the application of engineering judgment to knowledge to produce architecture. Derivation transforms validated understanding into structural decisions.
+### Knowledge Artifacts
 
-Derivation involves:
+A Knowledge Artifact contains:
+- **Statement**: The knowledge being captured
+- **Basis**: Evidence that supports this knowledge
+- **Evidence Strength**: Confidence rating based on corroboration
+- **Derivation**: How this knowledge was derived
 
-1. **Interpreting knowledge**: Understanding what knowledge means for system structure
-2. **Identifying implications**: Determining what knowledge implies for architecture
-3. **Resolving tensions**: Balancing competing knowledge when it suggests different approaches
-4. **Making decisions**: Choosing among alternatives based on knowledge and constraints
-5. **Documenting rationale**: Recording why decisions were made as they were
+### Evidence Strength
+
+Evidence Strength reflects confidence based on corroborating artifacts:
+
+| Rating | Meaning |
+|--------|---------|
+| ★★★★★ | Multiple independent sources confirm |
+| ★★★★☆ | Multiple sources with minor conflicts |
+| ★★★☆☆ | Single comprehensive source or few weak sources |
+| ★★☆☆☆ | Limited evidence, needs validation |
+| ★☆☆☆☆ | Minimal evidence, speculative |
+
+**Note**: Evidence Strength increases confidence but does not grant authority. Authority comes from proper derivation and review.
+
+## Knowledge Lifecycle
+
+```
+Notebook → Candidate → Promoted → Knowledge
+```
+
+| Stage | Description |
+|-------|-------------|
+| Notebook | Initial insight, raw observation |
+| Candidate | Submitted for review, has supporting evidence |
+| Promoted | Reviewed and accepted |
+| Knowledge | Approved, traceable, authoritative |
+
+## Promotion Workflow
+
+### 1. Submit Candidate
+
+```bash
+kdse promote submit <artifact-id>
+```
+
+Promotes a notebook entry to candidate status. Requires:
+- Clear statement
+- Evidence references
+- Initial derivation reasoning
+
+### 2. Review
+
+Review validates:
+- Correct derivation from evidence
+- Consistency with existing knowledge
+- Absence of contradictions
+
+### 3. Accept/Reject
+
+- **Accept**: Artifact becomes Knowledge with Evidence Strength
+- **Reject**: Return to Candidate with rationale for revision
+
+## Engineering Notebook
+
+The Engineering Notebook captures insights during work:
+
+```bash
+kdse notebook add "Users need password reset" --source "customer-interview-2024-01"
+```
+
+Notebook entries are:
+- Personal observations and insights
+- Raw evidence references
+- Initial derivations
+
+They are not authoritative until promoted through the workflow.
+
+## Example
+
+```bash
+# Add an insight to the notebook
+kdse notebook add "API latency must be under 200ms" --source benchmark-results.json
+
+# Submit as candidate for review
+kdse promote submit API-LATENCY-001
+
+# Review and accept
+kdse promote review API-LATENCY-001 --accept --strength 4
+```
 
 ## Derivation Stages
 
