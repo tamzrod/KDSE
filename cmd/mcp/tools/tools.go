@@ -6,11 +6,13 @@ package tools
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"github.com/kdse/runtime/internal/guard"
 	"github.com/kdse/runtime/internal/mcp"
 	"github.com/kdse/runtime/internal/workspace"
 )
@@ -20,6 +22,7 @@ type ToolHandler struct {
 	repoPath string
 	ws       *workspace.Workspace
 	orch     *orchestration.Manager
+	guard    *guard.SessionGuard
 }
 
 // NewToolHandler creates a new ToolHandler
@@ -27,10 +30,13 @@ func NewToolHandler() *ToolHandler {
 	repoPath, _ := os.Getwd()
 	ws := workspace.New(repoPath)
 	orch := orchestration.NewManager(repoPath)
+	g := guard.NewSessionGuardWithAutoInit(repoPath)
+	
 	return &ToolHandler{
 		repoPath: repoPath,
 		ws:       ws,
 		orch:     orch,
+		guard:    g,
 	}
 }
 
@@ -176,13 +182,17 @@ func (h *ToolHandler) Initialize() map[string]interface{} {
 
 // Status returns current repository status - delegates to runtime
 func (h *ToolHandler) Status() map[string]interface{} {
-	// Delegate to kdse runtime status
-	result := h.runKDSECommand("status")
-
-	// Add MCP-specific info
-	result["mcp"] = map[string]interface{}{
-		"version": "0.5",
-		"mode":    "thin",
+	// Add guard status to the response
+	guardStatus := h.guard.Check()
+	
+	result := map[string]interface{}{
+		"guard": map[string]interface{}{
+			"workspace_ready": guardStatus.WorkspaceReady,
+			"session_active":  guardStatus.SessionActive,
+			"session_id":      guardStatus.SessionID,
+			"session_age":     guardStatus.SessionAge,
+			"initialized":     guardStatus.Valid,
+		},
 	}
 
 	gitInfo := h.getGitInfo()
@@ -199,6 +209,11 @@ func (h *ToolHandler) Status() map[string]interface{} {
 			"workspace_exists": h.ws.Exists(),
 			"workspace_root":   h.ws.Root(),
 		},
+	}
+	
+	// Merge guard status into result
+	for k, v := range status {
+		result[k] = v
 	}
 
 	// Check for legacy directories
@@ -233,14 +248,25 @@ func (h *ToolHandler) Status() map[string]interface{} {
 		}
 	}
 
-	return status
+	// Merge orchestration status into result
+	result["orchestration"] = status["orchestration"]
+
+	return result
 }
 
 // SessionStatus returns detailed orchestration session status
 func (h *ToolHandler) SessionStatus() map[string]interface{} {
+	// Check guard status first
+	guardStatus := h.guard.Check()
+	
 	orchState, err := h.orch.Load()
 	if err != nil {
 		return map[string]interface{}{
+			"guard": map[string]interface{}{
+				"workspace_ready": guardStatus.WorkspaceReady,
+				"session_active":  guardStatus.SessionActive,
+				"initialized":     guardStatus.Valid,
+			},
 			"error": "No active orchestration session",
 			"hint":  "Run initialize to start a new session",
 		}
@@ -292,8 +318,17 @@ func (h *ToolHandler) SessionStatus() map[string]interface{} {
 // Takes a user objective and automatically orchestrates the KDSE workflow.
 // The LLM should NOT manually choose KDSE tools - execute decides which internal operations to invoke.
 func (h *ToolHandler) Execute(objective string) map[string]interface{} {
-	// Initialize workspace if not already done
-	h.ws.Initialize()
+	// ENFORCE SESSION GUARD - This is the critical enforcement point
+	// No operation can proceed without a valid initialized workspace and session
+	if err := h.guard.EnforceForOperation("execute"); err != nil {
+		log.Printf("[TOOLS] Guard enforcement failed: %v", err)
+		return map[string]interface{}{
+			"action":  "guard_blocked",
+			"error":   err.Error(),
+			"message": "KDSE workspace not initialized. Please run `kdse initialize` first.",
+			"hint":    "Run the initialize tool to set up the KDSE workspace and start a session.",
+		}
+	}
 
 	// Get execution decision from orchestration engine
 	decision := h.orch.GetExecutionDecision(objective)
@@ -471,8 +506,16 @@ func (h *ToolHandler) wsExists(subdir string) bool {
 
 // Collect collects and catalogs artifacts into .kdse/artifacts/
 func (h *ToolHandler) Collect() map[string]interface{} {
-	// Ensure workspace exists
-	h.ws.Initialize()
+	// ENFORCE SESSION GUARD - File creation requires valid initialization
+	if err := h.guard.EnforceForOperation("collect"); err != nil {
+		log.Printf("[TOOLS] Guard enforcement failed for collect: %v", err)
+		return map[string]interface{}{
+			"action":  "guard_blocked",
+			"error":   err.Error(),
+			"message": "KDSE workspace not initialized. Please run `kdse initialize` first.",
+			"hint":    "Run the initialize tool to set up the KDSE workspace and start a session.",
+		}
+	}
 
 	// Create artifacts directory
 	artifactsPath := h.ws.SubPath("artifacts")
@@ -497,8 +540,16 @@ func (h *ToolHandler) Collect() map[string]interface{} {
 
 // Foundation returns or creates foundation documentation
 func (h *ToolHandler) Foundation() map[string]interface{} {
-	// Ensure workspace exists
-	h.ws.Initialize()
+	// ENFORCE SESSION GUARD - File creation requires valid initialization
+	if err := h.guard.EnforceForOperation("foundation"); err != nil {
+		log.Printf("[TOOLS] Guard enforcement failed for foundation: %v", err)
+		return map[string]interface{}{
+			"action":  "guard_blocked",
+			"error":   err.Error(),
+			"message": "KDSE workspace not initialized. Please run `kdse initialize` first.",
+			"hint":    "Run the initialize tool to set up the KDSE workspace and start a session.",
+		}
+	}
 
 	// Create foundation directory
 	foundationPath := h.ws.SubPath("foundation")
@@ -522,8 +573,16 @@ func (h *ToolHandler) Foundation() map[string]interface{} {
 
 // Audit generates audit reports under .kdse/reports/
 func (h *ToolHandler) Audit() map[string]interface{} {
-	// Ensure workspace exists
-	h.ws.Initialize()
+	// ENFORCE SESSION GUARD - File creation requires valid initialization
+	if err := h.guard.EnforceForOperation("audit"); err != nil {
+		log.Printf("[TOOLS] Guard enforcement failed for audit: %v", err)
+		return map[string]interface{}{
+			"action":  "guard_blocked",
+			"error":   err.Error(),
+			"message": "KDSE workspace not initialized. Please run `kdse initialize` first.",
+			"hint":    "Run the initialize tool to set up the KDSE workspace and start a session.",
+		}
+	}
 
 	// Create reports directory
 	reportsPath := h.ws.SubPath("reports")
@@ -547,6 +606,17 @@ func (h *ToolHandler) Audit() map[string]interface{} {
 
 // Migrate moves legacy directories to .kdse/
 func (h *ToolHandler) Migrate() map[string]interface{} {
+	// ENFORCE SESSION GUARD - Migration requires valid initialization
+	if err := h.guard.EnforceForOperation("migrate"); err != nil {
+		log.Printf("[TOOLS] Guard enforcement failed for migrate: %v", err)
+		return map[string]interface{}{
+			"action":  "guard_blocked",
+			"error":   err.Error(),
+			"message": "KDSE workspace not initialized. Please run `kdse initialize` first.",
+			"hint":    "Run the initialize tool to set up the KDSE workspace and start a session.",
+		}
+	}
+
 	// First check what would be migrated
 	migrationReport := h.ws.CheckMigration()
 

@@ -6,6 +6,7 @@ package orchestration
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -85,18 +86,85 @@ type PhaseTransition struct {
 
 // Manager handles session state persistence and transitions
 type Manager struct {
+	repoPath    string
+	guard       *SessionGuard
+	initialized bool
+}
+
+// SessionGuard provides workspace and session initialization enforcement
+// This is a lightweight version that integrates with the guard package
+type SessionGuard struct {
 	repoPath string
+	wsPath   string
+}
+
+// NewSessionGuard creates a new session guard for the given repository path
+func NewSessionGuard(repoPath string) *SessionGuard {
+	return &SessionGuard{
+		repoPath: repoPath,
+		wsPath:   filepath.Join(repoPath, ".kdse"),
+	}
+}
+
+// IsInitialized checks if the workspace is properly initialized
+func (g *SessionGuard) IsInitialized() bool {
+	// Check if .kdse directory exists
+	if _, err := os.Stat(g.wsPath); os.IsNotExist(err) {
+		return false
+	}
+
+	// Check if session state file exists
+	sessionPath := filepath.Join(g.wsPath, "session-state.json")
+	if _, err := os.Stat(sessionPath); os.IsNotExist(err) {
+		return false
+	}
+
+	// Try to load and validate session state
+	data, err := os.ReadFile(sessionPath)
+	if err != nil {
+		return false
+	}
+
+	var state map[string]interface{}
+	if err := json.Unmarshal(data, &state); err != nil {
+		return false
+	}
+
+	// Validate required fields
+	if state["session_id"] == nil || state["session_id"] == "" {
+		return false
+	}
+	if state["started_at"] == nil || state["started_at"] == "" {
+		return false
+	}
+
+	return true
 }
 
 // NewManager creates a new orchestration manager for the given repository path
 func NewManager(repoPath string) *Manager {
-	return &Manager{repoPath: repoPath}
+	return &Manager{
+		repoPath:    repoPath,
+		guard:       NewSessionGuard(repoPath),
+		initialized: false,
+	}
+}
+
+// IsInitialized checks if the workspace is properly initialized
+func (m *Manager) IsInitialized() bool {
+	if !m.guard.IsInitialized() {
+		return false
+	}
+	
+	// Also check orchestration state
+	_, err := m.Load()
+	return err == nil
 }
 
 // Initialize creates a new session with default state
 func (m *Manager) Initialize() (*SessionState, error) {
 	now := time.Now().Format(time.RFC3339)
-	
+
 	state := &SessionState{
 		SessionID:         generateSessionID(),
 		StartedAt:         now,
@@ -112,11 +180,44 @@ func (m *Manager) Initialize() (*SessionState, error) {
 		},
 	}
 
+	// Ensure .kdse directory exists
+	kdseDir := filepath.Join(m.repoPath, ".kdse")
+	if err := os.MkdirAll(kdseDir, 0755); err != nil {
+		return nil, err
+	}
+
+	// Create session-state.json for the guard
+	if err := m.createSessionState(state); err != nil {
+		log.Printf("[ORCH] Warning: Failed to create session-state.json: %v", err)
+	}
+
 	if err := m.Save(state); err != nil {
 		return nil, err
 	}
 
+	m.initialized = true
+	log.Printf("[ORCH] Session initialized: %s", state.SessionID)
 	return state, nil
+}
+
+// createSessionState creates the session-state.json file for the guard
+func (m *Manager) createSessionState(state *SessionState) error {
+	sessionState := map[string]interface{}{
+		"session_id":      state.SessionID,
+		"started_at":       state.StartedAt,
+		"updated_at":       state.UpdatedAt,
+		"workspace_root":   filepath.Join(m.repoPath, ".kdse"),
+		"version":          "1.0.0",
+		"initialized":      true,
+	}
+
+	data, err := json.MarshalIndent(sessionState, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	sessionPath := filepath.Join(m.repoPath, ".kdse", "session-state.json")
+	return os.WriteFile(sessionPath, data, 0644)
 }
 
 // Load retrieves the current session state
