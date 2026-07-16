@@ -17,6 +17,25 @@ import (
 // The authoritative definition is in github.com/kdse/runtime/internal/types
 type Phase = types.OrchestrationPhase
 
+// Re-export Phase constants from types package for convenience
+// These are the authoritative definitions
+const (
+	PhaseIdle           = types.PhaseIdle
+	PhaseProblem        = types.PhaseProblem
+	PhaseKnowledge      = types.PhaseKnowledge
+	PhaseFoundation     = types.PhaseFoundation
+	PhaseAudit          = types.PhaseAudit
+	PhaseAssessment     = types.PhaseAssessment
+	PhaseArchitecture   = types.PhaseArchitecture
+	PhaseImplementation = types.PhaseImplementation
+	PhaseComplete       = types.PhaseComplete
+	PhaseBlocked        = types.PhaseBlocked
+)
+
+// Re-export PhaseTransitions and PhaseConfidenceThreshold from types package
+var PhaseTransitions = types.PhaseTransitions
+var PhaseConfidenceThreshold = types.PhaseConfidenceThreshold
+
 // ExecutionMode represents the mode of execution
 type ExecutionMode string
 
