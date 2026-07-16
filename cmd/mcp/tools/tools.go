@@ -21,7 +21,7 @@ import (
 type ToolHandler struct {
 	repoPath string
 	ws       *workspace.Workspace
-	orch     *mcp.Manager
+	orch     *orchestration.Manager
 	guard    *guard.SessionGuard
 }
 
@@ -29,7 +29,7 @@ type ToolHandler struct {
 func NewToolHandler() *ToolHandler {
 	repoPath, _ := os.Getwd()
 	ws := workspace.New(repoPath)
-	orch := mcp.NewManager(repoPath)
+	orch := orchestration.NewManager(repoPath)
 	g := guard.NewSessionGuardWithAutoInit(repoPath)
 	
 	return &ToolHandler{
@@ -234,7 +234,7 @@ func (h *ToolHandler) Status() map[string]interface{} {
 			"current_phase":      orchState.CurrentPhase,
 			"confidence":         orchState.Confidence,
 			"execution_mode":     orchState.ExecutionMode,
-			"strict_mode":        orchState.ExecutionMode == mcp.ModeStrict,
+			"strict_mode":        orchState.ExecutionMode == orchestration.ModeStrict,
 			"next_allowed_phases": orchState.NextAllowedPhases,
 			"completed_phases":   orchState.CompletedPhases,
 		}
@@ -283,11 +283,11 @@ func (h *ToolHandler) SessionStatus() map[string]interface{} {
 			"completed":           orchState.CompletedPhases,
 			"next_allowed":        orchState.NextAllowedPhases,
 			"confidence":          orchState.Confidence,
-			"confidence_threshold": mcp.PhaseConfidenceThreshold[orchState.CurrentPhase],
+			"confidence_threshold": orchestration.PhaseConfidenceThreshold[orchState.CurrentPhase],
 		},
 		"execution": map[string]interface{}{
 			"mode":        orchState.ExecutionMode,
-			"strict_mode": orchState.ExecutionMode == mcp.ModeStrict,
+			"strict_mode": orchState.ExecutionMode == orchestration.ModeStrict,
 		},
 		"workspace": orchState.Workspace,
 		"evidence":  orchState.Evidence,
@@ -394,9 +394,9 @@ func (h *ToolHandler) Execute(objective string) map[string]interface{} {
 }
 
 // executeTransition performs the actions for a phase transition
-func (h *ToolHandler) executeTransition(state *mcp.SessionState, decision *mcp.ExecutionDecision, objective string) map[string]interface{} {
+func (h *ToolHandler) executeTransition(state *orchestration.SessionState, decision *orchestration.ExecutionDecision, objective string) map[string]interface{} {
 	// Update workspace state based on current phase
-	wsState := &mcp.WorkspaceState{
+	wsState := &orchestration.WorkspaceState{
 		Initialized:    true,
 		Root:          h.ws.Root(),
 		HasFoundation: h.wsExists("foundation"),
@@ -439,17 +439,17 @@ func (h *ToolHandler) executeTransition(state *mcp.SessionState, decision *mcp.E
 }
 
 // getRequiredAction returns the required action to unblock implementation
-func (h *ToolHandler) getRequiredAction(state *mcp.SessionState) string {
+func (h *ToolHandler) getRequiredAction(state *orchestration.SessionState) string {
 	switch {
-	case state.CurrentPhase != mcp.PhaseArchitecture:
+	case state.CurrentPhase != orchestration.PhaseArchitecture:
 		return "Complete Architecture phase first"
 	case state.Workspace == nil || !state.Workspace.HasFoundation:
 		return "Create foundation documentation"
 	case state.Workspace == nil || !state.Workspace.HasAuditReport:
 		return "Run audit to generate report"
-	case state.Confidence < mcp.PhaseConfidenceThreshold[mcp.PhaseImplementation]:
+	case state.Confidence < orchestration.PhaseConfidenceThreshold[orchestration.PhaseImplementation]:
 		return fmt.Sprintf("Increase confidence to %.0f%% (currently %.0f%%)", 
-			mcp.PhaseConfidenceThreshold[mcp.PhaseImplementation]*100, 
+			orchestration.PhaseConfidenceThreshold[orchestration.PhaseImplementation]*100, 
 			state.Confidence*100)
 	default:
 		return "Review blocked reasons above"
@@ -457,21 +457,21 @@ func (h *ToolHandler) getRequiredAction(state *mcp.SessionState) string {
 }
 
 // getPhaseGuidance returns guidance for the current phase
-func (h *ToolHandler) getPhaseGuidance(phase mcp.Phase, decision *mcp.ExecutionDecision) string {
+func (h *ToolHandler) getPhaseGuidance(phase orchestration.Phase, decision *orchestration.ExecutionDecision) string {
 	switch phase {
-	case mcp.PhaseProblem:
+	case orchestration.PhaseProblem:
 		return "Analyzing the objective to define the problem scope and constraints."
-	case mcp.PhaseKnowledge:
+	case orchestration.PhaseKnowledge:
 		return "Collecting existing knowledge and artifacts from the repository."
-	case mcp.PhaseFoundation:
+	case orchestration.PhaseFoundation:
 		return "Establishing foundational documentation including SPEC.md and architecture decisions."
-	case mcp.PhaseAudit:
+	case orchestration.PhaseAudit:
 		return "Running compliance audit against KDSE standards."
-	case mcp.PhaseAssessment:
+	case orchestration.PhaseAssessment:
 		return "Assessing audit findings and identifying improvement opportunities."
-	case mcp.PhaseArchitecture:
+	case orchestration.PhaseArchitecture:
 		return "Defining system architecture and technical approach."
-	case mcp.PhaseImplementation:
+	case orchestration.PhaseImplementation:
 		return "Implementing the solution based on approved architecture."
 	default:
 		return "Processing..."
@@ -479,16 +479,16 @@ func (h *ToolHandler) getPhaseGuidance(phase mcp.Phase, decision *mcp.ExecutionD
 }
 
 // calculateConfidence calculates confidence based on current state
-func (h *ToolHandler) calculateConfidence(phase mcp.Phase, decision *mcp.ExecutionDecision) float64 {
-	baseConfidence := map[mcp.Phase]float64{
-		mcp.PhaseIdle:           0.0,
-		mcp.PhaseProblem:        0.65,
-		mcp.PhaseKnowledge:      0.72,
-		mcp.PhaseFoundation:     0.78,
-		mcp.PhaseAudit:          0.82,
-		mcp.PhaseAssessment:     0.85,
-		mcp.PhaseArchitecture:   0.88,
-		mcp.PhaseImplementation: 0.92,
+func (h *ToolHandler) calculateConfidence(phase orchestration.Phase, decision *orchestration.ExecutionDecision) float64 {
+	baseConfidence := map[orchestration.Phase]float64{
+		orchestration.PhaseIdle:           0.0,
+		orchestration.PhaseProblem:        0.65,
+		orchestration.PhaseKnowledge:      0.72,
+		orchestration.PhaseFoundation:     0.78,
+		orchestration.PhaseAudit:          0.82,
+		orchestration.PhaseAssessment:     0.85,
+		orchestration.PhaseArchitecture:   0.88,
+		orchestration.PhaseImplementation: 0.92,
 	}
 
 	if base, ok := baseConfidence[phase]; ok {

@@ -12,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kdse/runtime/internal/mcp"
 	"github.com/kdse/runtime/internal/workspace"
 )
 
@@ -56,10 +55,9 @@ var (
 type SessionGuard struct {
 	repoPath  string
 	ws        *workspace.Workspace
-	orch     *mcp.Manager
-	mu       sync.RWMutex
-	autoInit bool
-	logging  bool
+	mu        sync.RWMutex
+	autoInit  bool
+	logging   bool
 }
 
 // SessionState represents the persisted session state used by the guard
@@ -86,22 +84,20 @@ type GuardResult struct {
 // NewSessionGuard creates a new SessionGuard for the given repository path
 func NewSessionGuard(repoPath string) *SessionGuard {
 	return &SessionGuard{
-		repoPath:  repoPath,
-		ws:        workspace.New(repoPath),
-		orch:      mcp.NewManager(repoPath),
-		autoInit:  false,
-		logging:   true,
+		repoPath: repoPath,
+		ws:       workspace.New(repoPath),
+		autoInit: false,
+		logging:  true,
 	}
 }
 
 // NewSessionGuardWithAutoInit creates a new SessionGuard with auto-initialization enabled
 func NewSessionGuardWithAutoInit(repoPath string) *SessionGuard {
 	return &SessionGuard{
-		repoPath:  repoPath,
-		ws:        workspace.New(repoPath),
-		orch:      mcp.NewManager(repoPath),
-		autoInit:  true,
-		logging:   true,
+		repoPath: repoPath,
+		ws:       workspace.New(repoPath),
+		autoInit: true,
+		logging:  true,
 	}
 }
 
@@ -279,14 +275,6 @@ func (g *SessionGuard) Initialize() error {
 		return fmt.Errorf("failed to save session state: %w", err)
 	}
 
-	// Step 3: Initialize orchestration session
-	if _, err := g.orch.Initialize(); err != nil {
-		if g.logging {
-			log.Printf("[GUARD] Orchestration initialization failed: %v", err)
-		}
-		return fmt.Errorf("failed to initialize orchestration: %w", err)
-	}
-
 	if g.logging {
 		log.Printf("[GUARD] Initialization complete. Session ID: %s", sessionState.SessionID)
 	}
@@ -407,11 +395,6 @@ func (g *SessionGuard) autoInitialize() error {
 	}
 
 	if err := g.saveSessionState(sessionState); err != nil {
-		return fmt.Errorf("auto-initialization failed: %w", err)
-	}
-
-	// Initialize orchestration
-	if _, err := g.orch.Initialize(); err != nil {
 		return fmt.Errorf("auto-initialization failed: %w", err)
 	}
 
