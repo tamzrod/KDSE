@@ -1,0 +1,105 @@
+#===============================================================================
+# KDSE MCP Tools Registry
+#===============================================================================
+# Machine-readable registry of all KDSE MCP tools.
+# This registry is the authoritative source for MCP tool definitions.
+# Auto-generated from commands.yaml - do not edit manually.
+#===============================================================================
+
+version: "1.0"
+registry_version: "1.0"
+generated: "2026-07-16"
+
+#-------------------------------------------------------------------------------
+# MCP Tools
+#-------------------------------------------------------------------------------
+# These tools are available via the KDSE MCP server.
+# Tool names are lowercase with underscores.
+#-------------------------------------------------------------------------------
+
+tools:
+
+  - name: help
+    description: Returns available tools and their usage information
+    category: meta
+    parameters: []
+    example: '{"name": "help"}'
+    handler: Help
+
+  - name: execute
+    description: PRIMARY ORCHESTRATION TOOL. Takes a user objective and automatically orchestrates the KDSE workflow. The LLM should NOT manually choose KDSE tools - execute decides which internal operations to invoke based on session state.
+    category: orchestration
+    parameters:
+      - name: objective
+        type: string
+        required: true
+        description: The user objective or request to orchestrate
+    example: '{"name": "execute", "arguments": {"objective": "Build an inventory management system"}}'
+    handler: Execute
+    strict_mode: true
+
+  - name: initialize
+    description: Initializes the KDSE .kdse/ workspace AND starts a new orchestration session. Enables STRICT mode by default - all engineering requests must pass through execute.
+    category: orchestration
+    parameters: []
+    example: '{"name": "initialize"}'
+    handler: Initialize
+
+  - name: status
+    description: Returns current repository status information including git state, file counts, KDSE workspace state, compliance indicators, and orchestration session state
+    category: orchestration
+    parameters: []
+    example: '{"name": "status"}'
+    handler: Status
+
+  - name: session_status
+    description: Returns detailed orchestration session status including current phase, confidence, phase history, and blocked reasons
+    category: orchestration
+    parameters: []
+    example: '{"name": "session_status"}'
+    handler: SessionStatus
+
+  - name: collect
+    description: "[DEBUG] Collects and catalogs engineering artifacts into .kdse/artifacts/. Prefer using execute for orchestration."
+    category: debug
+    parameters: []
+    example: '{"name": "collect"}'
+    handler: Collect
+
+  - name: foundation
+    description: "[DEBUG] Returns or creates foundation documentation under .kdse/foundation/. Prefer using execute for orchestration."
+    category: debug
+    parameters: []
+    example: '{"name": "foundation"}'
+    handler: Foundation
+
+  - name: audit
+    description: "[DEBUG] Generates audit reports under .kdse/reports/. Prefer using execute for orchestration."
+    category: debug
+    parameters: []
+    example: '{"name": "audit"}'
+    handler: Audit
+
+  - name: migrate
+    description: Migrates any legacy KDSE directories (foundation/, knowledge/, context/, artifacts/) from repository root to .kdse/
+    category: migration
+    parameters: []
+    example: '{"name": "migrate"}'
+    handler: Migrate
+
+#-------------------------------------------------------------------------------
+# Handler Mapping
+#-------------------------------------------------------------------------------
+# Maps tool names to their Go handler functions in mcp/tools/tools.go
+#-------------------------------------------------------------------------------
+
+handlers:
+  Help: github.com/kdse/mcp/tools.ToolHandler.Help
+  Execute: github.com/kdse/mcp/tools.ToolHandler.Execute
+  Initialize: github.com/kdse/mcp/tools.ToolHandler.Initialize
+  Status: github.com/kdse/mcp/tools.ToolHandler.Status
+  SessionStatus: github.com/kdse/mcp/tools.ToolHandler.SessionStatus
+  Collect: github.com/kdse/mcp/tools.ToolHandler.Collect
+  Foundation: github.com/kdse/mcp/tools.ToolHandler.Foundation
+  Audit: github.com/kdse/mcp/tools.ToolHandler.Audit
+  Migrate: github.com/kdse/mcp/tools.ToolHandler.Migrate
