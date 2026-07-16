@@ -1,6 +1,5 @@
-// Package knowledge implements minimal Knowledge Promotion capability.
-// Responsibility: Notebook Entry → Knowledge Candidate
-// No review workflows. No approval workflows. No policy engines.
+// Package knowledge implements the Knowledge Promotion capability for KDSE.
+// Supports the derivation pipeline: Evidence → Derivation → Knowledge Artifact with Evidence Strength.
 package knowledge
 
 import (
@@ -17,20 +16,36 @@ const (
 	StatusNotebook  Status = "notebook"   // Entry in notebook
 	StatusCandidate Status = "candidate"  // Promoted to candidate
 	StatusPromoted  Status = "promoted"   // Promoted to knowledge
+	StatusRejected  Status = "rejected"    // Rejected during review
+)
+
+// EvidenceStrength represents the confidence level (1-5 stars)
+type EvidenceStrength int
+
+const (
+	EvidenceStrengthMinimal     EvidenceStrength = 1 // ★☆☆☆☆
+	EvidenceStrengthLimited     EvidenceStrength = 2 // ★★☆☆☆
+	EvidenceStrengthModerate    EvidenceStrength = 3 // ★★★☆☆
+	EvidenceStrengthStrong     EvidenceStrength = 4 // ★★★★☆
+	EvidenceStrengthVeryStrong EvidenceStrength = 5 // ★★★★★
 )
 
 // Entry represents a knowledge entry
 type Entry struct {
-	ID          string    `json:"id"`
-	Title       string    `json:"title"`
-	Content     string    `json:"content"`
-	Source      string    `json:"source"`      // notebook, external, derived
-	Status      Status    `json:"status"`
-	Tags        []string  `json:"tags,omitempty"`
-	Links       []string  `json:"links,omitempty"`
-	CreatedAt   string    `json:"created_at"`
-	PromotedAt  string    `json:"promoted_at,omitempty"`
-	PromotedBy  string    `json:"promoted_by,omitempty"`
+	ID             string          `json:"id"`
+	Title          string          `json:"title"`
+	Content        string          `json:"content"`
+	Source         string          `json:"source"`           // Evidence source reference
+	Status         Status          `json:"status"`
+	Tags           []string        `json:"tags,omitempty"`
+	Links          []string        `json:"links,omitempty"`  // Evidence links
+	EvidenceRefs   []string        `json:"evidence_refs,omitempty"`
+	EvidenceStrength EvidenceStrength `json:"evidence_strength,omitempty"`
+	Derivation     string          `json:"derivation,omitempty"` // How this was derived
+	ReviewRationale string         `json:"review_rationale,omitempty"`
+	CreatedAt      string          `json:"created_at"`
+	PromotedAt     string          `json:"promoted_at,omitempty"`
+	PromotedBy     string          `json:"promoted_by,omitempty"`
 }
 
 // Manager handles knowledge promotion
@@ -123,6 +138,51 @@ func (m *Manager) PromoteToKnowledge(id string) error {
 	return m.save()
 }
 
+// Review handles the review decision for a candidate
+func (m *Manager) Review(id string, accept bool, rationale string, strength EvidenceStrength) error {
+	entry, ok := m.entries[id]
+	if !ok {
+		return &NotFoundError{ID: id}
+	}
+
+	if entry.Status != StatusCandidate {
+		return &InvalidTransitionError{From: string(entry.Status), To: "review"}
+	}
+
+	entry.ReviewRationale = rationale
+	entry.EvidenceStrength = strength
+
+	if accept {
+		entry.Status = StatusPromoted
+	} else {
+		entry.Status = StatusRejected
+	}
+	entry.PromotedAt = time.Now().Format(time.RFC3339)
+	entry.PromotedBy = "runtime"
+
+	return m.save()
+}
+
+// SetEvidenceStrength sets the evidence strength for an entry
+func (m *Manager) SetEvidenceStrength(id string, strength EvidenceStrength) error {
+	entry, ok := m.entries[id]
+	if !ok {
+		return &NotFoundError{ID: id}
+	}
+	entry.EvidenceStrength = strength
+	return m.save()
+}
+
+// AddEvidenceRef adds an evidence reference to an entry
+func (m *Manager) AddEvidenceRef(id string, ref string) error {
+	entry, ok := m.entries[id]
+	if !ok {
+		return &NotFoundError{ID: id}
+	}
+	entry.EvidenceRefs = append(entry.EvidenceRefs, ref)
+	return m.save()
+}
+
 // Get returns an entry by ID
 func (m *Manager) Get(id string) *Entry {
 	return m.entries[id]
@@ -207,11 +267,65 @@ func Format(entries []*Entry) string {
 		result += "## " + e.Title + "\n"
 		result += "**ID:** " + e.ID + "\n"
 		result += "**Status:** " + string(e.Status) + "\n"
+		if e.EvidenceStrength > 0 {
+			result += "**Evidence Strength:** " + StrengthToStars(e.EvidenceStrength) + "\n"
+		}
+		if len(e.EvidenceRefs) > 0 {
+			result += "**Evidence:** " + joinStrings(e.EvidenceRefs, ", ") + "\n"
+		}
 		result += "**Created:** " + e.CreatedAt + "\n"
 		if e.PromotedAt != "" {
-			result += "**Promoted:** " + e.PromotedAt + "\n"
+			result += "**Updated:** " + e.PromotedAt + "\n"
+		}
+		if e.ReviewRationale != "" {
+			result += "**Review:** " + e.ReviewRationale + "\n"
 		}
 		result += "\n" + e.Content + "\n\n"
 	}
 	return result
+}
+
+// StrengthToStars converts evidence strength to star rating
+func StrengthToStars(s EvidenceStrength) string {
+	switch s {
+	case EvidenceStrengthVeryStrong:
+		return "★★★★★"
+	case EvidenceStrengthStrong:
+		return "★★★★☆"
+	case EvidenceStrengthModerate:
+		return "★★★☆☆"
+	case EvidenceStrengthLimited:
+		return "★★☆☆☆"
+	case EvidenceStrengthMinimal:
+		return "★☆☆☆☆"
+	default:
+		return "☆☆☆☆☆"
+	}
+}
+
+// joinStrings joins strings with separator
+func joinStrings(strs []string, sep string) string {
+	if len(strs) == 0 {
+		return ""
+	}
+	result := strs[0]
+	for _, s := range strs[1:] {
+		result += sep + s
+	}
+	return result
+}
+
+// Stats returns statistics about knowledge entries
+func (m *Manager) Stats() map[string]int {
+	stats := map[string]int{
+		"notebook":  0,
+		"candidate": 0,
+		"promoted": 0,
+		"rejected": 0,
+		"total":     len(m.entries),
+	}
+	for _, e := range m.entries {
+		stats[string(e.Status)]++
+	}
+	return stats
 }

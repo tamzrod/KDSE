@@ -1,99 +1,68 @@
 # Knowledge-Driven Software Engineering (KDSE)
 
-**KDSE** is an engineering methodology in which structured knowledge serves as the authoritative source from which all other software artifacts are derived, maintained, and verified throughout the software lifecycle.
+**Lean KDSE** is a practical engineering methodology where structured knowledge serves as the authoritative source from which all software artifacts are derived, maintained, and verified.
 
-## Quick Reference
+## Quick Start
 
-| Document | Purpose |
-|----------|---------|
-| [Foundation](docs/foundation/) | The authoritative definition of KDSE |
-| [Evolution](docs/evolution/) | Evidence-driven methodology improvements |
-| [Audit](docs/audit/) | KDSE Audit System standards |
-| [Runtime](runtime/) | Official reference implementation |
-| [000-what-is-kdse.md](docs/foundation/000-what-is-kdse.md) | What is KDSE? |
-| [001-why-kdse-exists.md](docs/foundation/001-why-kdse-exists.md) | Why KDSE exists |
-| [002-scope.md](docs/foundation/002-scope.md) | What KDSE is and is not |
-| [003-core-principles.md](docs/foundation/003-core-principles.md) | Core principles |
-| [004-engineering-model.md](docs/foundation/004-engineering-model.md) | Engineering lifecycle |
-| [005-engineering-artifacts.md](docs/foundation/005-engineering-artifacts.md) | Artifact definitions and stewardship |
-| [006-chain-of-authority.md](docs/foundation/006-chain-of-authority.md) | Authority hierarchy |
-| [007-glossary.md](docs/foundation/007-glossary.md) | Terminology |
-| [008-future-vision.md](docs/foundation/008-future-vision.md) | Long-term vision and maturity model |
-| [009-engineering-knowledge.md](docs/foundation/009-engineering-knowledge.md) | Engineering knowledge definition |
-| [010-knowledge-derivation.md](docs/foundation/010-knowledge-derivation.md) | Derivation mechanics |
-| [011-adoption-model.md](docs/foundation/011-adoption-model.md) | Adoption path |
-| [012-traceability.md](docs/foundation/012-traceability.md) | Traceability framework |
-| [013-authority-resolution.md](docs/foundation/013-authority-resolution.md) | Authority and conflict resolution |
-| [014-engineering-review-process.md](docs/foundation/014-engineering-review-process.md) | Methodology review process |
-| [015-reference-artifacts.md](docs/foundation/015-reference-artifacts.md) | Reference Artifacts as engineering evidence |
-| [016-reference-analysis-knowledge-derivation.md](docs/foundation/016-reference-analysis-knowledge-derivation.md) | Knowledge Derivation Lifecycle |
-| [017-engineering-knowledge-definition.md](docs/foundation/017-engineering-knowledge-definition.md) | Domain Knowledge definition |
-| [018-architecture-phase.md](docs/foundation/018-architecture-phase.md) | Architecture as distinct phase |
-| [019-implementation-phase.md](docs/foundation/019-implementation-phase.md) | Implementation as distinct phase |
-| [020-domain-interfaces.md](docs/foundation/020-domain-interfaces.md) | Domain Interfaces |
-| [021-evidence-and-strength.md](docs/foundation/021-evidence-and-strength.md) | Evidence and Evidence Strength |
-| [022-collector-philosophy.md](docs/foundation/022-collector-philosophy.md) | Collector philosophy |
-| [023-question-classification.md](docs/foundation/023-question-classification.md) | Question classification |
-| [024-engineering-independence-test.md](docs/foundation/024-engineering-independence-test.md) | Engineering Independence Test |
-| [025-reference-artifact-management.md](docs/foundation/025-reference-artifact-management.md) | Reference Artifact Management |
-| [DEVELOPMENT-EXPERIENCE-SPECIFICATION.md](docs/foundation/DEVELOPMENT-EXPERIENCE-SPECIFICATION.md) | Development Experience schema |
-| [CONFIDENCE-MODEL.md](docs/foundation/CONFIDENCE-MODEL.md) | Confidence levels for experiences |
-| [CAPTURE-RULES.md](docs/foundation/CAPTURE-RULES.md) | Rules for capturing experiences |
-| [RETRIEVAL-RULES.md](docs/foundation/RETRIEVAL-RULES.md) | Rules for retrieving experiences |
+```bash
+# Initialize KDSE workspace
+kdse init
+
+# Add knowledge to notebook
+kdse notebook add "Users need password reset" --source "customer-feedback.md"
+
+# Promote to candidate
+kdse promote submit <entry-id>
+
+# View status
+kdse status
+```
 
 ## Core Principles
 
-1. Knowledge precedes architecture
-2. Architecture precedes implementation
-3. Implementation precedes verification
-4. Knowledge is the longest-lived artifact
-5. Engineering decisions must be traceable
-6. Code realizes knowledge
-7. Knowledge is language-independent
-8. Authority flows downward
-9. Verification confirms alignment
-10. Evolution maintains authority
-11. Reference Artifacts support Domain Knowledge (not replace)
-12. Domain Knowledge is implementation-independent
-13. Evidence Strength strengthens but does not authorize
-14. Repository First: analyze artifacts before asking operator
-15. Contradictions are preserved, never silently resolved
+| # | Principle | What It Means |
+|---|-----------|---------------|
+| 1 | Knowledge precedes architecture | Derive, don't assume |
+| 2 | Architecture precedes implementation | Follow the design |
+| 3 | Authority flows downward | Lower can't contradict higher |
+| 4 | Traceability enables authority | Every decision traces to knowledge |
+| 5 | Repository first | Analyze artifacts before asking |
 
-## Engineering Lifecycle
+## Foundation Documents
+
+| Document | Purpose |
+|----------|---------|
+| [001-principles.md](docs/foundation/001-principles.md) | Core principles and philosophy |
+| [002-knowledge-engine.md](docs/foundation/002-knowledge-engine.md) | Evidence → Knowledge pipeline |
+| [003-authority-traceability.md](docs/foundation/003-authority-traceability.md) | Authority hierarchy and traceability |
+| [004-workspace.md](docs/foundation/004-workspace.md) | `.kdse/` workspace structure |
+| [005-adoption.md](docs/foundation/005-adoption.md) | Getting started guide |
+
+## Architecture
 
 ```
-Reference Artifacts → Reference Artifact Management → Reference Analysis → Domain Knowledge Derivation → Evidence Correlation → Knowledge Validation → Approved Domain Knowledge → Architecture → Implementation → Verification → Evolution
+Evidence → Derivation → Knowledge Artifact → Architecture → Implementation → Verification
+     ↑                                                      ↓
+     └──────────── Evidence Strength (confidence) ───────────┘
 ```
 
 ## Key Concepts
 
-- **Reference Artifacts**: Existing sources of domain information (evidence, not authority)
-- **Reference Artifact Management**: Discovery, cataloging, classification, and provenance of Reference Artifacts (does NOT analyze or derive knowledge)
-- **Collector**: Methodology component that consumes cataloged artifacts and derives Domain Knowledge
-- **Domain Knowledge**: Implementation-independent understanding that remains valid if implementation is rewritten
-- **Domain Interfaces**: Domain responsibilities that exclude implementation technologies
-- **Evidence Strength**: Domain support measure (★★★★★ to ★☆☆☆☆) based on corroborating artifacts
-- **Engineering Independence Test**: Validation ensuring knowledge remains valid across technology changes
-- **Question Classification**: Routing unresolved items to correct phase (Domain Knowledge/Architecture/Implementation)
-- **Repository First Principle**: Analyze all artifacts before asking operator
-- **Artifact Lifecycle**: Progression through defined states (Draft, Reviewed, Approved, etc.)
-- **Stewardship**: Responsibility without dominion; knowledge is stewarded, not owned
-- **Traceability**: The ability to follow relationships between artifacts
-- **Separation of Concerns**: Reference Artifacts, Reference Artifact Management, Domain Knowledge, Architecture, and Implementation remain independent
-- **Development Experience**: Verified development knowledge captured from real events, enabling knowledge transfer between AI sessions
+- **Evidence**: Raw domain information from any source
+- **Knowledge Artifact**: Structured understanding with Evidence Strength
+- **Derivation Pipeline**: Evidence → Derivation → Knowledge
+- **Agreement**: Compact project state for delta communication
 
-## Separation of Concerns
+## CLI Commands
 
-KDSE maintains strict separation between:
-
-| Concern | Description |
+| Command | Description |
 |---------|-------------|
-| Reference Artifact | Raw domain evidence (project docs, implementation, vendor docs) |
-| Reference Artifact Management | Discovery, cataloging, classification, provenance (does NOT analyze) |
-| Domain Knowledge | Implementation-independent understanding |
-| Architecture | Organization of Domain Knowledge into software |
-| Implementation | Realization of Architecture using specific technologies |
-| Development Experience | Verified development knowledge (lateral artifact, available at any phase) |
+| `kdse init` | Initialize `.kdse/` workspace |
+| `kdse status` | Show current state |
+| `kdse notebook add` | Add insight to notebook |
+| `kdse promote submit` | Submit candidate for review |
+| `kdse promote review` | Accept/reject with rationale |
+| `kdse agreement init` | Initialize project agreement |
 
 ## License
 
