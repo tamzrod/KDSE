@@ -1,10 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
+	"github.com/kdse/runtime/internal/agreement"
 	"github.com/kdse/runtime/internal/config"
 	"github.com/kdse/runtime/internal/detection"
 	"github.com/kdse/runtime/internal/context"
@@ -60,6 +62,8 @@ func main() {
 		handleCompliance(repoPath, args)
 	case "context":
 		handleContext(repoPath, args)
+	case "agreement":
+		handleAgreement(repoPath, args)
 	case "version", "--version", "-v":
 		fmt.Printf("KDSE Runtime v%s\n", version)
 	case "help", "--help", "-h":
@@ -1315,5 +1319,159 @@ func handleCompliance(repoPath string, args []string) {
 		fmt.Println("✓ Compliance validated")
 		fmt.Println()
 		fmt.Println("The project is KDSE compliant. Engineering may proceed.")
+	}
+}
+
+// handleAgreement manages the Agreement subsystem
+func handleAgreement(repoPath string, args []string) {
+	if len(args) < 1 {
+		printAgreementUsage()
+		os.Exit(1)
+	}
+
+	subcmd := args[0]
+	mgr := agreement.NewManager(repoPath)
+
+	switch subcmd {
+	case "init":
+		handleAgreementInit(mgr, args[1:])
+	case "show":
+		handleAgreementShow(mgr)
+	case "phase":
+		handleAgreementPhase(mgr, args[1:])
+	case "add-assumption":
+		handleAgreementAddAssumption(mgr, args[1:])
+	case "validate":
+		handleAgreementValidate(mgr, args[1:])
+	default:
+		fmt.Printf("Unknown agreement command: %s\n", subcmd)
+		printAgreementUsage()
+		os.Exit(1)
+	}
+}
+
+func printAgreementUsage() {
+	fmt.Println(`KDSE Agreement Commands
+
+Usage: kdse agreement <command> [options]
+
+Commands:
+  init              Initialize a new agreement
+  show              Display current agreement
+  phase <phase>     Update current phase
+  add-assumption    Add a shared assumption
+  validate          Validate constraints
+
+Examples:
+  kdse agreement init
+  kdse agreement show
+  kdse agreement phase Problem
+  kdse agreement add-assumption "We use Go for backend services"
+  kdse agreement validate --subsystem internal/api`)
+}
+
+func handleAgreementInit(mgr *agreement.Manager, args []string) {
+	// Get project name from git or directory
+	projectName := "unknown"
+	gitDir := ".git"
+	if _, err := os.Stat(gitDir); err == nil {
+		// Try to get repo name from git
+		projectName = "kdse-project"
+	}
+
+	a, err := mgr.Create(projectName, "", "1.0.0", version)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
+	fmt.Println("║              AGREEMENT INITIALIZED                           ║")
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+	fmt.Printf("║ Project:     %s\n", a.ProjectName)
+	fmt.Printf("║ Phase:       %s\n", a.CurrentPhase)
+	fmt.Printf("║ Methodology: v%s\n", a.MethodologyVersion)
+	fmt.Printf("║ Runtime:     v%s\n", a.RuntimeVersion)
+	fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
+}
+
+func handleAgreementShow(mgr *agreement.Manager) {
+	a, err := mgr.Get()
+	if err != nil {
+		if _, ok := err.(*os.PathError); ok {
+			fmt.Println("No agreement found. Run 'kdse agreement init' first.")
+			os.Exit(1)
+		}
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	data, _ := json.MarshalIndent(a, "", "  ")
+	fmt.Println(string(data))
+}
+
+func handleAgreementPhase(mgr *agreement.Manager, args []string) {
+	if len(args) < 1 {
+		fmt.Fprintf(os.Stderr, "Error: phase name required\n")
+		os.Exit(1)
+	}
+
+	phase := args[0]
+	if err := mgr.UpdatePhase(phase); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Phase updated to: %s\n", phase)
+}
+
+func handleAgreementAddAssumption(mgr *agreement.Manager, args []string) {
+	if len(args) < 1 {
+		fmt.Fprintf(os.Stderr, "Error: assumption statement required\n")
+		os.Exit(1)
+	}
+
+	statement := strings.Join(args, " ")
+	id, err := mgr.AddAssumption(statement)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Assumption added: %s\n", id)
+}
+
+func handleAgreementValidate(mgr *agreement.Manager, args []string) {
+	subsystem := ""
+	action := ""
+
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--subsystem":
+			if i+1 < len(args) {
+				subsystem = args[i+1]
+				i++
+			}
+		case "--action":
+			if i+1 < len(args) {
+				action = args[i+1]
+				i++
+			}
+		}
+	}
+
+	if subsystem == "" {
+		subsystem = "/"
+	}
+	if action == "" {
+		action = "modify"
+	}
+
+	valid, msg := mgr.ValidateConstraint(subsystem, action)
+	if valid {
+		fmt.Println("✓ Constraint validated - action allowed")
+	} else {
+		fmt.Printf("✗ Constraint violation: %s\n", msg)
+		os.Exit(1)
 	}
 }

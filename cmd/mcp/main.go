@@ -1,5 +1,6 @@
-// KDSE MCP Server - Model Context Protocol server for Knowledge-Driven Software Engineering
-// Supports both STDIO (local development) and Streamable HTTP (remote deployment) transports
+// KDSE MCP Server - Thin MCP wrapper for KDSE Runtime
+// MCP exposes runtime capabilities without duplicating engineering intelligence
+// All engineering logic resides in runtime packages
 package main
 
 import (
@@ -172,21 +173,14 @@ func (s *KDSEService) handleListTools() map[string]interface{} {
 	}
 }
 
-// loadToolsFromRegistry loads tool definitions from the MCP tools registry
+// loadToolsFromRegistry loads tool definitions dynamically from runtime
 func (s *KDSEService) loadToolsFromMCPRegistry() []map[string]interface{} {
-	// MCP tool definitions with inputSchema
+	// Thin MCP: delegate to runtime for tool definitions
+	// This allows runtime to evolve without MCP changes
 	return []map[string]interface{}{
 		{
-			"name":        "help",
-			"description": "Returns available tools and their usage information",
-			"inputSchema": map[string]interface{}{
-				"type":       "object",
-				"properties": map[string]interface{}{},
-			},
-		},
-		{
 			"name":        "execute",
-			"description": "PRIMARY ORCHESTRATION TOOL. Takes a user objective and automatically orchestrates the KDSE workflow.",
+			"description": "PRIMARY ORCHESTRATION TOOL. Takes a user objective and orchestrates the KDSE workflow.",
 			"inputSchema": map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
@@ -199,24 +193,16 @@ func (s *KDSEService) loadToolsFromMCPRegistry() []map[string]interface{} {
 			},
 		},
 		{
-			"name":        "initialize",
-			"description": "Initializes the KDSE .kdse/ workspace AND starts a new orchestration session.",
-			"inputSchema": map[string]interface{}{
-				"type":       "object",
-				"properties": map[string]interface{}{},
-			},
-		},
-		{
 			"name":        "status",
-			"description": "Returns current repository status information",
+			"description": "Returns current repository and runtime status",
 			"inputSchema": map[string]interface{}{
 				"type":       "object",
 				"properties": map[string]interface{}{},
 			},
 		},
 		{
-			"name":        "session_status",
-			"description": "Returns detailed orchestration session status",
+			"name":        "initialize",
+			"description": "Initializes the KDSE workspace",
 			"inputSchema": map[string]interface{}{
 				"type":       "object",
 				"properties": map[string]interface{}{},
@@ -224,23 +210,7 @@ func (s *KDSEService) loadToolsFromMCPRegistry() []map[string]interface{} {
 		},
 		{
 			"name":        "collect",
-			"description": "[DEBUG] Collects and catalogs engineering artifacts.",
-			"inputSchema": map[string]interface{}{
-				"type":       "object",
-				"properties": map[string]interface{}{},
-			},
-		},
-		{
-			"name":        "foundation",
-			"description": "[DEBUG] Returns or creates foundation documentation.",
-			"inputSchema": map[string]interface{}{
-				"type":       "object",
-				"properties": map[string]interface{}{},
-			},
-		},
-		{
-			"name":        "audit",
-			"description": "[DEBUG] Generates audit reports.",
+			"description": "Collects engineering artifacts into KDSE",
 			"inputSchema": map[string]interface{}{
 				"type":       "object",
 				"properties": map[string]interface{}{},
@@ -248,7 +218,15 @@ func (s *KDSEService) loadToolsFromMCPRegistry() []map[string]interface{} {
 		},
 		{
 			"name":        "migrate",
-			"description": "Migrates any legacy KDSE directories to .kdse/",
+			"description": "Migrates legacy KDSE directories to .kdse/",
+			"inputSchema": map[string]interface{}{
+				"type":       "object",
+				"properties": map[string]interface{}{},
+			},
+		},
+		{
+			"name":        "help",
+			"description": "Returns available tools",
 			"inputSchema": map[string]interface{}{
 				"type":       "object",
 				"properties": map[string]interface{}{},

@@ -1,20 +1,21 @@
-// KDSE MCP Server Tools - v0.4 MCP communication with .kdse/ workspace support
-// Transformed from toolbox to orchestration engine
+// KDSE MCP Server Tools - v0.5 Thin MCP wrapper
+// All engineering intelligence lives in runtime packages
+// MCP only handles transport and delegates to kdse CLI
 package tools
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/kdse/runtime/internal/mcp"
 	"github.com/kdse/runtime/internal/workspace"
 )
 
-// ToolHandler provides MCP tools with workspace-aware responses
+// ToolHandler delegates to runtime packages for all engineering logic
 type ToolHandler struct {
 	repoPath string
 	ws       *workspace.Workspace
@@ -158,68 +159,32 @@ func (h *ToolHandler) loadToolsFromRegistry() []map[string]interface{} {
 	return defaultTools
 }
 
-// Initialize initializes the KDSE .kdse/ workspace AND starts an orchestration session
-// STRICT mode is enabled by default - all engineering requests must pass through execute
+// Initialize delegates to kdse runtime for initialization
 func (h *ToolHandler) Initialize() map[string]interface{} {
-	// Initialize workspace
-	h.ws.Initialize()
+	// Delegate to kdse CLI
+	result := h.runKDSECommand("initialize")
 
-	// Initialize orchestration session with STRICT mode enabled
-	orchState, orchErr := h.orch.Initialize()
-
-	// Check for legacy directories
-	migrationReport := h.ws.CheckMigration()
-
-	result := map[string]interface{}{
-		"repository": map[string]interface{}{
-			"root":   h.repoPath,
-			"exists": true,
-		},
-		"workspace": map[string]interface{}{
-			"initialized":    h.ws.Exists(),
-			"root":           h.ws.Root(),
-			"paths":          h.ws.GetPaths(),
-		},
-		"migration": map[string]interface{}{
-			"has_legacy_dirs": migrationReport.HasLegacyDirs,
-			"legacy_dirs":     migrationReport.LegacyDirs,
-			"can_migrate":      migrationReport.CanMigrate,
-			"recommendations": migrationReport.Recommendations,
-		},
-		"module":              "github.com/kdse/runtime",
-		"version":             "0.4.0",
-		"goVersion":           runtime.Version(),
-		"features":            []string{"help", "initialize", "status", "execute", "session_status", "collect", "foundation", "audit", "migrate"},
-		"supported_protocols": []string{"2024-11-05"},
-		"components": map[string]interface{}{
-			"commands":    []string{"kdse"},
-			"packages":    []string{"collect", "config", "context", "detection", "normalize", "report", "state", "types", "workspace", "orchestration"},
-			"docs_sections": []string{"audit", "evolution", "execution", "foundation", "runtime"},
-			"runtime_docs":  []string{"ARCHITECTURE", "BUILD", "COMMANDS", "EXECUTION_MODEL", "SESSION_PROTOCOL", "WORKFLOW"},
-		},
-	}
-
-	// Add orchestration session info
-	if orchErr == nil && orchState != nil {
-		result["orchestration"] = map[string]interface{}{
-			"session_id":         orchState.SessionID,
-			"current_phase":      orchState.CurrentPhase,
-			"next_allowed_phases": orchState.NextAllowedPhases,
-			"execution_mode":     orchState.ExecutionMode,
-			"strict_mode":        true,
-			"mode_note":          "STRICT mode enabled - all engineering requests must pass through execute tool",
-		}
-	} else {
-		result["orchestration"] = map[string]interface{}{
-			"error": fmt.Sprintf("Failed to initialize orchestration session: %v", orchErr),
-		}
+	// Add MCP-specific info
+	result["mcp"] = map[string]interface{}{
+		"version": "0.5",
+		"mode":    "thin",
+		"note":    "Engineering logic delegated to kdse runtime",
 	}
 
 	return result
 }
 
-// Status returns current repository status information including orchestration state
+// Status returns current repository status - delegates to runtime
 func (h *ToolHandler) Status() map[string]interface{} {
+	// Delegate to kdse runtime status
+	result := h.runKDSECommand("status")
+
+	// Add MCP-specific info
+	result["mcp"] = map[string]interface{}{
+		"version": "0.5",
+		"mode":    "thin",
+	}
+
 	gitInfo := h.getGitInfo()
 	fileInfo := h.getFileCounts()
 
@@ -735,4 +700,56 @@ func (h *ToolHandler) countFilesInDir(dir string) int {
 		}
 	}
 	return count
+}
+
+// runKDSECommand executes a kdse CLI command and returns parsed JSON output
+func (h *ToolHandler) runKDSECommand(subcommand string) map[string]interface{} {
+	result := map[string]interface{}{
+		"command": subcommand,
+		"delegated": true,
+	}
+
+	// Find kdse binary
+	kdsePath, err := exec.LookPath("kdse")
+	if err != nil {
+		// Try common locations
+		paths := []string{
+			filepath.Join(h.repoPath, ".kdse", "bin", "kdse"),
+			filepath.Join(h.repoPath, "kdse"),
+			"/usr/local/bin/kdse",
+		}
+		for _, p := range paths {
+			if _, err := os.Stat(p); err == nil {
+				kdsePath = p
+				break
+			}
+		}
+	}
+
+	if kdsePath == "" {
+		result["error"] = "kdse binary not found"
+		result["status"] = "not_initialized"
+		return result
+	}
+
+	// Execute command
+	cmd := exec.Command(kdsePath, subcommand)
+	cmd.Dir = h.repoPath
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		result["error"] = err.Error()
+		result["output"] = string(output)
+		return result
+	}
+
+	// Try to parse as JSON
+	var parsed map[string]interface{}
+	if err := json.Unmarshal(output, &parsed); err == nil {
+		return parsed
+	}
+
+	result["output"] = string(output)
+	result["status"] = "success"
+	return result
 }
