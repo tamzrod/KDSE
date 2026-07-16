@@ -287,7 +287,7 @@ func (r *Runtime) createTemplateFiles(result *InitializeResult) {
 	}
 
 	foundationPath := filepath.Join(r.kdsePath, DirFoundation)
-	for filename, content := range foundationTemplates {
+	for filename := range foundationTemplates {
 		r.writeTemplateFile(filepath.Join(foundationPath, filename), filename, result)
 	}
 
@@ -296,7 +296,7 @@ func (r *Runtime) createTemplateFiles(result *InitializeResult) {
 		"README.md": r.generateKnowledgeReadme(),
 	}
 	knowledgePath := filepath.Join(r.kdsePath, DirKnowledge)
-	for filename, content := range knowledgeTemplates {
+	for filename := range knowledgeTemplates {
 		r.writeTemplateFile(filepath.Join(knowledgePath, filename), DirKnowledge+"/"+filename, result)
 	}
 
@@ -313,7 +313,7 @@ func (r *Runtime) createTemplateFiles(result *InitializeResult) {
 		},
 	}
 	for subdir, files := range knowledgeSubs {
-		for filename, content := range files {
+		for filename := range files {
 			r.writeTemplateFile(filepath.Join(knowledgePath, subdir, filename), DirKnowledge+"/"+subdir+"/"+filename, result)
 		}
 	}
@@ -323,7 +323,7 @@ func (r *Runtime) createTemplateFiles(result *InitializeResult) {
 		"README.md": r.generateLaboratoryReadme(),
 	}
 	labPath := filepath.Join(r.kdsePath, DirLaboratory)
-	for filename, content := range labTemplates {
+	for filename := range labTemplates {
 		r.writeTemplateFile(filepath.Join(labPath, filename), DirLaboratory+"/"+filename, result)
 	}
 
@@ -337,7 +337,7 @@ func (r *Runtime) createTemplateFiles(result *InitializeResult) {
 		},
 	}
 	for subdir, files := range labSubs {
-		for filename, content := range files {
+		for filename := range files {
 			r.writeTemplateFile(filepath.Join(labPath, subdir, filename), DirLaboratory+"/"+subdir+"/"+filename, result)
 		}
 	}
@@ -347,7 +347,7 @@ func (r *Runtime) createTemplateFiles(result *InitializeResult) {
 		"README.md": r.generateEvidenceReadme(),
 	}
 	evidencePath := filepath.Join(r.kdsePath, DirEvidence)
-	for filename, content := range evidenceTemplates {
+	for filename := range evidenceTemplates {
 		r.writeTemplateFile(filepath.Join(evidencePath, filename), DirEvidence+"/"+filename, result)
 	}
 
@@ -356,7 +356,7 @@ func (r *Runtime) createTemplateFiles(result *InitializeResult) {
 		"README.md": r.generateReportsReadme(),
 	}
 	reportsPath := filepath.Join(r.kdsePath, DirReports)
-	for filename, content := range reportsTemplates {
+	for filename := range reportsTemplates {
 		r.writeTemplateFile(filepath.Join(reportsPath, filename), DirReports+"/"+filename, result)
 	}
 
@@ -365,7 +365,7 @@ func (r *Runtime) createTemplateFiles(result *InitializeResult) {
 		"README.md": r.generateReferencesReadme(),
 	}
 	referencesPath := filepath.Join(r.kdsePath, DirReferences)
-	for filename, content := range referencesTemplates {
+	for filename := range referencesTemplates {
 		r.writeTemplateFile(filepath.Join(referencesPath, filename), DirReferences+"/"+filename, result)
 	}
 
@@ -374,7 +374,7 @@ func (r *Runtime) createTemplateFiles(result *InitializeResult) {
 		"README.md": r.generateTraceabilityReadme(),
 	}
 	tracePath := filepath.Join(r.kdsePath, DirTraceability)
-	for filename, content := range traceTemplates {
+	for filename := range traceTemplates {
 		r.writeTemplateFile(filepath.Join(tracePath, filename), DirTraceability+"/"+filename, result)
 	}
 
@@ -383,7 +383,7 @@ func (r *Runtime) createTemplateFiles(result *InitializeResult) {
 		"README.md": r.generateArtifactsReadme(),
 	}
 	artifactsPath := filepath.Join(r.kdsePath, DirArtifacts)
-	for filename, content := range artifactsTemplates {
+	for filename := range artifactsTemplates {
 		r.writeTemplateFile(filepath.Join(artifactsPath, filename), DirArtifacts+"/"+filename, result)
 	}
 }
@@ -711,12 +711,12 @@ This directory contains all collected engineering knowledge for the project.
 
 ## Structure
 
-```
+~~~
 knowledge/
 ├── general/         # General engineering knowledge
 ├── operational/     # Operational knowledge (runbooks, procedures)
 └── developmental/   # Development knowledge (patterns, practices)
-```
+~~~
 
 ## Purpose
 
@@ -778,11 +778,11 @@ This directory contains the experimental and validation workspace.
 
 ## Structure
 
-```
+~~~
 laboratory/
 ├── experiments/    # Hypothesis-driven experiments
 └── reports/       # Laboratory reports and validation results
-```
+~~~
 
 ## Purpose
 
@@ -1060,12 +1060,12 @@ This directory contains deferred engineering ideas.
 
 ## Structure
 
-```
+~~~
 someday/
 ├── ideas/       # Active someday ideas
 ├── archived/    # Archived ideas
 └── promoted/   # Promoted ideas
-```
+~~~
 `
 	default:
 		return r.generateDefaultReadme()

@@ -305,7 +305,7 @@ func TestFoundationThresholdBlocking(t *testing.T) {
 	}
 
 	// Even if we manually set phase to Implement, it should still block
-	state.CurrentPhase = PhaseImplement
+	state.CurrentPhase = PhaseImplementation
 	state.Confidence.MeetsThreshold = false
 
 	decision := engine.decideNextPhase()

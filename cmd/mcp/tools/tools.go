@@ -10,7 +10,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/kdse/mcp/internal/orchestration"
+	"github.com/kdse/runtime/internal/mcp"
 	"github.com/kdse/runtime/internal/workspace"
 )
 

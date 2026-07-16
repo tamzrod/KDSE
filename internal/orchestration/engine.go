@@ -244,7 +244,7 @@ func (e *Engine) decideNextPhase() *PhaseDecision {
 	}
 
 	// Check if Foundation threshold is met (blocks Implementation)
-	if e.state.CurrentPhase == PhaseImplement && !e.state.Confidence.MeetsThreshold {
+	if e.state.CurrentPhase == PhaseImplementation && !e.state.Confidence.MeetsThreshold {
 		decision.ShouldExecute = false
 		decision.NextPhase = PhaseFoundation
 		decision.Reason = fmt.Sprintf(

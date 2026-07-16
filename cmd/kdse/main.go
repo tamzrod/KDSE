@@ -1269,13 +1269,6 @@ func handleSomedayExport(manager *somedaypkg.SomedayManager, repoPath string) {
 	fmt.Printf("Export would be saved to: %s\n", exportPath)
 }
 
-func truncate(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen-3] + "..."
-}
-
 // handleCompliance checks KDSE runtime compliance
 func handleCompliance(repoPath string, args []string) {
 	// Parse arguments

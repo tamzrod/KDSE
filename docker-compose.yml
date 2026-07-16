@@ -1,22 +1,21 @@
-# KDSE MCP Server Docker Compose Configuration
-# Version: 0.2.0
-# DEVELOPMENT ONLY - Local development with Docker Compose
-# For production deployment, use mcp/deploy/droplet_linux/
+# KDSE Docker Compose Configuration
+# Single module architecture - runtime and MCP in one package
+# Version: 2.0.0
 
 services:
   # KDSE MCP Server - STDIO mode (local development)
   kdse-mcp-stdio:
     build:
-      context: ../..
+      context: .
       dockerfile: Dockerfile
     image: kdse-mcp:dev
     container_name: kdse-mcp-stdio
     environment:
-      - KDSE_REPO_ROOT=/workspace/project/KDSE
+      - KDSE_REPO_ROOT=/app
       - MCP_TRANSPORT=stdio
     volumes:
-      # Mount KDSE repository read-only
-      - ${KDSE_REPO_PATH:-../../..}:/workspace/project/KDSE:ro
+      # Mount current directory read-only
+      - .:/app:ro
     stdin_open: true  # -i
     tty: true         # -t
     networks:
@@ -30,17 +29,17 @@ services:
   # KDSE MCP Server - HTTP mode (development server)
   kdse-mcp-http:
     build:
-      context: ../..
+      context: .
       dockerfile: Dockerfile
     image: kdse-mcp:dev
     container_name: kdse-mcp-http
     environment:
-      - KDSE_REPO_ROOT=/workspace/project/KDSE
+      - KDSE_REPO_ROOT=/app
       - MCP_TRANSPORT=http
       - MCP_HTTP_PORT=${MCP_HTTP_PORT:-8080}
     volumes:
-      # Mount KDSE repository read-only
-      - ${KDSE_REPO_PATH:-../../..}:/workspace/project/KDSE:ro
+      # Mount current directory read-only
+      - .:/app:ro
     ports:
       - "${MCP_HTTP_PORT:-8080}:${MCP_HTTP_PORT:-8080}"
     networks:
@@ -60,6 +59,24 @@ services:
     profiles:
       - http
       - development
+
+  # KDSE Runtime CLI (utility container)
+  kdse-runtime:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: kdse-mcp:dev
+    container_name: kdse-runtime
+    environment:
+      - KDSE_REPO_ROOT=/app
+    volumes:
+      # Mount current directory
+      - .:/app
+    command: ["help"]
+    networks:
+      - kdse-network
+    profiles:
+      - runtime
 
 networks:
   kdse-network:

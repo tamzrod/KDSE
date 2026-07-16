@@ -1,6 +1,7 @@
 # KDSE MCP Server Dockerfile
 # Multi-stage build for minimal image size
-# Version: 0.2.0
+# Single module architecture - runtime and MCP in one package
+# Version: 2.0.0
 
 # Build stage
 FROM golang:1.22-alpine AS builder
@@ -19,8 +20,11 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build the binary
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o kdse-mcp .
+# Build both binaries
+# Runtime CLI
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o kdse ./cmd/kdse/
+# MCP Server
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o kdse-mcp ./cmd/mcp/
 
 # Runtime stage - minimal image
 FROM alpine:3.19
@@ -34,7 +38,8 @@ RUN adduser -D -u 1000 kdse
 
 WORKDIR /app
 
-# Copy binary from builder
+# Copy binaries from builder
+COPY --from=builder /build/kdse .
 COPY --from=builder /build/kdse-mcp .
 
 # Set ownership
@@ -46,6 +51,10 @@ ENV MCP_HTTP_PORT=8080
 
 # User setup
 USER kdse
+
+# Healthcheck for HTTP mode
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD wget -q --spider http://localhost:8080/health || exit 1
 
 # Default command - MCP server
 # Transport is selected via MCP_TRANSPORT environment variable

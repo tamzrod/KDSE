@@ -55,7 +55,7 @@ func (e *EvidenceEvaluator) GetRequiredEvidenceForPhase(phase OrchestrationPhase
 			{ID: "analysis-results", Type: "analysis", Description: "Analysis results", Paths: []string{".kdse/knowledge/"}, Weight: 1.0, Critical: true},
 			{ID: "architecture", Type: "architecture", Description: "Architecture design", Paths: []string{"ARCHITECTURE.md", ".kdse/foundation/005-architecture.md"}, Weight: 0.8, Critical: true},
 		}
-	case PhaseImplement:
+	case PhaseImplementation:
 		return []EvidenceRequirement{
 			{ID: "design-spec", Type: "specification", Description: "Design specification", Paths: []string{".kdse/artifacts/design.md"}, Weight: 1.0, Critical: true},
 			{ID: "context-handoff", Type: "context", Description: "Context handoff document", Paths: []string{".kdse/context.json"}, Weight: 0.8, Critical: true},
@@ -183,7 +183,7 @@ func (e *EvidenceEvaluator) EvaluateAllPhases(workspace *WorkspaceInfo) map[Orch
 		PhaseAudit,
 		PhaseAssessment,
 		PhaseArchitecture,
-		PhaseImplement,
+		PhaseImplementation,
 		PhaseComplete,
 	}
 

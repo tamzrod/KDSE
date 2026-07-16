@@ -11,7 +11,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/kdse/mcp/tools"
+	"github.com/kdse/runtime/cmd/mcp/tools"
 )
 
 // =============================================================================
@@ -161,7 +161,7 @@ func (s *KDSEService) handleInitialize(req *MCPRequest) map[string]interface{} {
 // Tool definitions are sourced from the registry at .kdse/bootstrap/mcp-tools.yaml
 func (s *KDSEService) handleListTools() map[string]interface{} {
 	// Get tool definitions from ToolHandler which loads from registry
-	toolDefs := s.tools.loadToolsFromMCPRegistry()
+	toolDefs := s.loadToolsFromMCPRegistry()
 
 	return map[string]interface{}{
 		"tools": toolDefs,
@@ -172,7 +172,7 @@ func (s *KDSEService) handleListTools() map[string]interface{} {
 	}
 }
 
-// loadToolsFromMCPRegistry loads tool definitions from the MCP tools registry
+// loadToolsFromRegistry loads tool definitions from the MCP tools registry
 func (s *KDSEService) loadToolsFromMCPRegistry() []map[string]interface{} {
 	// MCP tool definitions with inputSchema
 	return []map[string]interface{}{
