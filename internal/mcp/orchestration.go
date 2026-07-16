@@ -9,23 +9,13 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/kdse/runtime/internal/types"
 )
 
-// Phase represents the current phase in the KDSE workflow
-type Phase string
-
-const (
-	PhaseIdle             Phase = "Idle"
-	PhaseProblem          Phase = "Problem"
-	PhaseKnowledge        Phase = "Knowledge Collection"
-	PhaseFoundation       Phase = "Foundation"
-	PhaseAudit            Phase = "Audit"
-	PhaseAssessment       Phase = "Assessment"
-	PhaseArchitecture     Phase = "Architecture"
-	PhaseImplementation   Phase = "Implementation"
-	PhaseComplete         Phase = "Complete"
-	PhaseBlocked          Phase = "Blocked"
-)
+// Phase is an alias for types.OrchestrationPhase for backward compatibility
+// The authoritative definition is in github.com/kdse/runtime/internal/types
+type Phase = types.OrchestrationPhase
 
 // ExecutionMode represents the mode of execution
 type ExecutionMode string
@@ -35,40 +25,19 @@ const (
 	ModeStrict  ExecutionMode = "strict"   // Strict mode - all requests through execute
 )
 
-// PhaseTransition defines valid transitions between phases
-var PhaseTransitions = map[Phase][]Phase{
-	PhaseIdle:           {PhaseProblem},
-	PhaseProblem:        {PhaseKnowledge},
-	PhaseKnowledge:      {PhaseFoundation},
-	PhaseFoundation:     {PhaseAudit},
-	PhaseAudit:          {PhaseAssessment, PhaseArchitecture},
-	PhaseAssessment:     {PhaseArchitecture, PhaseFoundation},
-	PhaseArchitecture:   {PhaseImplementation},
-	PhaseImplementation: {PhaseComplete},
-}
-
-// Minimum confidence thresholds for each phase
-var PhaseConfidenceThreshold = map[Phase]float64{
-	PhaseIdle:           0.0,
-	PhaseProblem:        0.6,
-	PhaseKnowledge:      0.7,
-	PhaseFoundation:     0.75,
-	PhaseAudit:          0.8,
-	PhaseAssessment:     0.8,
-	PhaseArchitecture:   0.85,
-	PhaseImplementation: 0.9,
-}
+// PhaseTransitions and PhaseConfidenceThreshold are imported from types package
+// See github.com/kdse/runtime/internal/types for authoritative definitions
 
 // SessionState represents the runtime session state for KDSE orchestration
 type SessionState struct {
 	SessionID         string            `json:"session_id"`
 	StartedAt         string            `json:"started_at"`
 	UpdatedAt         string            `json:"updated_at"`
-	CurrentPhase      Phase             `json:"current_phase"`
+	CurrentPhase      types.OrchestrationPhase `json:"current_phase"`
 	Confidence        float64           `json:"confidence"`
 	Evidence          []string          `json:"evidence"`
-	CompletedPhases   []Phase           `json:"completed_phases"`
-	NextAllowedPhases []Phase           `json:"next_allowed_phases"`
+	CompletedPhases   []types.OrchestrationPhase `json:"completed_phases"`
+	NextAllowedPhases []types.OrchestrationPhase `json:"next_allowed_phases"`
 	ExecutionMode     ExecutionMode     `json:"execution_mode"`
 	Workspace         *WorkspaceState   `json:"workspace"`
 	Objective         string            `json:"objective,omitempty"`

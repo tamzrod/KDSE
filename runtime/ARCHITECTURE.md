@@ -418,6 +418,28 @@ Regardless of implementation:
 
 ---
 
+## Deployment Ownership
+
+The Runtime subsystem is responsible for deployment artifacts:
+
+| Deployment Artifact | Location | Owner |
+|--------------------|----------|-------|
+| Docker Container | `Dockerfile` | Runtime (github.com/kdse/runtime) |
+| Docker Compose | `docker-compose.yml` | Runtime (github.com/kdse/runtime) |
+| CLI Binary | `cmd/kdse/` | Runtime (github.com/kdse/runtime) |
+| MCP Server Binary | `cmd/mcp/` | Runtime (github.com/kdse/runtime) |
+
+### Deployment Boundary Rule
+
+**Deployment artifacts are owned by the Runtime subsystem, not by the KDSE Standard.**
+
+This ensures that:
+- Container configurations can evolve without Standard changes
+- Multiple deployment targets can be supported
+- Runtime implementation remains flexible
+
+---
+
 ## Design Principles
 
 ### 1. Standard-First

@@ -90,16 +90,17 @@ tools:
 #-------------------------------------------------------------------------------
 # Handler Mapping
 #-------------------------------------------------------------------------------
-# Maps tool names to their Go handler functions in mcp/tools/tools.go
+# Maps tool names to their Go handler functions in cmd/mcp/tools/tools.go
+# Note: Module is github.com/kdse/runtime (not github.com/kdse/mcp)
 #-------------------------------------------------------------------------------
 
 handlers:
-  Help: github.com/kdse/mcp/tools.ToolHandler.Help
-  Execute: github.com/kdse/mcp/tools.ToolHandler.Execute
-  Initialize: github.com/kdse/mcp/tools.ToolHandler.Initialize
-  Status: github.com/kdse/mcp/tools.ToolHandler.Status
-  SessionStatus: github.com/kdse/mcp/tools.ToolHandler.SessionStatus
-  Collect: github.com/kdse/mcp/tools.ToolHandler.Collect
-  Foundation: github.com/kdse/mcp/tools.ToolHandler.Foundation
-  Audit: github.com/kdse/mcp/tools.ToolHandler.Audit
-  Migrate: github.com/kdse/mcp/tools.ToolHandler.Migrate
+  Help: github.com/kdse/runtime/cmd/mcp/tools.ToolHandler.Help
+  Execute: github.com/kdse/runtime/cmd/mcp/tools.ToolHandler.Execute
+  Initialize: github.com/kdse/runtime/cmd/mcp/tools.ToolHandler.Initialize
+  Status: github.com/kdse/runtime/cmd/mcp/tools.ToolHandler.Status
+  SessionStatus: github.com/kdse/runtime/cmd/mcp/tools.ToolHandler.SessionStatus
+  Collect: github.com/kdse/runtime/cmd/mcp/tools.ToolHandler.Collect
+  Foundation: github.com/kdse/runtime/cmd/mcp/tools.ToolHandler.Foundation
+  Audit: github.com/kdse/runtime/cmd/mcp/tools.ToolHandler.Audit
+  Migrate: github.com/kdse/runtime/cmd/mcp/tools.ToolHandler.Migrate

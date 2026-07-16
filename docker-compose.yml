@@ -1,5 +1,6 @@
 # KDSE Docker Compose Configuration
-# Single module architecture - runtime and MCP in one package
+# Deployment: KDSE Runtime subsystem (github.com/kdse/runtime)
+# Contains: CLI (kdse) and MCP Server (kdse-mcp) services
 # Version: 2.0.0
 
 services:

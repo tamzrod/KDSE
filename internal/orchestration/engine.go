@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/kdse/runtime/internal/types"
 )
 
 // Engine is the state-based orchestration engine
@@ -71,7 +73,7 @@ func (e *Engine) Initialize(workingPath string) error {
 	// Initialize state
 	e.state = &OrchestrationState{
 		SessionID:    generateSessionID(),
-		CurrentPhase: PhaseProblem,
+		CurrentPhase: types.PhaseProblem,
 		Workspace:    *workspace,
 		Metrics: OrchestrationMetrics{
 			CycleCount:      0,
@@ -244,9 +246,9 @@ func (e *Engine) decideNextPhase() *PhaseDecision {
 	}
 
 	// Check if Foundation threshold is met (blocks Implementation)
-	if e.state.CurrentPhase == PhaseImplementation && !e.state.Confidence.MeetsThreshold {
+	if e.state.CurrentPhase == types.PhaseImplementation && !e.state.Confidence.MeetsThreshold {
 		decision.ShouldExecute = false
-		decision.NextPhase = PhaseFoundation
+		decision.NextPhase = types.PhaseFoundation
 		decision.Reason = fmt.Sprintf(
 			"Foundation threshold not met (%.2f < %.2f), must improve Foundation before Implementation",
 			e.state.Confidence.Foundation,
@@ -258,26 +260,26 @@ func (e *Engine) decideNextPhase() *PhaseDecision {
 
 	// Phase completion logic - MCP canonical phases
 	switch e.state.CurrentPhase {
-	case PhaseProblem:
+	case types.PhaseProblem:
 		// Problem definition complete
 		if e.state.Workspace.KDSEPath != "" {
-			decision.NextPhase = PhaseKnowledge
+			decision.NextPhase = types.PhaseKnowledge
 			decision.Reason = "Problem definition complete"
 			decision.ShouldExecute = true
 		}
 
-	case PhaseKnowledge:
+	case types.PhaseKnowledge:
 		// Knowledge collection complete
 		if e.state.EvidenceState.Completeness >= e.config.EvidenceThreshold {
-			decision.NextPhase = PhaseFoundation
+			decision.NextPhase = types.PhaseFoundation
 			decision.Reason = "Knowledge collection complete"
 			decision.ShouldExecute = true
 		}
 
-	case PhaseFoundation:
+	case types.PhaseFoundation:
 		// Foundation complete
 		if e.state.Confidence.MeetsThreshold {
-			decision.NextPhase = PhaseAudit
+			decision.NextPhase = types.PhaseAudit
 			decision.Reason = "Foundation meets threshold"
 			decision.ShouldExecute = true
 		} else {
@@ -286,39 +288,39 @@ func (e *Engine) decideNextPhase() *PhaseDecision {
 				e.state.Confidence.Foundation, e.state.Confidence.Threshold)
 		}
 
-	case PhaseAudit:
+	case types.PhaseAudit:
 		// Audit complete
 		if e.state.EvidenceState.Completeness >= 0.7 {
-			decision.NextPhase = PhaseAssessment
+			decision.NextPhase = types.PhaseAssessment
 			decision.Reason = "Audit complete"
 			decision.ShouldExecute = true
 		}
 
-	case PhaseAssessment:
+	case types.PhaseAssessment:
 		// Assessment complete
-		decision.NextPhase = PhaseArchitecture
+		decision.NextPhase = types.PhaseArchitecture
 		decision.Reason = "Assessment complete"
 		decision.ShouldExecute = true
 
-	case PhaseArchitecture:
+	case types.PhaseArchitecture:
 		// Architecture complete
-		decision.NextPhase = PhaseImplementation
+		decision.NextPhase = types.PhaseImplementation
 		decision.Reason = "Architecture complete"
 		decision.ShouldExecute = true
 
-	case PhaseImplementation:
+	case types.PhaseImplementation:
 		// Implementation complete
 		if e.state.Confidence.MeetsThreshold {
-			decision.NextPhase = PhaseComplete
+			decision.NextPhase = types.PhaseComplete
 			decision.Reason = "Implementation verified"
 			decision.ShouldExecute = true
 		} else {
-			decision.NextPhase = PhaseFoundation
+			decision.NextPhase = types.PhaseFoundation
 			decision.Reason = "Need more work"
 			decision.ShouldExecute = true
 		}
 
-	case PhaseComplete, PhaseBlocked:
+	case types.PhaseComplete, types.PhaseBlocked:
 		decision.ShouldExecute = false
 		decision.Reason = "Session ending"
 	}
@@ -379,7 +381,7 @@ func (e *Engine) shouldContinue() bool {
 	}
 
 	// Check if complete
-	if e.state.CurrentPhase == PhaseComplete {
+	if e.state.CurrentPhase == types.PhaseComplete {
 		return false
 	}
 

@@ -1,6 +1,7 @@
 # KDSE MCP Server Dockerfile
 # Multi-stage build for minimal image size
-# Single module architecture - runtime and MCP in one package
+# Deployment: KDSE Runtime subsystem (github.com/kdse/runtime)
+# Contains: CLI (cmd/kdse/) and MCP Server (cmd/mcp/) binaries
 # Version: 2.0.0
 
 # Build stage
