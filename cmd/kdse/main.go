@@ -1845,11 +1845,3 @@ func handlePromoteList(mgr *knowledge.Manager, args []string) {
 	fmt.Println()
 	fmt.Println("To review: kdse promote review <id> --accept/--reject")
 }
-
-// truncate shortens a string to maxLen characters
-func truncate(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen-3] + "..."
-}
