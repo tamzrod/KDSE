@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/kdse/mcp/internal/orchestration"
-	"github.com/kdse/mcp/internal/workspace"
+	"github.com/kdse/runtime/internal/workspace"
 )
 
 // ToolHandler provides MCP tools with workspace-aware responses
