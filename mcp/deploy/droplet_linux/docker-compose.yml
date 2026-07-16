@@ -13,14 +13,14 @@ services:
     environment:
       - KDSE_REPO_ROOT=/repo
       - MCP_TRANSPORT=${MCP_TRANSPORT:-http}
-      - MCP_HTTP_PORT=${MCP_HTTP_PORT:-8080}
+      - MCP_HTTP_PORT=${MCP_HTTP_PORT:-18181}
     ports:
-      - "${MCP_HTTP_PORT:-8080}:${MCP_HTTP_PORT:-8080}"
+      - "${MCP_HTTP_PORT:-18181}:${MCP_HTTP_PORT:-18181}"
     networks:
       - kdse-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:${MCP_HTTP_PORT:-8080}/health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:${MCP_HTTP_PORT:-18181}/health"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -48,14 +48,14 @@ RUN chown -R kdse:kdse /app
 
 # Environment variables (defaults)
 ENV MCP_TRANSPORT=stdio
-ENV MCP_HTTP_PORT=8080
+ENV MCP_HTTP_PORT=18181
 
 # User setup
 USER kdse
 
 # Healthcheck for HTTP mode
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD wget -q --spider http://localhost:8080/health || exit 1
+    CMD wget -q --spider http://localhost:18181/health || exit 1
 
 # Default command - MCP server
 # Transport is selected via MCP_TRANSPORT environment variable
