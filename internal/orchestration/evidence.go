@@ -21,11 +21,11 @@ func NewEvidenceEvaluator(config *EngineConfig) *EvidenceEvaluator {
 // GetRequiredEvidenceForPhase returns evidence requirements for a specific phase
 func (e *EvidenceEvaluator) GetRequiredEvidenceForPhase(phase OrchestrationPhase) []EvidenceRequirement {
 	switch phase {
-	case PhaseResolve:
+	case PhaseProblem:
 		return []EvidenceRequirement{
 			{ID: "repo-root", Type: "repository", Description: "Repository root accessible", Paths: []string{"README.md", "go.mod", "package.json"}, Weight: 1.0, Critical: true},
 		}
-	case PhaseAssess:
+	case PhaseKnowledge:
 		return []EvidenceRequirement{
 			{ID: "knowledge-artifacts", Type: "documentation", Description: "Knowledge artifacts (README, SPEC)", Paths: []string{"README.md", "SPEC.md"}, Weight: 1.0, Critical: true},
 			{ID: "architecture", Type: "documentation", Description: "Architecture documentation", Paths: []string{"ARCHITECTURE.md", "architecture/"}, Weight: 0.7, Critical: false},
@@ -39,18 +39,18 @@ func (e *EvidenceEvaluator) GetRequiredEvidenceForPhase(phase OrchestrationPhase
 			{ID: "engineering-model", Type: "foundation", Description: "Engineering model", Paths: []string{".kdse/foundation/004-engineering-model.md"}, Weight: 1.0, Critical: true},
 			{ID: "chain-of-authority", Type: "foundation", Description: "Chain of authority", Paths: []string{".kdse/foundation/006-chain-of-authority.md"}, Weight: 0.8, Critical: false},
 		}
-	case PhaseCollect:
+	case PhaseAudit:
 		return []EvidenceRequirement{
 			{ID: "evidence-directory", Type: "evidence", Description: "Evidence collection directory", Paths: []string{".kdse/evidence/"}, Weight: 1.0, Critical: true},
 			{ID: "screenshots", Type: "evidence", Description: "Screenshot evidence", Paths: []string{".kdse/evidence/screenshots/"}, Weight: 0.5, Critical: false},
 			{ID: "tests", Type: "evidence", Description: "Test evidence", Paths: []string{".kdse/evidence/tests/"}, Weight: 0.5, Critical: false},
 		}
-	case PhaseAnalyze:
+	case PhaseAssessment:
 		return []EvidenceRequirement{
 			{ID: "collected-evidence", Type: "evidence", Description: "Previously collected evidence", Paths: []string{".kdse/evidence/"}, Weight: 1.0, Critical: true},
 			{ID: "audit-results", Type: "audit", Description: "Audit results", Paths: []string{".kdse/reports/audit-*.md"}, Weight: 0.7, Critical: false},
 		}
-	case PhaseDesign:
+	case PhaseArchitecture:
 		return []EvidenceRequirement{
 			{ID: "analysis-results", Type: "analysis", Description: "Analysis results", Paths: []string{".kdse/knowledge/"}, Weight: 1.0, Critical: true},
 			{ID: "architecture", Type: "architecture", Description: "Architecture design", Paths: []string{"ARCHITECTURE.md", ".kdse/foundation/005-architecture.md"}, Weight: 0.8, Critical: true},
@@ -60,7 +60,7 @@ func (e *EvidenceEvaluator) GetRequiredEvidenceForPhase(phase OrchestrationPhase
 			{ID: "design-spec", Type: "specification", Description: "Design specification", Paths: []string{".kdse/artifacts/design.md"}, Weight: 1.0, Critical: true},
 			{ID: "context-handoff", Type: "context", Description: "Context handoff document", Paths: []string{".kdse/context.json"}, Weight: 0.8, Critical: true},
 		}
-	case PhaseVerify:
+	case PhaseComplete:
 		return []EvidenceRequirement{
 			{ID: "implementation", Type: "implementation", Description: "Implementation artifacts", Paths: []string{"src/", "lib/", "main.go"}, Weight: 1.0, Critical: true},
 			{ID: "tests", Type: "tests", Description: "Test files", Paths: []string{"tests/", "*_test.go"}, Weight: 0.8, Critical: true},
@@ -177,14 +177,14 @@ func (e *EvidenceEvaluator) CanProceedToPhase(workspace *WorkspaceInfo, targetPh
 // EvaluateAllPhases returns evidence state for all phases
 func (e *EvidenceEvaluator) EvaluateAllPhases(workspace *WorkspaceInfo) map[OrchestrationPhase]*EvidenceState {
 	phases := []OrchestrationPhase{
-		PhaseResolve,
-		PhaseAssess,
+		PhaseProblem,
+		PhaseKnowledge,
 		PhaseFoundation,
-		PhaseCollect,
-		PhaseAnalyze,
-		PhaseDesign,
+		PhaseAudit,
+		PhaseAssessment,
+		PhaseArchitecture,
 		PhaseImplement,
-		PhaseVerify,
+		PhaseComplete,
 	}
 
 	results := make(map[OrchestrationPhase]*EvidenceState)

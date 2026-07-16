@@ -37,21 +37,45 @@ const (
 )
 
 // OrchestrationPhase represents phases in the state-based orchestration
+// Canonical phases defined by MCP orchestration
 type OrchestrationPhase string
 
 const (
-	PhaseIdle          OrchestrationPhase = "Idle"
-	PhaseResolve       OrchestrationPhase = "Resolve"
-	PhaseAssess        OrchestrationPhase = "Assess"
-	PhaseFoundation    OrchestrationPhase = "Foundation"
-	PhaseCollect       OrchestrationPhase = "Collect"
-	PhaseAnalyze       OrchestrationPhase = "Analyze"
-	PhaseDesign        OrchestrationPhase = "Design"
-	PhaseImplement     OrchestrationPhase = "Implement"
-	PhaseVerify        OrchestrationPhase = "Verify"
-	PhaseComplete      OrchestrationPhase = "Complete"
-	PhaseBlocked       OrchestrationPhase = "Blocked"
+        PhaseIdle           OrchestrationPhase = "Idle"
+        PhaseProblem        OrchestrationPhase = "Problem"
+        PhaseKnowledge      OrchestrationPhase = "Knowledge Collection"
+        PhaseFoundation     OrchestrationPhase = "Foundation"
+        PhaseAudit          OrchestrationPhase = "Audit"
+        PhaseAssessment     OrchestrationPhase = "Assessment"
+        PhaseArchitecture   OrchestrationPhase = "Architecture"
+        PhaseImplementation OrchestrationPhase = "Implementation"
+        PhaseComplete       OrchestrationPhase = "Complete"
+        PhaseBlocked        OrchestrationPhase = "Blocked"
 )
+
+// PhaseTransitions defines valid transitions between phases
+var PhaseTransitions = map[OrchestrationPhase][]OrchestrationPhase{
+        PhaseIdle:           {PhaseProblem},
+        PhaseProblem:        {PhaseKnowledge},
+        PhaseKnowledge:      {PhaseFoundation},
+        PhaseFoundation:     {PhaseAudit},
+        PhaseAudit:          {PhaseAssessment, PhaseArchitecture},
+        PhaseAssessment:     {PhaseArchitecture, PhaseFoundation},
+        PhaseArchitecture:   {PhaseImplementation},
+        PhaseImplementation: {PhaseComplete},
+}
+
+// PhaseConfidenceThreshold defines minimum confidence for each phase
+var PhaseConfidenceThreshold = map[OrchestrationPhase]float64{
+        PhaseIdle:           0.0,
+        PhaseProblem:        0.6,
+        PhaseKnowledge:      0.7,
+        PhaseFoundation:     0.75,
+        PhaseAudit:          0.8,
+        PhaseAssessment:     0.8,
+        PhaseArchitecture:   0.85,
+        PhaseImplementation: 0.9,
+}
 
 // ConfidenceLevel represents the confidence assessment
 type ConfidenceLevel struct {

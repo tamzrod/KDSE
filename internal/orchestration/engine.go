@@ -71,7 +71,7 @@ func (e *Engine) Initialize(workingPath string) error {
 	// Initialize state
 	e.state = &OrchestrationState{
 		SessionID:    generateSessionID(),
-		CurrentPhase: PhaseResolve,
+		CurrentPhase: PhaseProblem,
 		Workspace:    *workspace,
 		Metrics: OrchestrationMetrics{
 			CycleCount:      0,
@@ -99,7 +99,7 @@ func (e *Engine) Initialize(workingPath string) error {
 }
 
 // ExecuteCycle runs a single orchestration cycle
-// Each cycle: Resolve → Evaluate State → Evaluate Confidence → Evaluate Missing Evidence → Decide Next Phase → Execute → Re-evaluate
+// Each cycle: Problem → Knowledge → Foundation → Audit → Assessment → Architecture → Implementation → Complete
 func (e *Engine) ExecuteCycle() (*ExecuteCycleResult, error) {
 	if !e.sessionActive || e.state == nil {
 		return nil, fmt.Errorf("session not initialized")
@@ -256,28 +256,28 @@ func (e *Engine) decideNextPhase() *PhaseDecision {
 		return decision
 	}
 
-	// Phase completion logic
+	// Phase completion logic - MCP canonical phases
 	switch e.state.CurrentPhase {
-	case PhaseResolve:
-		// Resolve is complete if we have workspace info
+	case PhaseProblem:
+		// Problem definition complete
 		if e.state.Workspace.KDSEPath != "" {
-			decision.NextPhase = PhaseAssess
-			decision.Reason = "Workspace resolved successfully"
+			decision.NextPhase = PhaseKnowledge
+			decision.Reason = "Problem definition complete"
 			decision.ShouldExecute = true
 		}
 
-	case PhaseAssess:
-		// Assess is complete if we have evaluated evidence
+	case PhaseKnowledge:
+		// Knowledge collection complete
 		if e.state.EvidenceState.Completeness >= e.config.EvidenceThreshold {
 			decision.NextPhase = PhaseFoundation
-			decision.Reason = "Assessment complete"
+			decision.Reason = "Knowledge collection complete"
 			decision.ShouldExecute = true
 		}
 
 	case PhaseFoundation:
-		// Foundation is complete if threshold is met
+		// Foundation complete
 		if e.state.Confidence.MeetsThreshold {
-			decision.NextPhase = PhaseCollect
+			decision.NextPhase = PhaseAudit
 			decision.Reason = "Foundation meets threshold"
 			decision.ShouldExecute = true
 		} else {
@@ -286,41 +286,35 @@ func (e *Engine) decideNextPhase() *PhaseDecision {
 				e.state.Confidence.Foundation, e.state.Confidence.Threshold)
 		}
 
-	case PhaseCollect:
-		// Collect is complete when evidence is gathered
+	case PhaseAudit:
+		// Audit complete
 		if e.state.EvidenceState.Completeness >= 0.7 {
-			decision.NextPhase = PhaseAnalyze
-			decision.Reason = "Evidence collection sufficient"
+			decision.NextPhase = PhaseAssessment
+			decision.Reason = "Audit complete"
 			decision.ShouldExecute = true
 		}
 
-	case PhaseAnalyze:
-		// Analyze is complete
-		decision.NextPhase = PhaseDesign
-		decision.Reason = "Analysis complete"
+	case PhaseAssessment:
+		// Assessment complete
+		decision.NextPhase = PhaseArchitecture
+		decision.Reason = "Assessment complete"
 		decision.ShouldExecute = true
 
-	case PhaseDesign:
-		// Design is complete
-		decision.NextPhase = PhaseImplement
-		decision.Reason = "Design complete"
+	case PhaseArchitecture:
+		// Architecture complete
+		decision.NextPhase = PhaseImplementation
+		decision.Reason = "Architecture complete"
 		decision.ShouldExecute = true
 
-	case PhaseImplement:
-		// Implementation leads to verification
-		decision.NextPhase = PhaseVerify
-		decision.Reason = "Implementation complete, verifying"
-		decision.ShouldExecute = true
-
-	case PhaseVerify:
-		// Verification can lead to complete or back to collect for more evidence
-		if e.state.Confidence.Overall >= 0.8 {
+	case PhaseImplementation:
+		// Implementation complete
+		if e.state.Confidence.MeetsThreshold {
 			decision.NextPhase = PhaseComplete
-			decision.Reason = "All phases verified"
+			decision.Reason = "Implementation verified"
 			decision.ShouldExecute = true
 		} else {
-			decision.NextPhase = PhaseCollect
-			decision.Reason = "Need more evidence, collecting"
+			decision.NextPhase = PhaseFoundation
+			decision.Reason = "Need more work"
 			decision.ShouldExecute = true
 		}
 
@@ -328,7 +322,6 @@ func (e *Engine) decideNextPhase() *PhaseDecision {
 		decision.ShouldExecute = false
 		decision.Reason = "Session ending"
 	}
-
 	return decision
 }
 
