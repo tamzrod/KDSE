@@ -1,0 +1,26 @@
+# KDSE Authority Configuration
+# Defines the authoritative sources and governance rules for this workspace
+
+version: "1.0"
+
+# Evidence sources that are considered authoritative
+authoritative_sources:
+  - type: github
+    enabled: true
+  - type: filesystem
+    enabled: true
+    paths:
+      - .kdse/knowledge
+      - .kdse/architecture
+      - .kdse/implementation
+
+# AI behavior rules
+ai_rules:
+  discover_instead_of_invent: true
+  prefer_disk_over_memory: true
+  require_evidence_for_claims: true
+
+# Governance
+governance:
+  require_approval_for_promotion: true
+  evidence_threshold: 3

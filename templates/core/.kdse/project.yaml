@@ -1,0 +1,32 @@
+# KDSE Project Configuration
+# Project-specific settings and metadata
+
+project:
+  name: ""  # Set your project name
+  description: ""  # Set your project description
+  created: ""  # Auto-filled during initialization
+  template: core
+
+# Repository settings
+repository:
+  type: ""  # github, gitlab, bitbucket
+  owner: ""  # Repository owner/organization
+  name: ""  # Repository name
+  default_branch: main
+
+# Team configuration
+team:
+  lead: ""  # Project lead
+  members: []  # Team members
+
+# External integrations
+integrations:
+  issue_tracker:
+    enabled: false
+    type: ""  # github, jira, linear
+  documentation:
+    enabled: false
+    type: ""  # confluence, notion, github-wiki
+  ci_cd:
+    enabled: false
+    type: ""  # github-actions, jenkins, gitlab-ci

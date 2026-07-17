@@ -19,6 +19,9 @@ type Workspace struct {
 const (
 	SubDirFoundation    = "foundation"
 	SubDirKnowledge     = "knowledge"
+	SubDirArchitecture  = "architecture"
+	SubDirImplementation = "implementation"
+	SubDirVerification  = "verification"
 	SubDirContext       = "context"
 	SubDirArtifacts     = "artifacts"
 	SubDirRuntime       = "runtime"
@@ -27,6 +30,7 @@ const (
 	SubDirOperational   = "operational"
 	SubDirDevelopmental = "developmental"
 	SubDirReports       = "reports"
+	SubDirDocs          = "docs"
 	SubDirCache         = "cache"
 	SubDirNormalized    = "normalized"
 	SubDirEvidence      = "evidence"
@@ -86,19 +90,23 @@ func (w *Workspace) EnsureSubdir(subdir string) error {
 // Subdirs returns a map of all standard KDSE subdirectories
 func (w *Workspace) Subdirs() map[string]string {
 	return map[string]string{
-		SubDirFoundation:    w.SubPath(SubDirFoundation),
-		SubDirKnowledge:     w.SubPath(SubDirKnowledge),
-		SubDirContext:       w.SubPath(SubDirContext),
-		SubDirArtifacts:     w.SubPath(SubDirArtifacts),
-		SubDirRuntime:       w.SubPath(SubDirRuntime),
-		SubDirSessions:      w.SubPath(SubDirSessions),
-		SubDirConfidence:    w.SubPath(SubDirConfidence),
-		SubDirOperational:   w.SubPath(SubDirOperational),
-		SubDirDevelopmental: w.SubPath(SubDirDevelopmental),
-		SubDirReports:       w.SubPath(SubDirReports),
-		SubDirCache:         w.SubPath(SubDirCache),
-		SubDirNormalized:    w.SubPath(SubDirNormalized),
-		SubDirEvidence:      w.SubPath(SubDirEvidence),
+		SubDirFoundation:     w.SubPath(SubDirFoundation),
+		SubDirKnowledge:      w.SubPath(SubDirKnowledge),
+		SubDirArchitecture:   w.SubPath(SubDirArchitecture),
+		SubDirImplementation: w.SubPath(SubDirImplementation),
+		SubDirVerification:   w.SubPath(SubDirVerification),
+		SubDirContext:        w.SubPath(SubDirContext),
+		SubDirArtifacts:      w.SubPath(SubDirArtifacts),
+		SubDirRuntime:        w.SubPath(SubDirRuntime),
+		SubDirSessions:       w.SubPath(SubDirSessions),
+		SubDirConfidence:     w.SubPath(SubDirConfidence),
+		SubDirOperational:    w.SubPath(SubDirOperational),
+		SubDirDevelopmental:  w.SubPath(SubDirDevelopmental),
+		SubDirReports:        w.SubPath(SubDirReports),
+		SubDirDocs:           w.SubPath(SubDirDocs),
+		SubDirCache:          w.SubPath(SubDirCache),
+		SubDirNormalized:     w.SubPath(SubDirNormalized),
+		SubDirEvidence:       w.SubPath(SubDirEvidence),
 	}
 }
 
@@ -231,20 +239,24 @@ func (w *Workspace) ResolvePath(shortPath string) string {
 
 // Paths returns all important workspace paths as a structure
 type Paths struct {
-	Root        string `json:"root"`
-	Foundation  string `json:"foundation"`
-	Knowledge   string `json:"knowledge"`
-	Context     string `json:"context"`
-	Artifacts   string `json:"artifacts"`
-	Runtime     string `json:"runtime"`
-	Sessions    string `json:"sessions"`
-	Confidence  string `json:"confidence"`
-	Operational string `json:"operational"`
+	Root          string `json:"root"`
+	Foundation    string `json:"foundation"`
+	Knowledge     string `json:"knowledge"`
+	Architecture  string `json:"architecture"`
+	Implementation string `json:"implementation"`
+	Verification  string `json:"verification"`
+	Context       string `json:"context"`
+	Artifacts     string `json:"artifacts"`
+	Runtime       string `json:"runtime"`
+	Sessions      string `json:"sessions"`
+	Confidence    string `json:"confidence"`
+	Operational   string `json:"operational"`
 	Developmental string `json:"developmental"`
-	Reports     string `json:"reports"`
-	Cache       string `json:"cache"`
-	Normalized  string `json:"normalized"`
-	Evidence    string `json:"evidence"`
+	Reports       string `json:"reports"`
+	Docs          string `json:"docs"`
+	Cache         string `json:"cache"`
+	Normalized    string `json:"normalized"`
+	Evidence      string `json:"evidence"`
 }
 
 // GetPaths returns all workspace paths
@@ -253,16 +265,20 @@ func (w *Workspace) GetPaths() *Paths {
 		Root:           w.kdsePath,
 		Foundation:     w.SubPath(SubDirFoundation),
 		Knowledge:      w.SubPath(SubDirKnowledge),
-		Context:       w.SubPath(SubDirContext),
-		Artifacts:     w.SubPath(SubDirArtifacts),
-		Runtime:       w.SubPath(SubDirRuntime),
-		Sessions:      w.SubPath(SubDirSessions),
-		Confidence:    w.SubPath(SubDirConfidence),
-		Operational:   w.SubPath(SubDirOperational),
-		Developmental: w.SubPath(SubDirDevelopmental),
-		Reports:       w.SubPath(SubDirReports),
-		Cache:         w.SubPath(SubDirCache),
-		Normalized:    w.SubPath(SubDirNormalized),
-		Evidence:      w.SubPath(SubDirEvidence),
+		Architecture:   w.SubPath(SubDirArchitecture),
+		Implementation: w.SubPath(SubDirImplementation),
+		Verification:   w.SubPath(SubDirVerification),
+		Context:        w.SubPath(SubDirContext),
+		Artifacts:      w.SubPath(SubDirArtifacts),
+		Runtime:        w.SubPath(SubDirRuntime),
+		Sessions:       w.SubPath(SubDirSessions),
+		Confidence:     w.SubPath(SubDirConfidence),
+		Operational:    w.SubPath(SubDirOperational),
+		Developmental:  w.SubPath(SubDirDevelopmental),
+		Reports:        w.SubPath(SubDirReports),
+		Docs:           w.SubPath(SubDirDocs),
+		Cache:          w.SubPath(SubDirCache),
+		Normalized:     w.SubPath(SubDirNormalized),
+		Evidence:       w.SubPath(SubDirEvidence),
 	}
 }

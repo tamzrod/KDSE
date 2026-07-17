@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/kdse/runtime/internal/agreement"
+	"github.com/kdse/runtime/internal/bootstrap"
 	"github.com/kdse/runtime/internal/config"
 	"github.com/kdse/runtime/internal/detection"
 	"github.com/kdse/runtime/internal/context"
@@ -21,7 +22,7 @@ import (
 	"github.com/kdse/runtime/internal/workspace"
 )
 
-const version = "1.0.0"
+const version = "2.0"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -1503,31 +1504,69 @@ func handleAgreementValidate(mgr *agreement.Manager, args []string) {
 	}
 }
 
-// handleInit initializes the .kdse/ workspace (lightweight init)
+// handleInit initializes the .kdse/ workspace using GitHub bootstrapper
 func handleInit(repoPath string) {
-	ws := workspace.New(repoPath)
+	// Parse template flag if provided
+	templateName := "core"
+	for _, arg := range os.Args[2:] {
+		if strings.HasPrefix(arg, "--template=") {
+			templateName = strings.TrimPrefix(arg, "--template=")
+		}
+	}
 
 	fmt.Println()
-	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
-	fmt.Println("║              KDSE Workspace Initialization                   ║")
-	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
-	fmt.Printf("║ Repository: %s\n", repoPath)
-	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+	fmt.Println("Initializing KDSE workspace...")
 
-	if err := ws.Initialize(); err != nil {
-		fmt.Printf("║ ✗ Error: %s\n", err)
-		fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
+	// Create bootstrapper configuration
+	cfg := &bootstrap.Config{
+		TemplateName: templateName,
+		TemplateOwner: "kdse",
+		TemplateRepo:  "workspace-templates",
+		TemplateRef:   "main",
+	}
+
+	// Create bootstrapper
+	b := bootstrap.NewBootstrapper(repoPath, cfg)
+
+	// Perform bootstrap initialization
+	fmt.Println("Downloading official template...")
+
+	result := b.Initialize()
+
+	if !result.Success {
+		fmt.Println()
+		if len(result.Errors) > 0 {
+			for _, err := range result.Errors {
+				fmt.Printf("Error: %v\n", err)
+			}
+		}
+		fmt.Println()
+		fmt.Println("Unable to download official KDSE template.")
+		fmt.Println("Please check network connection.")
+		fmt.Println("Do not create partial workspaces.")
 		os.Exit(1)
 	}
 
-	fmt.Println("║ ✓ Created .kdse/ directory")
-	fmt.Println("║ ✓ Workspace ready for KDSE operations")
-	fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
+	// Print success message with workspace details
+	fmt.Println()
+	fmt.Println("KDSE initialized successfully.")
+	fmt.Println()
+	fmt.Println("Workspace")
+	fmt.Println("  .kdse/")
+	fmt.Println("  knowledge/")
+	fmt.Println("  architecture/")
+	fmt.Println("  implementation/")
+	fmt.Println("  verification/")
+	fmt.Println("  reports/")
+	fmt.Println("  docs/")
+	fmt.Println()
+	fmt.Printf("Version: KDSE %s\n", result.KDSEVersion)
+	fmt.Printf("Template commit: %s\n", result.TemplateCommit)
 	fmt.Println()
 	fmt.Println("Next steps:")
+	fmt.Println("  kdse status              # View workspace status")
 	fmt.Println("  kdse agreement init      # Initialize project agreement")
 	fmt.Println("  kdse notebook add <title> # Add first knowledge entry")
-	fmt.Println("  kdse status              # View workspace status")
 }
 
 // handleNotebook manages the engineering notebook

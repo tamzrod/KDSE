@@ -13,9 +13,11 @@ KDSE implements a **Session Guard** that strictly enforces initialization. This 
 
 ### Initialization Workflow
 
+KDSE v2.0 uses **GitHub Bootstrap Initialization** - workspace templates are downloaded from the official KDSE repository, making GitHub the authoritative source for methodology artifacts.
+
 ```bash
-# First run - auto-initialization or explicit initialization
-kdse initialize
+# First run - downloads official workspace template from GitHub
+kdse init
 
 # Subsequent runs - session guard validates automatically
 kdse execute "Build a login system"
@@ -40,8 +42,11 @@ Operations that don't require initialization:
 ## Quick Start
 
 ```bash
-# Initialize KDSE workspace (first run required)
+# Initialize KDSE workspace (downloads template from GitHub)
 kdse init
+
+# Initialize with specific template (future)
+kdse init --template=web
 
 # Add knowledge to notebook
 kdse notebook add "Users need password reset" --source "customer-feedback.md"
@@ -53,6 +58,24 @@ kdse promote submit <entry-id>
 kdse status
 ```
 
+## Workspace Structure
+
+The `.kdse/` workspace contains:
+
+```
+.kdse/
+├── session.yaml         # Session metadata
+├── authority.yaml       # Authority rules
+├── phase.yaml          # Phase configuration
+├── project.yaml        # Project metadata
+├── knowledge/          # Knowledge artifacts
+├── architecture/       # System design
+├── implementation/     # Development tracking
+├── verification/       # Testing artifacts
+├── reports/            # Generated reports
+└── docs/              # Documentation
+```
+
 ## Core Principles
 
 | # | Principle | What It Means |
@@ -62,6 +85,17 @@ kdse status
 | 3 | Authority flows downward | Lower can't contradict higher |
 | 4 | Traceability enables authority | Every decision traces to knowledge |
 | 5 | Repository first | Analyze artifacts before asking |
+
+## Bootstrap Architecture
+
+The bootstrap layer downloads workspace templates from GitHub:
+
+1. **Download**: Fetches official template from GitHub archive
+2. **Extract**: Unpacks template into workspace
+3. **Verify**: Ensures all required artifacts exist
+4. **Rollback**: Cleans up on failure
+
+Templates are stored in the [kdse/workspace-templates](https://github.com/kdse/workspace-templates) repository.
 
 ## Foundation Documents
 

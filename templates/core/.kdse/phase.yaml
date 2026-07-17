@@ -1,0 +1,70 @@
+# KDSE Phase Configuration
+# Defines the project lifecycle phases and their transition rules
+
+current_phase: Discovery
+
+phases:
+  - name: Discovery
+    order: 1
+    description: Initial exploration and understanding of the problem domain
+    artifacts:
+      - knowledge/domain-overview
+      - knowledge/terminology
+    entry_criteria: []
+    exit_criteria:
+      - type: artifact_exists
+        path: knowledge/001-domain-overview.md
+      - type: artifact_exists
+        path: knowledge/002-terminology.md
+
+  - name: Architecture
+    order: 2
+    description: System design and component identification
+    artifacts:
+      - architecture/system-context
+      - architecture/components
+      - architecture/data-model
+    entry_criteria:
+      - type: phase_complete
+        phase: Discovery
+    exit_criteria:
+      - type: artifact_exists
+        path: architecture/001-system-context.md
+      - type: artifact_exists
+        path: architecture/002-components.md
+
+  - name: Implementation
+    order: 3
+    description: Code development and feature implementation
+    artifacts:
+      - implementation/roadmap
+      - implementation/tracking
+    entry_criteria:
+      - type: phase_complete
+        phase: Architecture
+    exit_criteria:
+      - type: artifact_exists
+        path: implementation/001-roadmap.md
+
+  - name: Verification
+    order: 4
+    description: Testing, validation, and quality assurance
+    artifacts:
+      - verification/test-plan
+      - verification/results
+    entry_criteria:
+      - type: phase_complete
+        phase: Implementation
+    exit_criteria:
+      - type: artifact_exists
+        path: verification/001-test-plan.md
+
+  - name: Production
+    order: 5
+    description: Deployment and ongoing maintenance
+    artifacts:
+      - reports/deployment
+      - reports/post-mortem
+    entry_criteria:
+      - type: phase_complete
+        phase: Verification
