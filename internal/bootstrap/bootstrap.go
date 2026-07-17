@@ -122,7 +122,7 @@ func (b *Bootstrapper) Initialize() *Result {
 	}
 
 	// Step 3: Copy template to workspace
-	if err := b.copyTemplate(extractDir, createdPaths); err != nil {
+	if err := b.copyTemplate(extractDir, &createdPaths); err != nil {
 		result.Success = false
 		result.Errors = append(result.Errors, fmt.Errorf("copy failed: %w", err))
 		b.rollback(createdPaths)

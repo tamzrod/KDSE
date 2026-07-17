@@ -230,8 +230,10 @@ func TestVerifyInstallation(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	// Create workspace with required directories
-	wsRoot := filepath.Join(tmpDir, ".kdse")
+	// Create workspace with required directories using workspace.New
+	ws := workspace.New(tmpDir)
+	wsRoot := ws.Root()
+	
 	if err := os.MkdirAll(wsRoot, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -254,7 +256,7 @@ func TestVerifyInstallation(t *testing.T) {
 	// Create bootstrapper and verify
 	b := &Bootstrapper{
 		repoPath:  tmpDir,
-		workspace: &workspace.Workspace{repoPath: tmpDir, kdsePath: wsRoot},
+		workspace: ws,
 	}
 
 	if err := b.verifyInstallation(); err != nil {
@@ -270,7 +272,9 @@ func TestVerifyInstallationMissingDirs(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	// Create workspace with only some directories
-	wsRoot := filepath.Join(tmpDir, ".kdse")
+	ws := workspace.New(tmpDir)
+	wsRoot := ws.Root()
+	
 	if err := os.MkdirAll(wsRoot, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -278,7 +282,7 @@ func TestVerifyInstallationMissingDirs(t *testing.T) {
 
 	b := &Bootstrapper{
 		repoPath:  tmpDir,
-		workspace: &workspace.Workspace{repoPath: tmpDir, kdsePath: wsRoot},
+		workspace: ws,
 	}
 
 	if err := b.verifyInstallation(); err == nil {
@@ -324,7 +328,9 @@ func TestWriteSessionMetadata(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	wsRoot := filepath.Join(tmpDir, ".kdse")
+	ws := workspace.New(tmpDir)
+	wsRoot := ws.Root()
+	
 	if err := os.MkdirAll(wsRoot, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -332,7 +338,7 @@ func TestWriteSessionMetadata(t *testing.T) {
 	b := &Bootstrapper{
 		repoPath:     tmpDir,
 		templateName: "core",
-		workspace:    &workspace.Workspace{repoPath: tmpDir, kdsePath: wsRoot},
+		workspace:    ws,
 	}
 
 	sessionPath := filepath.Join(wsRoot, "session.yaml")
