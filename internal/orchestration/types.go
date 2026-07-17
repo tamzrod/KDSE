@@ -35,6 +35,8 @@ type WorkspaceInfo struct {
 	ProjectPath    string          `json:"project_path,omitempty"`
 	TempPath       string          `json:"temp_path,omitempty"`
 	KDSEPath       string          `json:"kdse_path"`
+	HasFoundation  bool           `json:"has_foundation"`
+	HasAuditReport bool           `json:"has_audit_report"`
 }
 
 // WorkspaceType represents the type of workspace resolution
@@ -177,3 +179,14 @@ const (
 	PhaseResolve = OrchestrationPhase("Resolve")
 	PhaseCollect = OrchestrationPhase("Collect")
 )
+
+// PhaseConfidenceThreshold is exported from types package
+var PhaseConfidenceThreshold = map[OrchestrationPhase]float64{
+	types.PhaseProblem:        0.6,
+	types.PhaseKnowledge:      0.7,
+	types.PhaseFoundation:     0.75,
+	types.PhaseAudit:          0.8,
+	types.PhaseAssessment:     0.8,
+	types.PhaseArchitecture:   0.85,
+	types.PhaseImplementation: 0.9,
+}

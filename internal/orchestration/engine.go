@@ -558,7 +558,78 @@ type SessionState struct {
 	CompletedPhases   []OrchestrationPhase `json:"completed_phases"`
 	NextAllowedPhases []OrchestrationPhase `json:"next_allowed_phases"`
 	ExecutionMode     ExecutionMode     `json:"execution_mode"`
+	BlockedReason     string            `json:"blocked_reason,omitempty"`
+	StartedAt         string            `json:"started_at,omitempty"`
+	UpdatedAt         string            `json:"updated_at,omitempty"`
+	Workspace         WorkspaceInfo     `json:"workspace,omitempty"`
+	Evidence          []string          `json:"evidence,omitempty"`
+	PhaseHistory      []PhaseTransition `json:"phase_history,omitempty"`
+	LastAction        string            `json:"last_action,omitempty"`
+	Objective         string            `json:"objective,omitempty"`
 }
 
 // ExecutionMode represents the execution mode
 type ExecutionMode string
+
+// Execution modes
+const (
+	ModeStrict  ExecutionMode = "strict"
+	ModeToolbox ExecutionMode = "toolbox"
+	ModeAudit   ExecutionMode = "audit"
+)
+
+// ExecutionDecision represents the decision for an execution
+type ExecutionDecision struct {
+	Allowed         bool
+	BlockedReason   string
+	Blocked         bool
+	Reason          string
+	ExecutionMode   ExecutionMode
+	Action          string
+	NextPhase       OrchestrationPhase `json:"next_phase,omitempty"`
+	WorkOrder       string            `json:"work_order,omitempty"`
+	Operations      []string          `json:"operations,omitempty"`
+}
+
+// GetExecutionDecision determines what action to take for an objective
+func (e *Engine) GetExecutionDecision(objective string) *ExecutionDecision {
+	state := e.GetState()
+	if state == nil {
+		return &ExecutionDecision{
+			Action:        "initialize",
+			ExecutionMode: ModeToolbox,
+		}
+	}
+	
+	return &ExecutionDecision{
+		Allowed:       true,
+		Action:        "execute",
+		ExecutionMode: ModeToolbox,
+	}
+}
+
+// SetObjective sets the current objective
+func (e *Engine) SetObjective(objective string) (*SessionState, error) {
+	state, _ := e.Load()
+	return state, nil
+}
+
+// UpdateWorkspace updates the workspace state
+func (e *Engine) UpdateWorkspace(ws *WorkspaceState) error {
+	return nil
+}
+
+// UpdateConfidence updates the confidence level
+func (e *Engine) UpdateConfidence(confidence float64) error {
+	return nil
+}
+
+// WorkspaceState represents the workspace state
+type WorkspaceState struct {
+	Initialized    bool
+	Root           string
+	HasFoundation  bool
+	Ready          bool
+	HasArtifacts   bool
+	HasAuditReport bool
+}

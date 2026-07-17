@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/kdse/runtime/internal/guard"
-	"github.com/kdse/runtime/internal/mcpclient"
+	"github.com/kdse/runtime/internal/orchestration"
 	"github.com/kdse/runtime/internal/workspace"
 )
 
@@ -171,7 +171,7 @@ func (h *ToolHandler) Initialize() map[string]interface{} {
 	result := h.runKDSECommand("initialize")
 
 	// Also create orchestration session
-	state, err := h.orch.Initialize()
+	state, err := h.orch.InitializeDefault()
 	if err != nil {
 		result["orchestration_error"] = err.Error()
 	} else {
@@ -387,7 +387,7 @@ func (h *ToolHandler) Execute(objective string) map[string]interface{} {
 			"do_not":          "DO NOT implement. Follow the required action below.",
 		}
 		// Include the WorkOrder even when blocked - it shows what needs to be done
-		if decision.WorkOrder != nil {
+		if decision.WorkOrder != "" {
 			result["work_order"] = decision.WorkOrder
 		}
 		return result
@@ -434,7 +434,7 @@ func (h *ToolHandler) executeTransition(state *orchestration.SessionState, decis
 
 	// Include the WorkOrder - this is the KEY change for Runtime-Owns-Methodology
 	// The WorkOrder explicitly tells the LLM what to do, what to create, and what NOT to do
-	if decision.WorkOrder != nil {
+	if decision.WorkOrder != "" {
 		result["work_order"] = decision.WorkOrder
 	}
 
@@ -455,9 +455,9 @@ func (h *ToolHandler) getRequiredAction(state *orchestration.SessionState) strin
 	switch {
 	case state.CurrentPhase != orchestration.PhaseArchitecture:
 		return "Complete Architecture phase first"
-	case state.Workspace == nil || !state.Workspace.HasFoundation:
+	case state.Workspace.ResolvedPath == "" || !state.Workspace.HasFoundation:
 		return "Create foundation documentation"
-	case state.Workspace == nil || !state.Workspace.HasAuditReport:
+	case state.Workspace.ResolvedPath == "" || !state.Workspace.HasAuditReport:
 		return "Run audit to generate report"
 	case state.Confidence < orchestration.PhaseConfidenceThreshold[orchestration.PhaseImplementation]:
 		return fmt.Sprintf("Increase confidence to %.0f%% (currently %.0f%%)", 
