@@ -166,8 +166,10 @@ var (
 	)
 )
 
-// GuardResult is the common result type returned by all guards
-type GuardResult struct {
+// RuntimeGuardResult is the common result type returned by all guards in the new architecture.
+// NOTE: The legacy SessionGuard has its own GuardResult type for backward compatibility.
+// This type is used by RuntimeGuard, ProjectGuard, WorkspaceGuard, etc.
+type RuntimeGuardResult struct {
 	Valid       bool
 	State       RuntimeState
 	GuardType   GuardType
@@ -178,7 +180,7 @@ type GuardResult struct {
 
 // ProjectGuardResult contains project-specific guard results
 type ProjectGuardResult struct {
-	GuardResult
+	RuntimeGuardResult
 	ProjectPath  string
 	ProjectName  string
 	IsGitRepo    bool
@@ -187,7 +189,7 @@ type ProjectGuardResult struct {
 
 // WorkspaceGuardResult contains workspace-specific guard results
 type WorkspaceGuardResult struct {
-	GuardResult
+	RuntimeGuardResult
 	WorkspaceRoot string
 	Version       string
 	Integrity     bool
@@ -195,7 +197,7 @@ type WorkspaceGuardResult struct {
 
 // SessionGuardResult contains session-specific guard results
 type SessionGuardResult struct {
-	GuardResult
+	RuntimeGuardResult
 	SessionID   string
 	StartedAt   string
 	WorkspaceRoot string
@@ -203,7 +205,7 @@ type SessionGuardResult struct {
 
 // LifecycleGuardResult contains lifecycle-specific guard results
 type LifecycleGuardResult struct {
-	GuardResult
+	RuntimeGuardResult
 	CurrentPhase    string
 	AllowedPhases   []string
 	TransitionValid bool

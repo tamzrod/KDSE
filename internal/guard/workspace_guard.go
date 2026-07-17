@@ -34,7 +34,7 @@ func NewWorkspaceGuard(repoPath string) *WorkspaceGuard {
 // Returns WorkspaceGuardResult indicating if workspace is valid.
 func (g *WorkspaceGuard) Validate(ctx context.Context) *WorkspaceGuardResult {
 	result := &WorkspaceGuardResult{
-		GuardResult: GuardResult{
+		GuardResult: RuntimeGuardResult{
 			Valid:        false,
 			State:        StateProject,
 			StateBefore:  StateProject,

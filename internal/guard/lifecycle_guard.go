@@ -35,7 +35,7 @@ func NewLifecycleGuard(repoPath string) *LifecycleGuard {
 // Returns LifecycleGuardResult indicating if lifecycle is valid.
 func (g *LifecycleGuard) Validate(ctx context.Context) *LifecycleGuardResult {
 	result := &LifecycleGuardResult{
-		GuardResult: GuardResult{
+		GuardResult: RuntimeGuardResult{
 			Valid:        false,
 			State:        StateSession,
 			StateBefore:  StateSession,

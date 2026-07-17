@@ -33,7 +33,7 @@ func NewProjectGuard(repoPath string) *ProjectGuard {
 // Returns ProjectGuardResult indicating if a valid project was detected.
 func (g *ProjectGuard) Validate(ctx context.Context) *ProjectGuardResult {
 	result := &ProjectGuardResult{
-		GuardResult: GuardResult{
+		GuardResult: RuntimeGuardResult{
 			Valid:        false,
 			State:        StateNoProject,
 			StateBefore:  StateNoProject,

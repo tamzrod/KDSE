@@ -57,7 +57,7 @@ func (g *SessionValidationGuard) Validate(ctx context.Context) *SessionGuardResu
 	defer g.mu.RUnlock()
 
 	result := &SessionGuardResult{
-		GuardResult: GuardResult{
+		GuardResult: RuntimeGuardResult{
 			Valid:        false,
 			State:        StateWorkspace,
 			StateBefore:  StateWorkspace,
