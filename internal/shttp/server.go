@@ -15,7 +15,7 @@ import (
 
 	"github.com/kdse/runtime/internal/enforcer"
 	"github.com/kdse/runtime/internal/guard"
-	"github.com/kdse/runtime/internal/mcp"
+	"github.com/kdse/runtime/internal/mcpclient"
 	"github.com/kdse/runtime/internal/orchestration"
 	"github.com/kdse/runtime/internal/runtime"
 )
@@ -28,7 +28,7 @@ type Server struct {
 	guard       *guard.SessionGuard
 	enforcer    *enforcer.Engine
 	orchestrator *orchestration.Manager
-	executeTool *mcp.ExecuteTool
+	executeTool *mcpclient.ExecuteTool
 	kdseRuntime *runtime.Runtime
 	mu          sync.RWMutex
 	server      *http.Server
@@ -43,7 +43,7 @@ func NewServer(repoPath string, port int) *Server {
 		guard:       guard.NewSessionGuard(repoPath),
 		enforcer:    enforcer.NewEngine(repoPath),
 		orchestrator: orchestration.NewManager(repoPath),
-		executeTool: mcp.NewExecuteTool(repoPath),
+		executeTool: mcpclient.NewExecuteTool(repoPath),
 		kdseRuntime: runtime.New(repoPath),
 	}
 
@@ -170,7 +170,7 @@ func (s *Server) handleInitialize(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Initialize orchestration
-	state, err := s.orchestrator.Initialize()
+	state, err := s.orchestrator.InitializeDefault()
 	if err != nil {
 		s.writeError(w, fmt.Sprintf("Orchestration init failed: %v", err), http.StatusInternalServerError)
 		return
@@ -199,7 +199,7 @@ func (s *Server) handleExecute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req mcp.ExecuteRequest
+	var req mcpclient.ExecuteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		s.writeError(w, fmt.Sprintf("Invalid request: %v", err), http.StatusBadRequest)
 		return

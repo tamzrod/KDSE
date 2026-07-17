@@ -1,7 +1,7 @@
 // Package orchestration provides the KDSE orchestration engine that transforms
 // KDSE from a toolbox into an orchestration engine. After initialization, the
 // LLM never decides which KDSE tool to call - the execute tool decides.
-package orchestration
+package mcpclient
 
 import (
 	"encoding/json"
@@ -929,4 +929,54 @@ func (m *Manager) IsStrictMode() bool {
 		return true // Default to strict mode
 	}
 	return state.ExecutionMode == ModeStrict
+}
+
+// ExecuteRequest represents a request to execute a tool
+type ExecuteRequest struct {
+	Tool    string                 `json:"tool"`
+	Args    map[string]interface{} `json:"args"`
+	Context map[string]string      `json:"context,omitempty"`
+}
+
+// ExecuteResponse represents the response from executing a tool
+type ExecuteResponse struct {
+	Blocked        bool   `json:"blocked"`
+	BlockedReason  string `json:"blocked_reason,omitempty"`
+	Result         interface{} `json:"result,omitempty"`
+	Error          string `json:"error,omitempty"`
+}
+
+// ExecuteTool handles tool execution with enforcement
+type ExecuteTool struct {
+	repoPath string
+	enforcer *enforcer.Engine
+}
+
+// NewExecuteTool creates a new ExecuteTool
+func NewExecuteTool(repoPath string) *ExecuteTool {
+	return &ExecuteTool{
+		repoPath: repoPath,
+		enforcer: enforcer.NewEngine(repoPath),
+	}
+}
+
+// Execute runs a tool with enforcement checks
+func (e *ExecuteTool) Execute(req *ExecuteRequest) *ExecuteResponse {
+	// Check enforcement rules before execution
+	result := e.enforcer.ValidateOperation(req.Tool)
+	if result != nil && !result.Allowed {
+		reason := "enforcement violation"
+		if len(result.Violations) > 0 {
+			reason = result.Violations[0].Error()
+		}
+		return &ExecuteResponse{
+			Blocked:       true,
+			BlockedReason: reason,
+		}
+	}
+
+	// TODO: Implement actual tool execution
+	return &ExecuteResponse{
+		Result: fmt.Sprintf("Executed %s", req.Tool),
+	}
 }

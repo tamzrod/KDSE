@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/kdse/runtime/internal/guard"
-	"github.com/kdse/runtime/internal/mcp"
+	"github.com/kdse/runtime/internal/mcpclient"
 	"github.com/kdse/runtime/internal/workspace"
 )
 

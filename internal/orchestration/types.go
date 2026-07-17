@@ -154,3 +154,26 @@ func DefaultEngineConfig() *EngineConfig {
 		EnableMigration:     true,
 	}
 }
+
+// Phase is an alias for OrchestrationPhase for API compatibility
+type Phase = OrchestrationPhase
+
+// Phase constants re-exported for convenience
+const (
+	PhaseIdle           = types.PhaseIdle
+	PhaseProblem        = types.PhaseProblem
+	PhaseKnowledge      = types.PhaseKnowledge
+	PhaseFoundation     = types.PhaseFoundation
+	PhaseAudit          = types.PhaseAudit
+	PhaseAssessment     = types.PhaseAssessment
+	PhaseArchitecture   = types.PhaseArchitecture
+	PhaseImplementation = types.PhaseImplementation
+	PhaseComplete       = types.PhaseComplete
+	PhaseBlocked        = types.PhaseBlocked
+)
+
+// Additional phase constants used in confidence evaluation
+const (
+	PhaseResolve = OrchestrationPhase("Resolve")
+	PhaseCollect = OrchestrationPhase("Collect")
+)

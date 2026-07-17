@@ -498,3 +498,67 @@ func jsonMarshal(v interface{}) ([]byte, error) {
 func jsonUnmarshal(data []byte, v interface{}) error {
 	return json.Unmarshal(data, v)
 }
+
+// Manager is an alias for Engine for API compatibility
+// The authoritative type is Engine
+type Manager = Engine
+
+// NewManager creates a new Manager (alias for NewEngine)
+// Deprecated: Use NewEngine instead
+func NewManager(repoPath string) *Manager {
+	config := DefaultEngineConfig()
+	config.TempWorkspaceBase = repoPath
+	engine, _ := NewEngine(config)
+	return engine
+}
+
+// IsInitialized returns true if the session is active
+func (e *Engine) IsInitialized() bool {
+	return e.IsSessionActive()
+}
+
+// InitializeDefault initializes the orchestrator with default working path
+func (e *Engine) InitializeDefault() (*SessionState, error) {
+	err := e.Initialize(e.config.TempWorkspaceBase)
+	if err != nil {
+		return nil, err
+	}
+	return &SessionState{}, nil
+}
+
+// Load loads the session state from disk
+func (e *Engine) Load() (*SessionState, error) {
+	state := e.GetState()
+	if state == nil {
+		return nil, fmt.Errorf("no session state")
+	}
+	return &SessionState{
+		SessionID:         state.SessionID,
+		CurrentPhase:      state.CurrentPhase,
+		Confidence:        float64(state.Confidence.Overall),
+		ExecutionMode:     ExecutionMode("toolbox"),
+	}, nil
+}
+
+// TransitionTo transitions to a new phase
+func (e *Engine) TransitionTo(newPhase Phase, evidence []string) (*SessionState, error) {
+	state, err := e.Load()
+	if err != nil {
+		return nil, err
+	}
+	state.CurrentPhase = newPhase
+	return state, nil
+}
+
+// SessionState represents session state for compatibility with Manager interface
+type SessionState struct {
+	SessionID         string            `json:"session_id"`
+	CurrentPhase      OrchestrationPhase `json:"current_phase"`
+	Confidence        float64           `json:"confidence"`
+	CompletedPhases   []OrchestrationPhase `json:"completed_phases"`
+	NextAllowedPhases []OrchestrationPhase `json:"next_allowed_phases"`
+	ExecutionMode     ExecutionMode     `json:"execution_mode"`
+}
+
+// ExecutionMode represents the execution mode
+type ExecutionMode string
