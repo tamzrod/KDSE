@@ -211,8 +211,8 @@ type LifecycleGuardResult struct {
 	TransitionValid bool
 }
 
-// RuntimeGuardResult contains the combined results from all guards
-type RuntimeGuardResult struct {
+// RuntimeValidationResult contains the combined results from all guards during a validation run.
+type RuntimeValidationResult struct {
 	Valid        bool
 	FinalState   RuntimeState
 	Project      *ProjectGuardResult
@@ -223,7 +223,7 @@ type RuntimeGuardResult struct {
 }
 
 // AddError adds an error to the result
-func (r *RuntimeGuardResult) AddError(err *RuntimeGuardError) {
+func (r *RuntimeValidationResult) AddError(err *RuntimeGuardError) {
 	r.Errors = append(r.Errors, err)
 	r.Valid = false
 }

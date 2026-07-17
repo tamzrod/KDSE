@@ -23,10 +23,10 @@ type RuntimeGuard struct {
 	repoPath string
 
 	// Guards - initialized by options
-	projectGuard   ProjectGuard
-	workspaceGuard WorkspaceGuard
-	sessionGuard   SessionValidationGuard
-	lifecycleGuard LifecycleGuard
+	projectGuard   *ProjectGuard
+	workspaceGuard *WorkspaceGuard
+	sessionGuard   *SessionValidationGuard
+	lifecycleGuard *LifecycleGuard
 
 	mu      sync.RWMutex
 	options RuntimeGuardOptions
@@ -91,12 +91,12 @@ func (g *RuntimeGuard) SetOptions(opts RuntimeGuardOptions) {
 //   2. Workspace Guard → Workspace exists and valid
 //   3. Session Guard → Session is active and valid
 //   4. Lifecycle Guard → Lifecycle is ready for operations
-func (g *RuntimeGuard) Validate(ctx context.Context) *RuntimeGuardResult {
+func (g *RuntimeGuard) Validate(ctx context.Context) *RuntimeValidationResult {
 	g.mu.Lock()
 	opts := g.options
 	g.mu.Unlock()
 
-	result := &RuntimeGuardResult{
+	result := &RuntimeValidationResult{
 		Valid:      true,
 		FinalState: StateNoProject,
 	}
@@ -205,8 +205,8 @@ func (g *RuntimeGuard) Validate(ctx context.Context) *RuntimeGuardResult {
 
 // QuickCheck performs a non-blocking validation without enforcement.
 // Returns results without stopping on first failure.
-func (g *RuntimeGuard) QuickCheck(ctx context.Context) *RuntimeGuardResult {
-	result := &RuntimeGuardResult{
+func (g *RuntimeGuard) QuickCheck(ctx context.Context) *RuntimeValidationResult {
+	result := &RuntimeValidationResult{
 		Valid:      true,
 		FinalState: StateNoProject,
 	}
@@ -315,7 +315,7 @@ func (g *RuntimeGuard) GetCurrentState() RuntimeState {
 }
 
 // FormatResult formats the guard result for display
-func FormatGuardResult(result *RuntimeGuardResult) string {
+func FormatGuardResult(result *RuntimeValidationResult) string {
 	if result.Valid {
 		return fmt.Sprintf("✓ Runtime Guard: ALL PASSED (State: %s)", result.FinalState)
 	}

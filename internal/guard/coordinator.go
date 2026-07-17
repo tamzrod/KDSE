@@ -221,7 +221,7 @@ func getString(data map[string]interface{}, key, defaultVal string) string {
 }
 
 // Validate runs a full runtime validation
-func (c *Coordinator) Validate(ctx context.Context) *RuntimeGuardResult {
+func (c *Coordinator) Validate(ctx context.Context) *RuntimeValidationResult {
 	return c.guard.Validate(ctx)
 }
 

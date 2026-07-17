@@ -31,16 +31,7 @@ type SessionValidationGuard struct {
 	mu            sync.RWMutex
 }
 
-// SessionState represents the persisted session state
-type SessionState struct {
-	SessionID     string `json:"session_id"`
-	SessionToken  string `json:"session_token,omitempty"`
-	StartedAt     string `json:"started_at"`
-	UpdatedAt     string `json:"updated_at"`
-	WorkspaceRoot string `json:"workspace_root"`
-	Version       string `json:"version"`
-	Initialized   bool   `json:"initialized"`
-}
+// SessionState is defined in session_guard.go for shared use
 
 // NewSessionValidationGuard creates a new Session Validation Guard
 func NewSessionValidationGuard(repoPath string) *SessionValidationGuard {
@@ -57,7 +48,7 @@ func (g *SessionValidationGuard) Validate(ctx context.Context) *SessionGuardResu
 	defer g.mu.RUnlock()
 
 	result := &SessionGuardResult{
-		GuardResult: RuntimeGuardResult{
+		RuntimeGuardResult: RuntimeGuardResult{
 			Valid:        false,
 			State:        StateWorkspace,
 			StateBefore:  StateWorkspace,

@@ -43,7 +43,7 @@ func (e *GuardError) Error() string {
 	return fmt.Sprintf("[%s] %s", e.Code, e.Message)
 }
 
-// Common guard errors
+// Common guard errors (legacy types for backward compatibility)
 var (
 	ErrWorkspaceNotInitialized = &GuardError{
 		Code:    "KDSE_GUARD_001",
@@ -55,12 +55,12 @@ var (
 		Message: "No active KDSE session",
 		Hint:    "Please run `kdse initialize` to start a session",
 	}
-	ErrSessionInvalid = &GuardError{
+	ErrSessionInvalidLegacy = &GuardError{
 		Code:    "KDSE_GUARD_003",
 		Message: "Session state is invalid or corrupted",
 		Hint:    "Please run `kdse initialize` to reset the session",
 	}
-	ErrSessionExpired = &GuardError{
+	ErrSessionExpiredLegacy = &GuardError{
 		Code:    "KDSE_GUARD_004",
 		Message: "Session has expired",
 		Hint:    "Please run `kdse initialize` to start a new session",
@@ -178,7 +178,7 @@ func (g *SessionGuard) EnforceInitialized() error {
 			return ErrWorkspaceNotInitialized
 		case GuardTypeSession:
 			if err.Code == "SESSION_EXPIRED" {
-				return ErrSessionExpired
+				return ErrSessionExpiredLegacy
 			}
 			return ErrSessionNotActive
 		}
