@@ -5,18 +5,6 @@ import (
 	"time"
 )
 
-// Phase represents a KDSE engineering phase
-type Phase string
-
-const (
-	PhaseInitialization  Phase = "initialization"
-	PhaseKnowledge      Phase = "knowledge"
-	PhaseArchitecture   Phase = "architecture"
-	PhaseImplementation Phase = "implementation"
-	PhaseVerification   Phase = "verification"
-	PhaseReports        Phase = "reports"
-)
-
 // RuntimeType represents the type of runtime
 type RuntimeType string
 
@@ -89,8 +77,9 @@ type Transition struct {
 	Evidence  []string
 }
 
-// Workspace represents a KDSE workspace
-type Workspace struct {
+// RuntimeContext represents the KDSE workspace runtime state
+// This is the authoritative state container owned by the Workspace Engine
+type RuntimeContext struct {
 	Path    string
 	Root    string
 	Config  *WorkspaceConfig

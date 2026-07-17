@@ -31,19 +31,18 @@ func (e *DefaultEngine) loadRuntimeConfig() (*RuntimeConfig, error) {
 		return nil, ErrRuntimeInvalid
 	}
 
-	// Simple YAML parsing
+	// Simple YAML parsing - handle both flat and nested formats
 	var config RuntimeConfig
-	if strings.Contains(string(data), "type:") && strings.Contains(string(data), "version:") {
-		lines := strings.Split(string(data), "\n")
-		for _, line := range lines {
-			if strings.HasPrefix(line, "type:") {
-				t := strings.TrimPrefix(line, "type:")
-				config.Type = RuntimeType(strings.TrimSpace(t))
-			}
-			if strings.HasPrefix(line, "version:") {
-				v := strings.TrimPrefix(line, "version:")
-				config.Version = strings.TrimSpace(v)
-			}
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "type:") {
+			t := strings.TrimPrefix(trimmed, "type:")
+			config.Type = RuntimeType(strings.TrimSpace(t))
+		}
+		if strings.HasPrefix(trimmed, "version:") {
+			v := strings.TrimPrefix(trimmed, "version:")
+			config.Version = strings.TrimSpace(v)
 		}
 	}
 
@@ -371,7 +370,7 @@ func (e *DefaultEngine) persistSession(session *Session) error {
 }
 
 // Report formatting functions
-func (e *DefaultEngine) formatPhaseReport(ws *Workspace) string {
+func (e *DefaultEngine) formatPhaseReport(ws *RuntimeContext) string {
 	var b strings.Builder
 	b.WriteString("# Phase Report\n\n")
 	b.WriteString(fmt.Sprintf("| Field | Value |\n"))
@@ -382,7 +381,7 @@ func (e *DefaultEngine) formatPhaseReport(ws *Workspace) string {
 	return b.String()
 }
 
-func (e *DefaultEngine) formatVerificationReport(ws *Workspace) string {
+func (e *DefaultEngine) formatVerificationReport(ws *RuntimeContext) string {
 	var b strings.Builder
 	b.WriteString("# Verification Report\n\n")
 	b.WriteString(fmt.Sprintf("| Field | Value |\n"))
@@ -393,7 +392,7 @@ func (e *DefaultEngine) formatVerificationReport(ws *Workspace) string {
 	return b.String()
 }
 
-func (e *DefaultEngine) formatSummaryReport(ws *Workspace) string {
+func (e *DefaultEngine) formatSummaryReport(ws *RuntimeContext) string {
 	var b strings.Builder
 	b.WriteString("# Summary Report\n\n")
 	b.WriteString(fmt.Sprintf("## Workspace Overview\n\n"))
@@ -404,7 +403,7 @@ func (e *DefaultEngine) formatSummaryReport(ws *Workspace) string {
 	return b.String()
 }
 
-func (e *DefaultEngine) formatProgressReport(ws *Workspace) string {
+func (e *DefaultEngine) formatProgressReport(ws *RuntimeContext) string {
 	var b strings.Builder
 	b.WriteString("# Progress Report\n\n")
 	b.WriteString("## Phase Progress\n\n")

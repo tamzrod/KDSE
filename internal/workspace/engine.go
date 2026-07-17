@@ -5,15 +5,30 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/kdse/runtime/internal/methodology/lifecycle"
+)
+
+// Use lifecycle.Phase as the authoritative Phase type
+type Phase = lifecycle.Phase
+
+// Phase constants from lifecycle package
+const (
+	PhaseInitialization  = lifecycle.PhaseInitialization
+	PhaseKnowledge      = lifecycle.PhaseKnowledge
+	PhaseArchitecture   = lifecycle.PhaseArchitecture
+	PhaseImplementation = lifecycle.PhaseImplementation
+	PhaseVerification   = lifecycle.PhaseVerification
+	PhaseReports        = lifecycle.PhaseReports
 )
 
 // Engine is the main interface for the Workspace Engine
 // It owns all project state and enforces the KDSE methodology
 type Engine interface {
 	// Workspace lifecycle
-	InitializeWorkspace(ctx context.Context, opts InitOptions) (*Workspace, error)
+	InitializeWorkspace(ctx context.Context, opts InitOptions) (*RuntimeContext, error)
 	VerifyWorkspace(ctx context.Context) (*VerificationResult, error)
-	LoadWorkspace(ctx context.Context) (*Workspace, error)
+	LoadWorkspace(ctx context.Context) (*RuntimeContext, error)
 	DestroyWorkspace(ctx context.Context) error
 
 	// Phase management
@@ -82,6 +97,8 @@ func (e *DefaultEngine) VerifyWorkspace(ctx context.Context) (*VerificationResul
 			Code:    "RUNTIME_INVALID",
 			Message: err.Error(),
 		})
+		result.RuntimeInfo = nil
+		return result, nil
 	}
 
 	// Step 3: Load current phase
@@ -112,14 +129,16 @@ func (e *DefaultEngine) VerifyWorkspace(ctx context.Context) (*VerificationResul
 		}
 	}
 
-	result.RuntimeInfo = runtimeConfig
+	result.RuntimeInfo = &RuntimeInfo{
+		Type:    runtimeConfig.Type,
+		Version: runtimeConfig.Version,
+		Commit:  runtimeConfig.Commit,
+	}
 	return result, nil
 }
 
 // InitializeWorkspace initializes a new KDSE workspace
-func (e *DefaultEngine) InitializeWorkspace(ctx context.Context, opts InitOptions) (*Workspace, error) {
-	kdseDir := filepath.Join(e.workspacePath, ".kdse")
-
+func (e *DefaultEngine) InitializeWorkspace(ctx context.Context, opts InitOptions) (*RuntimeContext, error) {
 	// Create staging directory for atomic initialization
 	stagingDir, err := os.MkdirTemp("", "kdse-init-*")
 	if err != nil {
@@ -198,7 +217,7 @@ func (e *DefaultEngine) InitializeWorkspace(ctx context.Context, opts InitOption
 }
 
 // LoadWorkspace loads the current workspace state
-func (e *DefaultEngine) LoadWorkspace(ctx context.Context) (*Workspace, error) {
+func (e *DefaultEngine) LoadWorkspace(ctx context.Context) (*RuntimeContext, error) {
 	kdseDir := filepath.Join(e.workspacePath, ".kdse")
 
 	// Verify .kdse exists
@@ -237,7 +256,7 @@ func (e *DefaultEngine) LoadWorkspace(ctx context.Context) (*Workspace, error) {
 	state.ArtifactCount = artifactCount
 	state.ReportCount = reportCount
 
-	return &Workspace{
+	return &RuntimeContext{
 		Path:    e.workspacePath,
 		Root:    e.workspacePath,
 		Config:  &WorkspaceConfig{Version: "1.0.0"},
@@ -267,7 +286,6 @@ func (e *DefaultEngine) AdvancePhase(ctx context.Context, target Phase) (*Transi
 
 	// Validate transition
 	if !e.lifecycle.IsValidTransition(current, target) {
-		validNext, _ := e.lifecycle.GetNextPhase(current)
 		return nil, &EngineError{
 			Code:        "INVALID_TRANSITION",
 			Message:     "Invalid phase transition",
@@ -365,7 +383,11 @@ func (e *DefaultEngine) VerifyArtifacts(ctx context.Context, phase Phase) (*Vali
 		if art, exists := existingPaths[spec.Path]; exists {
 			result.Verified = append(result.Verified, art)
 		} else if spec.Required {
-			result.Missing = append(result.Missing, spec)
+			result.Missing = append(result.Missing, ArtifactSpec{
+				Path:     spec.Path,
+				Type:     spec.Type,
+				Required: spec.Required,
+			})
 			result.Valid = false
 		}
 	}
