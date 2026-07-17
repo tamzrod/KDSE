@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/kdse/runtime/internal/enforcer"
 	"github.com/kdse/runtime/internal/types"
 )
 
@@ -88,6 +89,7 @@ type PhaseTransition struct {
 type Manager struct {
 	repoPath    string
 	guard       *SessionGuard
+	enforcer    *enforcer.Engine
 	initialized bool
 }
 
@@ -146,6 +148,7 @@ func NewManager(repoPath string) *Manager {
 	return &Manager{
 		repoPath:    repoPath,
 		guard:       NewSessionGuard(repoPath),
+		enforcer:    enforcer.NewEngine(repoPath),
 		initialized: false,
 	}
 }
@@ -415,16 +418,42 @@ func (m *Manager) CanProceedTo(targetPhase Phase) (bool, string) {
 }
 
 // CheckImplementationReadiness verifies if the project is ready for implementation
+// This method now integrates with the enforcer engine for strict KDSE principle enforcement
 func (m *Manager) CheckImplementationReadiness() (bool, *SessionState) {
 	state, err := m.Load()
 	if err != nil {
 		return false, nil
 	}
 
-	// Check all prerequisites for implementation
+	// FIRST: Run enforcer checks for strict KDSE principle enforcement
+	// This blocks premature implementation if foundation/knowledge/architecture is missing
+	enforcementErr := m.enforcer.EnforceImplementation()
+	
+	if enforcementErr != nil {
+		// Get violations from enforcer
+		violations := m.enforcer.GetViolations()
+		var reasons []string
+		for _, v := range violations {
+			if v.Blocked {
+				reasons = append(reasons, fmt.Sprintf("[%s] %s", v.Code, v.Message))
+			}
+		}
+		state.BlockedReason = fmt.Sprintf("KDSE Enforcement blocked: %v", reasons)
+		
+		// Also include in session state for the LLM to see
+		if state.Workspace == nil {
+			state.Workspace = &WorkspaceState{}
+		}
+		state.Workspace.HasFoundation = !m.hasEnforcementViolation(violations, enforcer.CodeNoFoundation, enforcer.CodeFoundationIncomplete)
+		state.Workspace.HasArtifacts = !m.hasEnforcementViolation(violations, enforcer.CodeNoKnowledge, enforcer.CodeKnowledgeIncomplete)
+		
+		return false, state
+	}
+
+	// SECOND: Check orchestration-level prerequisites
 	prerequisites := []struct {
-		check    bool
-		reason   string
+		check  bool
+		reason string
 	}{
 		{state.CurrentPhase == PhaseArchitecture, fmt.Sprintf("Current phase: %s (need Architecture)", state.CurrentPhase)},
 		{state.Confidence >= PhaseConfidenceThreshold[PhaseImplementation], fmt.Sprintf("Confidence: %.2f (need %.2f)", state.Confidence, PhaseConfidenceThreshold[PhaseImplementation])},
@@ -448,6 +477,25 @@ func (m *Manager) CheckImplementationReadiness() (bool, *SessionState) {
 
 	state.BlockedReason = ""
 	return true, state
+}
+
+// hasEnforcementViolation checks if violations contain a specific code
+func (m *Manager) hasEnforcementViolation(violations []enforcer.EnforcementError, codes ...string) bool {
+	violationMap := make(map[string]bool)
+	for _, v := range violations {
+		violationMap[v.Code] = true
+	}
+	for _, code := range codes {
+		if violationMap[code] {
+			return true
+		}
+	}
+	return false
+}
+
+// GetEnforcementReport returns the current enforcement status
+func (m *Manager) GetEnforcementReport() *enforcer.EnforcementReport {
+	return m.enforcer.GenerateEnforcementReport()
 }
 
 // GetExecutionDecision determines what KDSE operations to invoke based on session state.
