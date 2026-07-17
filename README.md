@@ -1,17 +1,17 @@
 # Knowledge-Driven Software Engineering (KDSE)
 
-**KDSE** is a Runtime-Centric Engineering Platform where the KDSE Runtime (`.kdse/`) is the authoritative foundation of every engineering project.
+**KDSE** is an Engineering Runtime that **augments** software engineering practices. It never replaces them.
 
 ## Core Principles
 
 | # | Principle | What It Means |
 |---|-----------|---------------|
 | P-001 | Evidence First | No engineering work without evidence |
-| P-002 | Runtime is the Authority | `.kdse/` is the authoritative state |
-| P-003 | One Methodology | Only one engineering methodology |
-| P-004 | Multiple Runtimes | CLI, MCP, IDE are execution adapters |
-| P-005 | Runtime Independence | Methodology never depends on runtime |
-| P-006 | Filesystem is Evidence | Without `.kdse/`, project is NOT KDSE |
+| P-002 | Project is the Foundation | The software project owns all deliverables |
+| P-003 | Runtime Augments | KDSE runtime supports, not replaces engineering |
+| P-004 | Ownership Boundaries | Project vs Runtime layers are strictly separated |
+| P-005 | Standard Practices | KDSE enhances, not bypasses, standard engineering |
+| P-006 | Runtime is the Engineering Runtime | `.kdse/` is for engineering artifacts, not project deliverables |
 
 ## Architecture Overview
 
@@ -61,27 +61,35 @@ kdse report --type summary
 
 ## KDSE Runtime (.kdse/)
 
-The `.kdse/` directory is **mandatory**. Without it, the project is NOT a KDSE project.
+The `.kdse/` directory contains the **KDSE Engineering Runtime** - it is NOT the project workspace.
+
+**Key Rule:** A KDSE-enabled repository must remain a standard software project. Any engineer unfamiliar with KDSE should still be able to understand, build, and maintain the project.
 
 ```
-.kdse/
-├── runtime.yaml           # Runtime configuration (type, version)
-├── workspace.yaml         # Workspace state
-├── methodology.yaml       # Methodology reference
-├── phase.yaml              # Current phase
-├── session.yaml            # Session state
-├── metadata.yaml            # Runtime metadata
-├── knowledge/               # Knowledge artifacts
-│   ├── requirements.md
-│   ├── stakeholders.md
-│   └── constraints.md
-├── architecture/           # Architecture artifacts
-│   ├── architecture.md
-│   └── decisions.md
-├── implementation/          # Implementation artifacts
-├── verification/            # Verification artifacts
-└── reports/                 # Generated reports
+Project/                     # ← Project Layer (owned by software project)
+├── README.md               # Project documentation
+├── docs/                   # Project documentation
+├── src/                    # Source code
+├── tests/                  # Test code
+└── .kdse/                 # ← Runtime Layer (owned by KDSE)
+    ├── runtime/            # Runtime state
+    ├── sessions/          # Engineering sessions
+    ├── reports/           # Engineering reports
+    ├── evidence/          # Engineering evidence
+    ├── traceability/      # Traceability links
+    ├── references/        # External standards (IEC 61850, Modbus, etc.)
+    ├── knowledge/         # Extracted knowledge
+    └── laboratory/        # Engineering laboratory
 ```
+
+### Ownership Boundaries
+
+| Layer | Owner | Contains | Location |
+|-------|-------|----------|----------|
+| **Project Layer** | Software Project | Deliverables, docs, code | Project root |
+| **Runtime Layer** | KDSE Runtime | State, sessions, evidence | `.kdse/` |
+| **Reference Layer** | KDSE Runtime | External standards | `.kdse/references/` |
+| **Knowledge Layer** | KDSE Runtime | Extracted knowledge | `.kdse/knowledge/` |
 
 ## Engineering Phases
 
@@ -158,22 +166,19 @@ If verification fails → STOP, return error
 
 | Document | Description |
 |----------|-------------|
+| [docs/architecture/OWNERSHIP_MODEL.md](docs/architecture/OWNERSHIP_MODEL.md) | **Ownership model** - Project vs Runtime boundaries |
+| [docs/architecture/AUDIT-ARCHITECTURE-DRIFT.md](docs/architecture/AUDIT-ARCHITECTURE-DRIFT.md) | Architecture audit report |
 | [docs/architecture/PRINCIPLES.md](docs/architecture/PRINCIPLES.md) | Core principles |
 | [docs/architecture/RUNTIME_ARCHITECTURE.md](docs/architecture/RUNTIME_ARCHITECTURE.md) | Runtime architecture |
 | [docs/architecture/METHODOLOGY.md](docs/architecture/METHODOLOGY.md) | Engineering methodology |
-| [docs/architecture/WORKSPACE_ENGINE.md](docs/architecture/WORKSPACE_ENGINE.md) | Workspace Engine |
-| [docs/architecture/CLI_RUNTIME.md](docs/architecture/CLI_RUNTIME.md) | CLI Runtime |
-| [docs/architecture/MCP_RUNTIME.md](docs/architecture/MCP_RUNTIME.md) | MCP Runtime |
 
-## Architecture Evolution
+## KDSE Runtime Documentation
 
 | Document | Description |
 |----------|-------------|
-| [docs/architecture-evolution/README.md](docs/architecture-evolution/README.md) | Evolution index |
-| [docs/architecture-evolution/KAE-001](docs/architecture-evolution/KAE-001-RUNTIME-CENTRIC-ARCHITECTURE.md) | Runtime-Centric Architecture |
-| [docs/architecture-evolution/KAE-002](docs/architecture-evolution/KAE-002-CLI-MCP-RUNTIME-SEPARATION.md) | CLI/MCP Separation |
-| [docs/architecture-evolution/KAE-003](docs/architecture-evolution/KAE-003-RUNTIME-BOOTSTRAP.md) | Runtime Bootstrap |
-| [docs/architecture-evolution/MIGRATION.md](docs/architecture-evolution/MIGRATION.md) | Migration Guide |
+| [docs/runtime/README.md](docs/runtime/README.md) | KDSE Runtime usage guide |
+| [docs/runtime/COMMANDS.md](docs/runtime/COMMANDS.md) | CLI commands reference |
+| [docs/runtime/INITIALIZATION.md](docs/runtime/KDSE_INITIALIZATION.md) | Initialization guide |
 
 ## ADRs (Architecture Decision Records)
 

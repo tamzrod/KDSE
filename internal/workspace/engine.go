@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -138,6 +139,7 @@ func (e *DefaultEngine) VerifyWorkspace(ctx context.Context) (*VerificationResul
 }
 
 // InitializeWorkspace initializes a new KDSE workspace
+// This creates both the standard project layout AND the KDSE runtime
 func (e *DefaultEngine) InitializeWorkspace(ctx context.Context, opts InitOptions) (*RuntimeContext, error) {
 	// Create staging directory for atomic initialization
 	stagingDir, err := os.MkdirTemp("", "kdse-init-*")
@@ -146,13 +148,19 @@ func (e *DefaultEngine) InitializeWorkspace(ctx context.Context, opts InitOption
 	}
 	defer os.RemoveAll(stagingDir)
 
-	// Create .kdse structure in staging
+	// Step 1: Create standard project layout in staging
+	// This ensures KDSE augments the project, not replaces it
+	if err := e.createProjectLayout(stagingDir); err != nil {
+		return nil, err
+	}
+
+	// Step 2: Create .kdse structure in staging
 	stagingKDSE := filepath.Join(stagingDir, ".kdse")
 	if err := os.MkdirAll(stagingKDSE, 0755); err != nil {
 		return nil, err
 	}
 
-	// Create required files
+	// Create required runtime files
 	if err := e.createRuntimeFiles(stagingKDSE, opts); err != nil {
 		return nil, err
 	}
@@ -162,42 +170,10 @@ func (e *DefaultEngine) InitializeWorkspace(ctx context.Context, opts InitOption
 		return nil, err
 	}
 
-	// Create knowledge directory
-	knowledgeDir := filepath.Join(stagingKDSE, "knowledge")
-	if err := os.MkdirAll(knowledgeDir, 0755); err != nil {
+	// Create KDSE runtime directories (runtime layer)
+	if err := e.createRuntimeDirectories(stagingKDSE); err != nil {
 		return nil, err
 	}
-
-	// Create architecture directory
-	architectureDir := filepath.Join(stagingKDSE, "architecture")
-	if err := os.MkdirAll(architectureDir, 0755); err != nil {
-		return nil, err
-	}
-
-	// Create implementation directory
-	implementationDir := filepath.Join(stagingKDSE, "implementation")
-	if err := os.MkdirAll(implementationDir, 0755); err != nil {
-		return nil, err
-	}
-
-	// Create verification directory
-	verificationDir := filepath.Join(stagingKDSE, "verification")
-	if err := os.MkdirAll(verificationDir, 0755); err != nil {
-		return nil, err
-	}
-
-	// Create reports directory
-	reportsDir := filepath.Join(stagingKDSE, "reports")
-	if err := os.MkdirAll(reportsDir, 0755); err != nil {
-		return nil, err
-	}
-
-	// Create README files in directories
-	e.createDirectoryReadme(knowledgeDir)
-	e.createDirectoryReadme(architectureDir)
-	e.createDirectoryReadme(implementationDir)
-	e.createDirectoryReadme(verificationDir)
-	e.createDirectoryReadme(reportsDir)
 
 	// Atomic move to final location
 	if err := atomicMove(stagingDir, e.workspacePath); err != nil {
@@ -214,6 +190,126 @@ func (e *DefaultEngine) InitializeWorkspace(ctx context.Context, opts InitOption
 	}
 
 	return e.LoadWorkspace(ctx)
+}
+
+// createProjectLayout creates the standard project directory structure
+// This is the project layer - owned by the software project, not KDSE
+func (e *DefaultEngine) createProjectLayout(stagingDir string) error {
+	// Project directories - these belong to the project, not KDSE
+	projectDirs := []string{
+		"docs",
+		"docs/architecture",
+		"docs/api",
+		"docs/deployment",
+		"docs/design",
+		"src",
+		"tests",
+	}
+
+	for _, dir := range projectDirs {
+		fullPath := filepath.Join(stagingDir, dir)
+		if err := os.MkdirAll(fullPath, 0755); err != nil {
+			return err
+		}
+	}
+
+	// Create README.md if it doesn't exist in project root
+	readmePath := filepath.Join(stagingDir, "README.md")
+	if _, err := os.Stat(readmePath); os.IsNotExist(err) {
+		readme := "# Project\n\nThis is a KDSE-enabled software project.\n\n## Project Structure\n\n- docs/ - Project documentation\n- src/ - Source code\n- tests/ - Test code\n\n## KDSE Runtime\n\nThe .kdse/ directory contains the KDSE engineering runtime.\nSee docs/architecture/OWNERSHIP_MODEL.md for details.\n\n## Quick Start\n\n1. Install dependencies\n2. Build the project\n3. Run tests\n"
+		if err := os.WriteFile(readmePath, []byte(readme), 0644); err != nil {
+			return err
+		}
+	}
+
+	// Create README.md for project directories (idempotent)
+	for _, dir := range projectDirs {
+		readmePath := filepath.Join(stagingDir, dir, "README.md")
+		if _, err := os.Stat(readmePath); os.IsNotExist(err) {
+			dirName := filepath.Base(dir)
+			readme := fmt.Sprintf(`# %s
+
+This directory is part of the project layer (owned by the software project).
+
+`, dirName)
+			if err := os.WriteFile(readmePath, []byte(readme), 0644); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// createRuntimeDirectories creates KDSE runtime layer directories
+// These belong to KDSE, not the project
+func (e *DefaultEngine) createRuntimeDirectories(stagingKDSE string) error {
+	// Runtime directories - these belong to KDSE, not the project
+	runtimeDirs := []string{
+		"runtime",
+		"sessions",
+		"state",
+		"cache",
+		"reports",
+		"evidence",
+		"traceability",
+		"references",
+		"references/modbus",
+		"references/iec61850",
+		"references/vendor",
+		"knowledge",
+		"laboratory",
+	}
+
+	for _, dir := range runtimeDirs {
+		fullPath := filepath.Join(stagingKDSE, dir)
+		if err := os.MkdirAll(fullPath, 0755); err != nil {
+			return err
+		}
+	}
+
+	// Create README files in runtime directories (idempotent)
+	for _, dir := range runtimeDirs {
+		readmePath := filepath.Join(stagingKDSE, dir, "README.md")
+		if _, err := os.Stat(readmePath); os.IsNotExist(err) {
+			dirName := filepath.Base(dir)
+			var readme string
+			switch dirName {
+			case "references":
+				readme = `# References
+
+This directory contains external authoritative references.
+These are external sources, NOT project documentation.
+
+`
+			case "knowledge":
+				readme = `# Knowledge
+
+This directory contains knowledge extracted from references.
+Knowledge must maintain traceability back to its references.
+
+`
+			case "laboratory":
+				readme = `# Laboratory
+
+This directory contains the engineering laboratory for experiments.
+This is a runtime artifact, not project documentation.
+
+`
+			default:
+				readme = fmt.Sprintf(`# %s
+
+This directory is part of the KDSE runtime layer.
+
+`, dirName)
+			}
+			if err := os.WriteFile(readmePath, []byte(readme), 0644); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // LoadWorkspace loads the current workspace state
