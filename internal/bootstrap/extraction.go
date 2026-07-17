@@ -98,9 +98,3 @@ func extractTarGz(archivePath, destDir string) error {
 	return nil
 }
 
-// ExtractZip extracts a .zip archive (for future use with GitHub release assets).
-func ExtractZip(archivePath, destDir string) error {
-	// Placeholder for zip extraction if needed in the future
-	// Currently using tar.gz which is standard for GitHub archives
-	return fmt.Errorf("zip extraction not implemented - use tar.gz format")
-}
