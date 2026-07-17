@@ -36,7 +36,7 @@ type EnforcementError struct {
 	Blocked          bool     `json:"blocked"`
 }
 
-func (e *EnforcementError) Error() string {
+func (e EnforcementError) Error() string {
 	return fmt.Sprintf("[%s] %s", e.Code, e.Message)
 }
 

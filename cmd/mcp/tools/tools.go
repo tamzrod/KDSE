@@ -167,8 +167,20 @@ func (h *ToolHandler) loadToolsFromRegistry() []map[string]interface{} {
 
 // Initialize delegates to kdse runtime for initialization
 func (h *ToolHandler) Initialize() map[string]interface{} {
-	// Delegate to kdse CLI
+	// Delegate to kdse CLI for runtime initialization
 	result := h.runKDSECommand("initialize")
+
+	// Also create orchestration session
+	state, err := h.orch.Initialize()
+	if err != nil {
+		result["orchestration_error"] = err.Error()
+	} else {
+		result["orchestration"] = map[string]interface{}{
+			"session_id":     state.SessionID,
+			"current_phase":  state.CurrentPhase,
+			"execution_mode": state.ExecutionMode,
+		}
+	}
 
 	// Add MCP-specific info
 	result["mcp"] = map[string]interface{}{
