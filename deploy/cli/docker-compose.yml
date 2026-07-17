@@ -1,0 +1,24 @@
+# KDSE CLI - Authoritative Production Docker Compose
+# Target: Isolated CLI runtime
+# Version: 2.0.0
+
+services:
+  # KDSE Runtime CLI
+  kdse-runtime:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    image: kdse-cli:${IMAGE_TAG:-production}
+    container_name: kdse-runtime
+    environment:
+      - KDSE_REPO_ROOT=/repo
+    volumes:
+      # Mount repository for CLI operations
+      - ${KDSE_REPO_PATH:-../..}:/repo
+    command: ["status"]
+    networks:
+      - kdse-cli-network
+
+networks:
+  kdse-cli-network:
+    driver: bridge

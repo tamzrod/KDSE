@@ -1,0 +1,54 @@
+# KDSE MCP Server - Authoritative Production Docker Compose
+# Target: DigitalOcean with Nginx Proxy Manager
+# Network: nginx-proxy-manager_default (external)
+# Version: 2.0.0
+
+services:
+  # KDSE MCP Server - HTTP mode (production)
+  kdse-mcp:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    image: kdse-mcp:${IMAGE_TAG:-production}
+    container_name: kdse-mcp
+    environment:
+      - KDSE_REPO_ROOT=/repo
+      - MCP_TRANSPORT=${MCP_TRANSPORT:-http}
+      - MCP_HTTP_PORT=${MCP_HTTP_PORT:-18181}
+    ports:
+      - "${MCP_HTTP_PORT:-18181}:${MCP_HTTP_PORT:-18181}"
+    networks:
+      - proxy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:${MCP_HTTP_PORT:-18181}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "${LOG_MAX_SIZE:-10m}"
+        max-file: "${LOG_MAX_FILES:-3}"
+
+  # KDSE MCP Server - STDIO mode (development)
+  kdse-mcp-stdio:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    image: kdse-mcp:${IMAGE_TAG:-production}
+    container_name: kdse-mcp-stdio
+    environment:
+      - KDSE_REPO_ROOT=/repo
+      - MCP_TRANSPORT=stdio
+    stdin_open: true
+    tty: true
+    networks:
+      - proxy
+    restart: unless-stopped
+
+networks:
+  proxy:
+    external: true
+    name: nginx-proxy-manager_default
