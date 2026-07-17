@@ -5,8 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"kdse/internal/methodology/lifecycle"
 )
 
 func TestEngine_VerifyWorkspace_NoRuntime(t *testing.T) {
