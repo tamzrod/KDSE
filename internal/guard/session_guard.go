@@ -1,6 +1,25 @@
-// Package guard provides the KDSE Session Guard - a critical enforcement layer
-// that ensures all KDSE operations require a valid initialized workspace and session state.
-// No operation should bypass this guard.
+// Package guard provides the KDSE Session Guard.
+//
+// DEPRECATED: The original SessionGuard has been refactored into separate guards:
+//   - RuntimeGuard: Orchestrates all guards (internal/guard/runtime_guard.go)
+//   - ProjectGuard: Project discovery and validation (internal/guard/project_guard.go)
+//   - WorkspaceGuard: Workspace validation (internal/guard/workspace_guard.go)
+//   - SessionValidationGuard: Session validation (internal/guard/session_validation_guard.go)
+//   - LifecycleGuard: Lifecycle validation (internal/guard/lifecycle_guard.go)
+//
+// This file is kept for backward compatibility but delegates to the new architecture.
+//
+// The SessionGuard is now only responsible for:
+//   - Active session detection
+//   - Session validity
+//   - Session expiration
+//   - Session recovery
+//
+// Session Guard must NEVER:
+//   - Discover projects (now ProjectGuard)
+//   - Validate projects (now ProjectGuard)
+//   - Initialize projects (now RuntimeGuard)
+//   - Create workspaces (now RuntimeGuard)
 package guard
 
 import (
@@ -11,8 +30,6 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
-
-	"github.com/kdse/runtime/internal/workspace"
 )
 
 // GuardError represents a session guard enforcement error
@@ -50,14 +67,18 @@ var (
 	}
 )
 
-// SessionGuard is a thread-safe enforcement layer that validates workspace and session state
-// before allowing any KDSE operations to proceed.
+// SessionGuard is a thread-safe enforcement layer that validates session state.
+// It has been refactored to ONLY manage sessions - all project and workspace
+// logic has been moved to dedicated guards.
+//
+// NOTE: For new code, use RuntimeGuard which orchestrates all guards together.
+// This SessionGuard is kept for backward compatibility.
 type SessionGuard struct {
-	repoPath  string
-	ws        *workspace.Workspace
-	mu        sync.RWMutex
-	autoInit  bool
-	logging   bool
+	repoPath      string
+	workspacePath string
+	mu            sync.RWMutex
+	autoInit      bool
+	logging       bool
 }
 
 // SessionState represents the persisted session state used by the guard
@@ -81,23 +102,25 @@ type GuardResult struct {
 	Error         *GuardError `json:"error,omitempty"`
 }
 
-// NewSessionGuard creates a new SessionGuard for the given repository path
+// NewSessionGuard creates a new SessionGuard for the given repository path.
+// NOTE: For new code, prefer RuntimeGuard which orchestrates all guards.
 func NewSessionGuard(repoPath string) *SessionGuard {
 	return &SessionGuard{
-		repoPath: repoPath,
-		ws:       workspace.New(repoPath),
-		autoInit: false,
-		logging:  true,
+		repoPath:      repoPath,
+		workspacePath: filepath.Join(repoPath, ".kdse"),
+		autoInit:      false,
+		logging:       true,
 	}
 }
 
 // NewSessionGuardWithAutoInit creates a new SessionGuard with auto-initialization enabled
+// NOTE: For new code, prefer RuntimeGuard which orchestrates all guards.
 func NewSessionGuardWithAutoInit(repoPath string) *SessionGuard {
 	return &SessionGuard{
-		repoPath: repoPath,
-		ws:       workspace.New(repoPath),
-		autoInit: true,
-		logging:  true,
+		repoPath:      repoPath,
+		workspacePath: filepath.Join(repoPath, ".kdse"),
+		autoInit:      true,
+		logging:       true,
 	}
 }
 
@@ -116,7 +139,11 @@ func (g *SessionGuard) SetLogging(enabled bool) {
 }
 
 // EnforceInitialized is the primary entry point for session enforcement.
-// It checks if the workspace and session are properly initialized and active.
+//
+// DEPRECATED: This method has been superseded by RuntimeGuard.Validate().
+// For new code, use RuntimeGuard which orchestrates all guards together.
+//
+// This method checks if the workspace and session are properly initialized and active.
 // If autoInit is enabled, it will attempt to initialize on first run.
 // Returns nil if initialized, otherwise returns a GuardError.
 func (g *SessionGuard) EnforceInitialized() error {
@@ -127,105 +154,59 @@ func (g *SessionGuard) EnforceInitialized() error {
 		log.Printf("[GUARD] Checking initialization status...")
 	}
 
-	// Step 1: Check if .kdse/ workspace directory exists
-	if !g.ws.Exists() {
+	// Delegate to RuntimeGuard for full validation
+	runtimeGuard := NewRuntimeGuard(g.repoPath)
+	result := runtimeGuard.Validate(nil)
+
+	if result.Valid {
 		if g.logging {
-			log.Printf("[GUARD] Workspace not found: %s", g.ws.Root())
+			log.Printf("[GUARD] Initialization check passed.")
 		}
-		
-		if g.autoInit {
-			return g.autoInitialize()
-		}
-		
-		return ErrWorkspaceNotInitialized
+		return nil
 	}
 
-	// Step 2: Check if session state file exists and is valid
-	sessionState, err := g.loadSessionState()
-	if err != nil {
-		if g.logging {
-			log.Printf("[GUARD] Session state error: %v", err)
+	// Map errors from RuntimeGuard to legacy GuardError
+	for _, err := range result.Errors {
+		switch err.GuardType {
+		case GuardTypeProject:
+			return &GuardError{
+				Code:    "KDSE_GUARD_000",
+				Message: err.Message,
+				Hint:    err.Hint,
+			}
+		case GuardTypeWorkspace:
+			return ErrWorkspaceNotInitialized
+		case GuardTypeSession:
+			if err.Code == "SESSION_EXPIRED" {
+				return ErrSessionExpired
+			}
+			return ErrSessionNotActive
 		}
-		
-		if g.autoInit && os.IsNotExist(err) {
-			return g.autoInitialize()
-		}
-		
-		return ErrSessionNotActive
 	}
 
-	// Step 3: Verify session state is valid
-	if err := g.validateSessionState(sessionState); err != nil {
-		if g.logging {
-			log.Printf("[GUARD] Session validation failed: %v", err)
-		}
-		
-		if g.autoInit {
-			return g.autoInitialize()
-		}
-		
-		return ErrSessionInvalid
-	}
-
-	// Step 4: Verify session hasn't expired (optional 24-hour expiry)
-	if g.isSessionExpired(sessionState) {
-		if g.logging {
-			log.Printf("[GUARD] Session expired: %s", sessionState.SessionID)
-		}
-		
-		if g.autoInit {
-			return g.autoInitialize()
-		}
-		
-		return ErrSessionExpired
-	}
-
-	if g.logging {
-		log.Printf("[GUARD] Initialization check passed. Session: %s", sessionState.SessionID)
-	}
-
-	return nil
+	return ErrSessionNotActive
 }
 
 // Check performs a non-enforcing check of initialization status
 // Returns GuardResult without returning an error
+//
+// DEPRECATED: For new code, use RuntimeGuard.QuickCheck().
 func (g *SessionGuard) Check() *GuardResult {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
-	result := &GuardResult{
-		Valid:         false,
-		SessionActive: false,
-		WorkspaceReady: g.ws.Exists(),
+	// Delegate to RuntimeGuard for full quick check
+	runtimeGuard := NewRuntimeGuard(g.repoPath)
+	result := runtimeGuard.QuickCheck(nil)
+
+	return &GuardResult{
+		Valid:         result.Valid,
+		SessionActive: result.Session != nil && result.Session.Valid,
+		WorkspaceReady: result.Workspace != nil && result.Workspace.Valid,
+		SessionID:     "",
+		SessionAge:    "",
+		Error:        nil,
 	}
-
-	if !g.ws.Exists() {
-		result.Error = ErrWorkspaceNotInitialized
-		return result
-	}
-
-	sessionState, err := g.loadSessionState()
-	if err != nil {
-		result.Error = ErrSessionNotActive
-		return result
-	}
-
-	if err := g.validateSessionState(sessionState); err != nil {
-		result.Error = ErrSessionInvalid
-		return result
-	}
-
-	if g.isSessionExpired(sessionState) {
-		result.Error = ErrSessionExpired
-		return result
-	}
-
-	result.Valid = true
-	result.SessionActive = true
-	result.SessionID = sessionState.SessionID
-	result.SessionAge = g.formatSessionAge(sessionState.StartedAt)
-
-	return result
 }
 
 // EnforceForOperation is a convenience method that enforces initialization
@@ -242,6 +223,8 @@ func (g *SessionGuard) EnforceForOperation(operationName string) error {
 }
 
 // Initialize performs a full initialization of the KDSE workspace and session
+//
+// DEPRECATED: For new code, use RuntimeGuard with initialization.
 func (g *SessionGuard) Initialize() error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -250,25 +233,18 @@ func (g *SessionGuard) Initialize() error {
 		log.Printf("[GUARD] Initializing KDSE workspace...")
 	}
 
-	// Step 1: Create workspace directory
-	if err := g.ws.Initialize(); err != nil {
+	// Create workspace directory
+	if err := os.MkdirAll(g.workspacePath, 0755); err != nil {
 		if g.logging {
 			log.Printf("[GUARD] Workspace initialization failed: %v", err)
 		}
 		return fmt.Errorf("failed to create workspace: %w", err)
 	}
 
-	// Step 2: Create session state
-	sessionState := &SessionState{
-		SessionID:     g.generateSessionID(),
-		StartedAt:     time.Now().Format(time.RFC3339),
-		UpdatedAt:     time.Now().Format(time.RFC3339),
-		WorkspaceRoot: g.ws.Root(),
-		Version:       "1.0.0",
-		Initialized:   true,
-	}
-
-	if err := g.saveSessionState(sessionState); err != nil {
+	// Create session state using the new SessionValidationGuard
+	sessionGuard := NewSessionValidationGuard(g.repoPath)
+	sessionState, err := sessionGuard.CreateSession()
+	if err != nil {
 		if g.logging {
 			log.Printf("[GUARD] Session state save failed: %v", err)
 		}
@@ -284,7 +260,7 @@ func (g *SessionGuard) Initialize() error {
 
 // sessionStatePath returns the path to the session state file
 func (g *SessionGuard) sessionStatePath() string {
-	return filepath.Join(g.repoPath, ".kdse", "session-state.json")
+	return filepath.Join(g.workspacePath, "session.yaml")
 }
 
 // loadSessionState loads the session state from disk
@@ -374,27 +350,22 @@ func (g *SessionGuard) formatSessionAge(startedAt string) string {
 }
 
 // autoInitialize performs automatic initialization when autoInit is enabled
+//
+// DEPRECATED: This method has been refactored.
 func (g *SessionGuard) autoInitialize() error {
 	if g.logging {
 		log.Printf("[GUARD] Auto-initializing workspace...")
 	}
 
 	// Create workspace directory
-	if err := g.ws.Initialize(); err != nil {
+	if err := os.MkdirAll(g.workspacePath, 0755); err != nil {
 		return fmt.Errorf("auto-initialization failed: %w", err)
 	}
 
-	// Create session state
-	sessionState := &SessionState{
-		SessionID:     g.generateSessionID(),
-		StartedAt:     time.Now().Format(time.RFC3339),
-		UpdatedAt:     time.Now().Format(time.RFC3339),
-		WorkspaceRoot: g.ws.Root(),
-		Version:       "1.0.0",
-		Initialized:   true,
-	}
-
-	if err := g.saveSessionState(sessionState); err != nil {
+	// Create session state using SessionValidationGuard
+	sessionGuard := NewSessionValidationGuard(g.repoPath)
+	sessionState, err := sessionGuard.CreateSession()
+	if err != nil {
 		return fmt.Errorf("auto-initialization failed: %w", err)
 	}
 
@@ -412,20 +383,22 @@ func (g *SessionGuard) generateSessionID() string {
 
 // IsInitialized is a quick check if the workspace is initialized
 // without enforcing initialization
+//
+// DEPRECATED: For new code, use RuntimeGuard.GetCurrentState().
 func (g *SessionGuard) IsInitialized() bool {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
-	if !g.ws.Exists() {
-		return false
-	}
-
-	_, err := g.loadSessionState()
-	return err == nil
+	// Quick check - delegate to RuntimeGuard
+	runtimeGuard := NewRuntimeGuard(g.repoPath)
+	state := runtimeGuard.GetCurrentState()
+	return state == StateLifecycleReady
 }
 
 // Reset clears all session state and workspace
 // This should only be used for testing or recovery scenarios
+//
+// DEPRECATED: For new code, use SessionValidationGuard.EndSession().
 func (g *SessionGuard) Reset() error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -434,16 +407,11 @@ func (g *SessionGuard) Reset() error {
 		log.Printf("[GUARD] Resetting session state...")
 	}
 
-	// Remove session state file
-	sessionPath := g.sessionStatePath()
-	if _, err := os.Stat(sessionPath); err == nil {
-		if err := os.Remove(sessionPath); err != nil {
-			return fmt.Errorf("failed to remove session state: %w", err)
-		}
+	// Remove session state file using SessionValidationGuard
+	sessionGuard := NewSessionValidationGuard(g.repoPath)
+	if err := sessionGuard.EndSession(); err != nil {
+		return fmt.Errorf("failed to remove session state: %w", err)
 	}
-
-	// Note: We don't remove the .kdse/ directory as it may contain other data
-	// The next Initialize() will overwrite the session state
 
 	if g.logging {
 		log.Printf("[GUARD] Session state reset complete")
@@ -453,28 +421,23 @@ func (g *SessionGuard) Reset() error {
 }
 
 // GetSessionID returns the current session ID if a session is active
+//
+// DEPRECATED: For new code, use SessionValidationGuard.GetSessionID().
 func (g *SessionGuard) GetSessionID() (string, error) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
-	state, err := g.loadSessionState()
-	if err != nil {
-		return "", err
-	}
-
-	return state.SessionID, nil
+	sessionGuard := NewSessionValidationGuard(g.repoPath)
+	return sessionGuard.GetSessionID()
 }
 
 // UpdateSessionTimestamp updates the session's last activity timestamp
+//
+// DEPRECATED: For new code, use SessionValidationGuard.UpdateSessionTimestamp().
 func (g *SessionGuard) UpdateSessionTimestamp() error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	state, err := g.loadSessionState()
-	if err != nil {
-		return err
-	}
-
-	state.UpdatedAt = time.Now().Format(time.RFC3339)
-	return g.saveSessionState(state)
+	sessionGuard := NewSessionValidationGuard(g.repoPath)
+	return sessionGuard.UpdateSessionTimestamp()
 }
