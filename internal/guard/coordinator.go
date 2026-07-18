@@ -7,8 +7,9 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
+
+	"github.com/kdse/runtime/internal/detection"
 )
 
 // Coordinator provides a high-level interface for runtime initialization.
@@ -18,12 +19,28 @@ type Coordinator struct {
 	guard    *RuntimeGuard
 }
 
-// NewCoordinator creates a new Coordinator for the given repository path
+// NewCoordinator creates a new Coordinator for the given repository path.
+// The path is resolved to the Git repository root if available.
+// If no Git repository is found, the original path is used.
 func NewCoordinator(repoPath string) *Coordinator {
+	// Resolve to Git root if available
+	resolvedPath := resolveToGitRoot(repoPath)
 	return &Coordinator{
-		repoPath: repoPath,
-		guard:    NewRuntimeGuard(repoPath),
+		repoPath: resolvedPath,
+		guard:    NewRuntimeGuard(resolvedPath),
 	}
+}
+
+// resolveToGitRoot resolves the given path to the Git repository root.
+// If no Git repository is found, returns the original path.
+func resolveToGitRoot(path string) string {
+	resolver := detection.NewGitResolver(path)
+	gitRoot, err := resolver.ResolveRoot()
+	if err != nil {
+		// No Git repository found, use the original path
+		return path
+	}
+	return gitRoot
 }
 
 // Initialize performs a complete runtime initialization.
@@ -269,180 +286,39 @@ func (c *Coordinator) Status() string {
 	return fmt.Sprintf("Runtime State: %s\nStatus: %s", state, msg)
 }
 
-// EnsureProject ensures a valid engineering project exists at the target path.
-// If the current directory is already a valid project, returns the current path.
-// If not, creates a minimal project in a subdirectory and returns that path.
+// EnsureProject ensures the path is within a valid Git repository.
+// KDSE requires a Git repository to function. This method:
+// 1. Verifies the path is within a Git repository (resolved via Git root)
+// 2. Returns the Git repository root
+// 3. If not in a Git repository, returns an error instructing the caller to create one
 //
-// Minimal project requirements (per ProjectGuard):
-// - At least 2 distinct artifact categories
-// This implementation creates a README.md (documentation) and a src/ directory (source_code)
+// KDSE SHALL NOT create projects or guess locations. The user/AI MUST provide a Git repository.
 func (c *Coordinator) EnsureProject(ctx context.Context) (string, error) {
-	// Check if current directory is already a valid project
-	if c.guard.projectGuard.Exists() {
-		log.Printf("[COORDINATOR] Valid project already exists at: %s", c.repoPath)
-		return c.repoPath, nil
-	}
-
-	// Check if .kdse already exists (workspace was initialized without project)
-	kdsePath := filepath.Join(c.repoPath, ".kdse")
-	if _, err := os.Stat(kdsePath); err == nil {
-		// .kdse exists but no project - this is the problematic case
-		// We need to create a minimal project
-		log.Printf("[COORDINATOR] .kdse exists but no valid project found")
-	}
-
-	// Check if directory has any content at all
-	entries, err := os.ReadDir(c.repoPath)
+	// Check if we're already in a Git repository
+	gitRoot, err := detection.NewGitResolver(c.repoPath).ResolveRoot()
 	if err != nil {
-		return "", fmt.Errorf("cannot read directory: %w", err)
-	}
-
-	// Count non-hidden entries
-	hasContent := false
-	for _, entry := range entries {
-		if !strings.HasPrefix(entry.Name(), ".") {
-			hasContent = true
-			break
+		// No Git repository found
+		log.Printf("[COORDINATOR] No Git repository found at: %s", c.repoPath)
+		return "", &NoGitRepositoryError{
+			Path: c.repoPath,
+			Message: "KDSE requires a Git repository. Please create one first:\n" +
+				"  1. Initialize Git: git init\n" +
+				"  2. Or ensure you are in an existing repository\n" +
+				"  3. Then run kdse initialize",
 		}
 	}
 
-	if !hasContent {
-		// Empty directory - create minimal project directly in current directory
-		log.Printf("[COORDINATOR] Creating minimal project in current directory: %s", c.repoPath)
-		if err := c.createMinimalProject(c.repoPath); err != nil {
-			return "", fmt.Errorf("failed to create minimal project: %w", err)
-		}
-		return c.repoPath, nil
-	}
-
-	// Directory has content but no valid project
-	// Create project in subdirectory
-	log.Printf("[COORDINATOR] No valid project found, creating one...")
-
-	// Generate project name from current directory or use default
-	projectName := c.generateProjectName(c.repoPath)
-	projectPath := filepath.Join(c.repoPath, projectName)
-
-	// Ensure unique path
-	counter := 1
-	for {
-		if _, err := os.Stat(projectPath); os.IsNotExist(err) {
-			break
-		}
-		projectPath = filepath.Join(c.repoPath, fmt.Sprintf("%s-%d", projectName, counter))
-		counter++
-	}
-
-	log.Printf("[COORDINATOR] Creating project at: %s", projectPath)
-	if err := os.MkdirAll(projectPath, 0755); err != nil {
-		return "", fmt.Errorf("failed to create project directory: %w", err)
-	}
-
-	if err := c.createMinimalProject(projectPath); err != nil {
-		return "", fmt.Errorf("failed to create minimal project: %w", err)
-	}
-
-	return projectPath, nil
+	log.Printf("[COORDINATOR] Git repository found at: %s", gitRoot)
+	return gitRoot, nil
 }
 
-// createMinimalProject creates the minimum artifacts required for ProjectGuard validation.
-// ProjectGuard requires at least 2 distinct artifact categories.
-// This creates: README.md (documentation) + src/ directory (source_code)
-func (c *Coordinator) createMinimalProject(projectPath string) error {
-	// Create README.md
-	readmeContent := "# Engineering Project\n\n" +
-		"This is an auto-generated engineering project initialized with KDSE.\n\n" +
-		"## Project Structure\n\n" +
-		"- `src/` - Source code directory\n" +
-		"- `.kdse/` - KDSE workspace (created by KDSE runtime)\n\n" +
-		"## Getting Started\n\n" +
-		"Initialize the KDSE workspace:\n" +
-		"```bash\nkdse initialize\n```\n"
-
-	readmePath := filepath.Join(projectPath, "README.md")
-	if err := os.WriteFile(readmePath, []byte(readmeContent), 0644); err != nil {
-		return fmt.Errorf("failed to create README.md: %w", err)
-	}
-
-	// Create src/ directory
-	srcPath := filepath.Join(projectPath, "src")
-	if err := os.MkdirAll(srcPath, 0755); err != nil {
-		return fmt.Errorf("failed to create src directory: %w", err)
-	}
-
-	// Create a .gitkeep in src to ensure directory is tracked
-	gitkeepPath := filepath.Join(srcPath, ".gitkeep")
-	if err := os.WriteFile(gitkeepPath, []byte(""), 0644); err != nil {
-		return fmt.Errorf("failed to create .gitkeep: %w", err)
-	}
-
-	// Create .gitignore
-	gitignoreContent := `# KDSE
-.kdse/
-
-# Dependencies
-node_modules/
-vendor/
-__pycache__/
-
-# Build outputs
-dist/
-build/
-*.o
-*.so
-
-# IDE
-.vscode/
-.idea/
-`
-	gitignorePath := filepath.Join(projectPath, ".gitignore")
-	if err := os.WriteFile(gitignorePath, []byte(gitignoreContent), 0644); err != nil {
-		return fmt.Errorf("failed to create .gitignore: %w", err)
-	}
-
-	log.Printf("[COORDINATOR] Minimal project created with README.md and src/")
-	return nil
+// NoGitRepositoryError indicates the path is not within a Git repository.
+type NoGitRepositoryError struct {
+	Path    string
+	Message string
 }
 
-// generateProjectName creates a valid directory name from the current path
-func (c *Coordinator) generateProjectName(dirPath string) string {
-	baseName := filepath.Base(dirPath)
-
-	// If it's a home directory or root, use a default name
-	if baseName == "~" || baseName == "" {
-		return "engineering-project"
-	}
-
-	// Clean the name - remove special characters, lowercase
-	name := strings.ToLower(baseName)
-	name = strings.Map(func(r rune) rune {
-		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
-			return r
-		}
-		if r >= 'A' && r <= 'Z' {
-			return r + 32 // lowercase
-		}
-		if r >= '0' && r <= '9' {
-			return r
-		}
-		return '-' // replace special chars with hyphen
-	}, name)
-
-	// Remove consecutive hyphens
-	for strings.Contains(name, "--") {
-		name = strings.ReplaceAll(name, "--", "-")
-	}
-	name = strings.Trim(name, "-")
-
-	// Ensure non-empty
-	if name == "" {
-		return "engineering-project"
-	}
-
-	// Limit length
-	if len(name) > 50 {
-		name = name[:50]
-	}
-
-	return name
+func (e *NoGitRepositoryError) Error() string {
+	return e.Message
+}
 }

@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/kdse/runtime/internal/detection"
 	"github.com/kdse/runtime/internal/guard"
 	kdseruntime "github.com/kdse/runtime/internal/runtime"
 	"github.com/kdse/runtime/internal/orchestration"
@@ -20,24 +21,40 @@ import (
 
 // ToolHandler delegates to runtime packages for all engineering logic
 type ToolHandler struct {
-	repoPath string
-	ws       *workspace.Workspace
-	orch     *orchestration.Manager
-	guard    *guard.SessionGuard
+	repoPath   string // Always the Git repository root
+	ws         *workspace.Workspace
+	orch       *orchestration.Manager
+	guard      *guard.SessionGuard
+	gitRoot    string // The resolved Git root (may differ from repoPath if cwd is subdirectory)
 }
 
 // NewToolHandler creates a new ToolHandler
+// The repoPath is resolved to the Git repository root using git rev-parse --show-toplevel
 func NewToolHandler() *ToolHandler {
-	repoPath, _ := os.Getwd()
-	ws := workspace.New(repoPath)
-	orch := orchestration.NewManager(repoPath)
-	g := guard.NewSessionGuardWithAutoInit(repoPath)
-	
+	cwd, _ := os.Getwd()
+
+	// Resolve to Git root - this is the fundamental change
+	// KDSE always operates at the Git repository root, like .github
+	gitRoot := cwd
+	resolver := detection.NewGitResolver(cwd)
+	if resolvedRoot, err := resolver.ResolveRoot(); err == nil {
+		gitRoot = resolvedRoot
+		log.Printf("[MCP] Git repository root: %s", gitRoot)
+	} else {
+		log.Printf("[MCP] No Git repository found, using cwd: %s", cwd)
+	}
+
+	// Use the Git root as the repoPath
+	ws := workspace.New(gitRoot)
+	orch := orchestration.NewManager(gitRoot)
+	g := guard.NewSessionGuardWithAutoInit(gitRoot)
+
 	return &ToolHandler{
-		repoPath: repoPath,
-		ws:       ws,
-		orch:     orch,
-		guard:    g,
+		repoPath:   gitRoot,
+		ws:         ws,
+		orch:       orch,
+		guard:      g,
+		gitRoot:    gitRoot,
 	}
 }
 
@@ -171,21 +188,26 @@ func (h *ToolHandler) loadToolsFromRegistry() []map[string]interface{} {
 func (h *ToolHandler) Initialize() map[string]interface{} {
 	result := map[string]interface{}{}
 
-	// Use the Guard Coordinator to ensure project exists before workspace creation
-	// This handles the case where current directory is not a valid project
+	// Use the Guard Coordinator to verify Git repository exists
+	// KDSE requires a Git repository - project root is always determined by Git
 	coordinator := guard.NewCoordinator(h.repoPath)
 
-	// Step 1: Ensure valid project exists
+	// Step 1: Verify Git repository exists
 	projectPath, err := coordinator.EnsureProject(nil)
 	if err != nil {
 		result["success"] = false
-		result["action"] = "project_creation_failed"
+		result["action"] = "no_git_repository"
 		result["error"] = err.Error()
-		result["message"] = "Failed to create or validate engineering project"
+		result["project_path"] = ""
+		result["workspace_path"] = ""
+		result["git_root"] = ""
+		result["message"] = "KDSE requires a Git repository. Please:\n" +
+			"  1. Create a Git repository: git init\n" +
+			"  2. Then run initialize again"
 		return result
 	}
 
-	// Step 2: Create workspace in the project directory
+	// Step 2: Create workspace in the Git repository root
 	kdse := kdseruntime.New(projectPath)
 	initResult := kdse.Initialize()
 
@@ -193,6 +215,7 @@ func (h *ToolHandler) Initialize() map[string]interface{} {
 	result["confidence"] = initResult.Confidence
 	result["project_path"] = projectPath
 	result["workspace_path"] = projectPath + "/.kdse"
+	result["git_root"] = projectPath // Explicitly show Git root
 
 	if !initResult.Success {
 		result["action"] = "initialization_failed"
@@ -216,7 +239,7 @@ func (h *ToolHandler) Initialize() map[string]interface{} {
 	result["mcp"] = map[string]interface{}{
 		"version": "0.5",
 		"mode":    "direct",
-		"note":    "Uses Guard Coordinator for project-aware initialization",
+		"note":    "Uses Git-based resolution for project root (like .github)",
 	}
 
 	return result

@@ -150,25 +150,29 @@ func handleInitialize(repoPath string) {
 	fmt.Printf("║ Repository: %s\n", repoPath)
 	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
 
-	// Use the Guard Coordinator to handle project detection and initialization
-	// This ensures .kdse is always created inside a valid engineering project
+	// Use the Guard Coordinator to resolve Git repository root
+	// KDSE always determines project root via Git (like .github)
 	coordinator := guard.NewCoordinator(repoPath)
 
-	// Step 0: Ensure valid project exists
-	fmt.Println("║ PHASE 0: Ensure Project                                      ║")
+	// Step 0: Verify Git repository exists
+	fmt.Println("║ PHASE 0: Verify Git Repository                              ║")
 	projectPath, err := coordinator.EnsureProject(nil)
 	if err != nil {
-		fmt.Println("║ Status: PROJECT CREATION FAILED                              ║")
-		fmt.Printf("║ Error: %s\n", err.Error())
+		fmt.Println("║ Status: NO GIT REPOSITORY FOUND                            ║")
+		fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+		fmt.Println("║ KDSE requires a Git repository to function.                ║")
+		fmt.Println("║                                                         ║")
+		fmt.Println("║ To initialize KDSE:                                     ║")
+		fmt.Println("║   1. Create or navigate to a Git repository               ║")
+		fmt.Println("║   2. Run: git init (if no repository exists)                ║")
+		fmt.Println("║   3. Run: kdse initialize                               ║")
 		fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
 		os.Exit(1)
 	}
 
-	// Check if we changed to a new project directory
-	if projectPath != repoPath {
-		fmt.Printf("║ Created project in: %s\n", projectPath)
-		fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
-	}
+	// Show the resolved Git root
+	fmt.Printf("║ Git Repository: %s\n", projectPath)
+	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
 
 	// Step 1: Create workspace using kdseruntime
 	fmt.Println("║ PHASE 1: Execute                                              ║")
