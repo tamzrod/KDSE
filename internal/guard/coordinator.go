@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -27,10 +28,33 @@ func NewCoordinator(repoPath string) *Coordinator {
 
 // Initialize performs a complete runtime initialization.
 // This is the primary method for setting up KDSE for the first time.
+//
+// Before creating the workspace, this method ensures:
+// 1. A valid engineering project exists at the target path
+// 2. If no project exists, a minimal project is created
+// 3. The .kdse workspace is always created inside the project
 func (c *Coordinator) Initialize(ctx context.Context) error {
 	log.Printf("[COORDINATOR] Starting initialization...")
 
-	// Step 1: Validate project first
+	// Step 0: Ensure a valid project exists before creating workspace
+	log.Printf("[COORDINATOR] Step 0: Ensuring valid project exists...")
+	projectPath, err := c.EnsureProject(ctx)
+	if err != nil {
+		return fmt.Errorf("[COORDINATOR] Failed to ensure project: %w", err)
+	}
+	// Update repoPath if project was created in a subdirectory
+	if projectPath != c.repoPath {
+		log.Printf("[COORDINATOR] Project created in subdirectory: %s", projectPath)
+		log.Printf("[COORDINATOR] Updating working directory to project root...")
+		if err := os.Chdir(projectPath); err != nil {
+			return fmt.Errorf("[COORDINATOR] Failed to change to project directory: %w", err)
+		}
+		c.repoPath = projectPath
+		// Re-create guard with new path
+		c.guard = NewRuntimeGuard(c.repoPath)
+	}
+
+	// Step 1: Validate project (should now pass)
 	log.Printf("[COORDINATOR] Step 1: Validating project...")
 	projectResult := c.guard.projectGuard.Validate(ctx)
 	if !projectResult.Valid {
@@ -243,4 +267,182 @@ func (c *Coordinator) Status() string {
 	}
 
 	return fmt.Sprintf("Runtime State: %s\nStatus: %s", state, msg)
+}
+
+// EnsureProject ensures a valid engineering project exists at the target path.
+// If the current directory is already a valid project, returns the current path.
+// If not, creates a minimal project in a subdirectory and returns that path.
+//
+// Minimal project requirements (per ProjectGuard):
+// - At least 2 distinct artifact categories
+// This implementation creates a README.md (documentation) and a src/ directory (source_code)
+func (c *Coordinator) EnsureProject(ctx context.Context) (string, error) {
+	// Check if current directory is already a valid project
+	if c.guard.projectGuard.Exists() {
+		log.Printf("[COORDINATOR] Valid project already exists at: %s", c.repoPath)
+		return c.repoPath, nil
+	}
+
+	// Check if .kdse already exists (workspace was initialized without project)
+	kdsePath := filepath.Join(c.repoPath, ".kdse")
+	if _, err := os.Stat(kdsePath); err == nil {
+		// .kdse exists but no project - this is the problematic case
+		// We need to create a minimal project
+		log.Printf("[COORDINATOR] .kdse exists but no valid project found")
+	}
+
+	// Check if directory has any content at all
+	entries, err := os.ReadDir(c.repoPath)
+	if err != nil {
+		return "", fmt.Errorf("cannot read directory: %w", err)
+	}
+
+	// Count non-hidden entries
+	hasContent := false
+	for _, entry := range entries {
+		if !strings.HasPrefix(entry.Name(), ".") {
+			hasContent = true
+			break
+		}
+	}
+
+	if !hasContent {
+		// Empty directory - create minimal project directly in current directory
+		log.Printf("[COORDINATOR] Creating minimal project in current directory: %s", c.repoPath)
+		if err := c.createMinimalProject(c.repoPath); err != nil {
+			return "", fmt.Errorf("failed to create minimal project: %w", err)
+		}
+		return c.repoPath, nil
+	}
+
+	// Directory has content but no valid project
+	// Create project in subdirectory
+	log.Printf("[COORDINATOR] No valid project found, creating one...")
+
+	// Generate project name from current directory or use default
+	projectName := c.generateProjectName(c.repoPath)
+	projectPath := filepath.Join(c.repoPath, projectName)
+
+	// Ensure unique path
+	counter := 1
+	for {
+		if _, err := os.Stat(projectPath); os.IsNotExist(err) {
+			break
+		}
+		projectPath = filepath.Join(c.repoPath, fmt.Sprintf("%s-%d", projectName, counter))
+		counter++
+	}
+
+	log.Printf("[COORDINATOR] Creating project at: %s", projectPath)
+	if err := os.MkdirAll(projectPath, 0755); err != nil {
+		return "", fmt.Errorf("failed to create project directory: %w", err)
+	}
+
+	if err := c.createMinimalProject(projectPath); err != nil {
+		return "", fmt.Errorf("failed to create minimal project: %w", err)
+	}
+
+	return projectPath, nil
+}
+
+// createMinimalProject creates the minimum artifacts required for ProjectGuard validation.
+// ProjectGuard requires at least 2 distinct artifact categories.
+// This creates: README.md (documentation) + src/ directory (source_code)
+func (c *Coordinator) createMinimalProject(projectPath string) error {
+	// Create README.md
+	readmeContent := "# Engineering Project\n\n" +
+		"This is an auto-generated engineering project initialized with KDSE.\n\n" +
+		"## Project Structure\n\n" +
+		"- `src/` - Source code directory\n" +
+		"- `.kdse/` - KDSE workspace (created by KDSE runtime)\n\n" +
+		"## Getting Started\n\n" +
+		"Initialize the KDSE workspace:\n" +
+		"```bash\nkdse initialize\n```\n"
+
+	readmePath := filepath.Join(projectPath, "README.md")
+	if err := os.WriteFile(readmePath, []byte(readmeContent), 0644); err != nil {
+		return fmt.Errorf("failed to create README.md: %w", err)
+	}
+
+	// Create src/ directory
+	srcPath := filepath.Join(projectPath, "src")
+	if err := os.MkdirAll(srcPath, 0755); err != nil {
+		return fmt.Errorf("failed to create src directory: %w", err)
+	}
+
+	// Create a .gitkeep in src to ensure directory is tracked
+	gitkeepPath := filepath.Join(srcPath, ".gitkeep")
+	if err := os.WriteFile(gitkeepPath, []byte(""), 0644); err != nil {
+		return fmt.Errorf("failed to create .gitkeep: %w", err)
+	}
+
+	// Create .gitignore
+	gitignoreContent := `# KDSE
+.kdse/
+
+# Dependencies
+node_modules/
+vendor/
+__pycache__/
+
+# Build outputs
+dist/
+build/
+*.o
+*.so
+
+# IDE
+.vscode/
+.idea/
+`
+	gitignorePath := filepath.Join(projectPath, ".gitignore")
+	if err := os.WriteFile(gitignorePath, []byte(gitignoreContent), 0644); err != nil {
+		return fmt.Errorf("failed to create .gitignore: %w", err)
+	}
+
+	log.Printf("[COORDINATOR] Minimal project created with README.md and src/")
+	return nil
+}
+
+// generateProjectName creates a valid directory name from the current path
+func (c *Coordinator) generateProjectName(dirPath string) string {
+	baseName := filepath.Base(dirPath)
+
+	// If it's a home directory or root, use a default name
+	if baseName == "~" || baseName == "" {
+		return "engineering-project"
+	}
+
+	// Clean the name - remove special characters, lowercase
+	name := strings.ToLower(baseName)
+	name = strings.Map(func(r rune) rune {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
+			return r
+		}
+		if r >= 'A' && r <= 'Z' {
+			return r + 32 // lowercase
+		}
+		if r >= '0' && r <= '9' {
+			return r
+		}
+		return '-' // replace special chars with hyphen
+	}, name)
+
+	// Remove consecutive hyphens
+	for strings.Contains(name, "--") {
+		name = strings.ReplaceAll(name, "--", "-")
+	}
+	name = strings.Trim(name, "-")
+
+	// Ensure non-empty
+	if name == "" {
+		return "engineering-project"
+	}
+
+	// Limit length
+	if len(name) > 50 {
+		name = name[:50]
+	}
+
+	return name
 }

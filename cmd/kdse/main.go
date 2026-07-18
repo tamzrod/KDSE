@@ -11,6 +11,7 @@ import (
 	"github.com/kdse/runtime/internal/config"
 	"github.com/kdse/runtime/internal/detection"
 	"github.com/kdse/runtime/internal/context"
+	"github.com/kdse/runtime/internal/guard"
 	"github.com/kdse/runtime/internal/state"
 	"github.com/kdse/runtime/internal/report"
 	"github.com/kdse/runtime/internal/normalize"
@@ -148,10 +149,32 @@ func handleInitialize(repoPath string) {
 	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
 	fmt.Printf("║ Repository: %s\n", repoPath)
 	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+
+	// Use the Guard Coordinator to handle project detection and initialization
+	// This ensures .kdse is always created inside a valid engineering project
+	coordinator := guard.NewCoordinator(repoPath)
+
+	// Step 0: Ensure valid project exists
+	fmt.Println("║ PHASE 0: Ensure Project                                      ║")
+	projectPath, err := coordinator.EnsureProject(nil)
+	if err != nil {
+		fmt.Println("║ Status: PROJECT CREATION FAILED                              ║")
+		fmt.Printf("║ Error: %s\n", err.Error())
+		fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
+		os.Exit(1)
+	}
+
+	// Check if we changed to a new project directory
+	if projectPath != repoPath {
+		fmt.Printf("║ Created project in: %s\n", projectPath)
+		fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+	}
+
+	// Step 1: Create workspace using kdseruntime
 	fmt.Println("║ PHASE 1: Execute                                              ║")
 	fmt.Println("║ Creating operational runtime structure...")
 
-	kdse := kdseruntime.New(repoPath)
+	kdse := kdseruntime.New(projectPath)
 
 	// Execute: Create all directories and files
 	directories := []string{
@@ -197,6 +220,9 @@ func handleInitialize(repoPath string) {
 		for _, e := range result.Evidence {
 			fmt.Printf("║ ✓ %s\n", e)
 		}
+		fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
+		fmt.Printf("║ Project: %s\n", projectPath)
+		fmt.Printf("║ Workspace: %s/.kdse/\n", projectPath)
 	} else {
 		fmt.Println("║ Status: INITIALIZATION FAILED                                 ║")
 		if len(result.Errors) > 0 {

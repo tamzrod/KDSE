@@ -14,8 +14,8 @@ This directory contains the authoritative deployment configuration for the KDSE 
 ## Prerequisites
 
 - Docker 20.10+ and Docker Compose v2
-- Existing `nginx-proxy-manager_default` network
-- Nginx Proxy Manager installation
+- Existing `nginx-proxy-manager_default` network (from Nginx Proxy Manager)
+- Nginx Proxy Manager installation on the droplet
 
 ## Quick Start
 
@@ -43,6 +43,7 @@ curl http://localhost:18181/health
 | `MCP_TRANSPORT` | `http` | Transport mode: `stdio` or `http` |
 | `MCP_HTTP_PORT` | `18181` | HTTP server port |
 | `KDSE_REPO_ROOT` | `/repo` | Repository root inside container |
+| `KDSE_REPO_HOST_PATH` | `../../..` | Host path to mount |
 | `IMAGE_TAG` | `production` | Docker image tag |
 | `LOG_MAX_SIZE` | `10m` | Max log file size |
 | `LOG_MAX_FILES` | `3` | Number of log files |
@@ -75,6 +76,15 @@ networks:
     name: nginx-proxy-manager_default
 ```
 
+## Volumes
+
+The local repository is mounted into the container at `/repo`:
+
+```yaml
+volumes:
+  - ${KDSE_REPO_HOST_PATH:-../../..}:/repo
+```
+
 ## Verification
 
 ```bash
@@ -82,7 +92,7 @@ networks:
 docker compose ps
 
 # View logs
-docker compose logs -f
+docker compose logs -f kdse-mcp
 
 # Health check
 curl http://localhost:18181/health
@@ -105,7 +115,7 @@ MCP_HTTP_PORT=8081
 
 ### Network not found
 
-Ensure `nginx-proxy-manager_default` network exists:
+Ensure `nginx-proxy-manager_default` network exists (it should be created by Nginx Proxy Manager):
 
 ```bash
 docker network ls | grep nginx-proxy-manager

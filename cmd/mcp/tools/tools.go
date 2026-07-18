@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/kdse/runtime/internal/guard"
+	kdseruntime "github.com/kdse/runtime/internal/runtime"
 	"github.com/kdse/runtime/internal/orchestration"
 	"github.com/kdse/runtime/internal/workspace"
 )
@@ -165,12 +166,41 @@ func (h *ToolHandler) loadToolsFromRegistry() []map[string]interface{} {
 	return defaultTools
 }
 
-// Initialize delegates to kdse runtime for initialization
+// Initialize initializes the KDSE workspace using the Guard Coordinator.
+// This ensures .kdse is always created inside a valid engineering project.
 func (h *ToolHandler) Initialize() map[string]interface{} {
-	// Delegate to kdse CLI for runtime initialization
-	result := h.runKDSECommand("initialize")
+	result := map[string]interface{}{}
 
-	// Also create orchestration session
+	// Use the Guard Coordinator to ensure project exists before workspace creation
+	// This handles the case where current directory is not a valid project
+	coordinator := guard.NewCoordinator(h.repoPath)
+
+	// Step 1: Ensure valid project exists
+	projectPath, err := coordinator.EnsureProject(nil)
+	if err != nil {
+		result["success"] = false
+		result["action"] = "project_creation_failed"
+		result["error"] = err.Error()
+		result["message"] = "Failed to create or validate engineering project"
+		return result
+	}
+
+	// Step 2: Create workspace in the project directory
+	kdse := kdseruntime.New(projectPath)
+	initResult := kdse.Initialize()
+
+	result["success"] = initResult.Success
+	result["confidence"] = initResult.Confidence
+	result["project_path"] = projectPath
+	result["workspace_path"] = projectPath + "/.kdse"
+
+	if !initResult.Success {
+		result["action"] = "initialization_failed"
+		result["errors"] = initResult.Errors
+		return result
+	}
+
+	// Step 3: Create orchestration session
 	state, err := h.orch.InitializeDefault()
 	if err != nil {
 		result["orchestration_error"] = err.Error()
@@ -185,8 +215,8 @@ func (h *ToolHandler) Initialize() map[string]interface{} {
 	// Add MCP-specific info
 	result["mcp"] = map[string]interface{}{
 		"version": "0.5",
-		"mode":    "thin",
-		"note":    "Engineering logic delegated to kdse runtime",
+		"mode":    "direct",
+		"note":    "Uses Guard Coordinator for project-aware initialization",
 	}
 
 	return result

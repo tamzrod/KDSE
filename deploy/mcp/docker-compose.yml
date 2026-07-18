@@ -1,4 +1,4 @@
-# KDSE MCP Server - Authoritative Production Docker Compose
+# KDSE MCP Server - Production Docker Compose
 # Target: DigitalOcean with Nginx Proxy Manager
 # Network: nginx-proxy-manager_default (external)
 # Version: 2.0.0
@@ -17,6 +17,9 @@ services:
       - MCP_HTTP_PORT=${MCP_HTTP_PORT:-18181}
     ports:
       - "${MCP_HTTP_PORT:-18181}:${MCP_HTTP_PORT:-18181}"
+    volumes:
+      # Mount local repository
+      - ${KDSE_REPO_HOST_PATH:-../../..}:/repo
     networks:
       - proxy
     restart: unless-stopped
@@ -25,7 +28,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 5s
+      start_period: 10s
     logging:
       driver: "json-file"
       options:
@@ -42,6 +45,9 @@ services:
     environment:
       - KDSE_REPO_ROOT=/repo
       - MCP_TRANSPORT=stdio
+    volumes:
+      # Mount local repository
+      - ${KDSE_REPO_HOST_PATH:-../../..}:/repo
     stdin_open: true
     tty: true
     networks:
