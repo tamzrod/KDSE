@@ -10,6 +10,7 @@ import (
 	"github.com/kdse/runtime/internal/bootstrap"
 	"github.com/kdse/runtime/internal/config"
 	"github.com/kdse/runtime/internal/detection"
+	"github.com/kdse/runtime/internal/discover"
 	"github.com/kdse/runtime/internal/context"
 	"github.com/kdse/runtime/internal/guard"
 	"github.com/kdse/runtime/internal/state"
@@ -25,6 +26,23 @@ import (
 
 const version = "2.0"
 
+// resolveRepoPath resolves the repository path using shared discovery.
+// Takes optional project path from args, falls back to cwd.
+func resolveRepoPath(args []string) string {
+	// Check if project path is provided as first argument
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		return args[0]
+	}
+	// Fallback to current working directory
+	cwd, _ := os.Getwd()
+	return cwd
+}
+
+// resolveRuntimePaths resolves all runtime paths using shared discovery.
+func resolveRuntimePaths(projectPath string) (*discover.RuntimePaths, error) {
+	return discover.Resolve(projectPath)
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		printUsage()
@@ -37,7 +55,29 @@ func main() {
 		args = os.Args[2:]
 	}
 
-	repoPath, _ := os.Getwd()
+	// Resolve project path using shared discovery
+	// If no path provided, uses cwd as fallback
+	projectPath := resolveRepoPath(args)
+
+	// Resolve to Git repository root using shared discovery
+	runtimePaths, err := discover.Resolve(projectPath)
+	if err != nil {
+		// For commands that require git repo, show error and exit
+		if cmd != "help" && cmd != "--help" && cmd != "-h" && cmd != "version" && cmd != "--version" && cmd != "-v" {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			fmt.Fprintln(os.Stderr, "")
+			fmt.Fprintln(os.Stderr, "KDSE requires a Git repository to function.")
+			fmt.Fprintln(os.Stderr, "Please ensure you are in a Git repository, or provide one:")
+			fmt.Fprintln(os.Stderr, "  kdse <command> /path/to/project")
+			os.Exit(1)
+		}
+	}
+
+	// Use resolved Git root as repo path for all commands
+	repoPath := ""
+	if runtimePaths != nil {
+		repoPath = runtimePaths.RepositoryPath
+	}
 
 	switch cmd {
 	case "install":
@@ -86,9 +126,12 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Println(`KDSE Runtime v1.0.0 - Knowledge-Driven Software Engineering
+	fmt.Println(`KDSE Runtime v2.0 - Knowledge-Driven Software Engineering
 
-Usage: kdse <command> [options]
+Usage: kdse [project-path] <command> [options]
+
+The project-path is optional. If not provided, uses the current working directory.
+KDSE always resolves the runtime to <git-root>/.kdse regardless of server cwd.
 
 Core Commands:
   init         Initialize .kdse/ workspace
@@ -120,6 +163,11 @@ Other Commands:
 Options:
   -h, --help    Show this help message
   -v, --version Show version information
+
+Examples:
+  kdse status                           # Use current directory
+  kdse /path/to/project status          # Use explicit project path
+  kdse initialize /path/to/project      # Initialize specific project
 
 For more information, see https://github.com/kdse/runtime`)
 }

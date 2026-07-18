@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/kdse/runtime/internal/detection"
+	"github.com/kdse/runtime/internal/discover"
 )
 
 // Coordinator provides a high-level interface for runtime initialization.
@@ -20,27 +20,30 @@ type Coordinator struct {
 }
 
 // NewCoordinator creates a new Coordinator for the given repository path.
-// The path is resolved to the Git repository root if available.
-// If no Git repository is found, the original path is used.
-func NewCoordinator(repoPath string) *Coordinator {
-	// Resolve to Git root if available
-	resolvedPath := resolveToGitRoot(repoPath)
+// Uses shared discovery to resolve to Git repository root.
+func NewCoordinator(projectPath string) *Coordinator {
+	// Use shared discovery to resolve to Git repository root
+	runtimePaths, err := discover.Resolve(projectPath)
+	if err != nil {
+		// Fallback to provided path if discovery fails
+		return &Coordinator{
+			repoPath: projectPath,
+			guard:    NewRuntimeGuard(projectPath),
+		}
+	}
 	return &Coordinator{
-		repoPath: resolvedPath,
-		guard:    NewRuntimeGuard(resolvedPath),
+		repoPath: runtimePaths.RepositoryPath,
+		guard:    NewRuntimeGuard(runtimePaths.RepositoryPath),
 	}
 }
 
-// resolveToGitRoot resolves the given path to the Git repository root.
-// If no Git repository is found, returns the original path.
-func resolveToGitRoot(path string) string {
-	resolver := detection.NewGitResolver(path)
-	gitRoot, err := resolver.ResolveRoot()
-	if err != nil {
-		// No Git repository found, use the original path
-		return path
+// NewCoordinatorWithRepository creates a coordinator with a pre-resolved repository path.
+// This is useful when the repository path has already been resolved.
+func NewCoordinatorWithRepository(repoPath string) *Coordinator {
+	return &Coordinator{
+		repoPath: repoPath,
+		guard:    NewRuntimeGuard(repoPath),
 	}
-	return gitRoot
 }
 
 // Initialize performs a complete runtime initialization.
@@ -294,8 +297,8 @@ func (c *Coordinator) Status() string {
 //
 // KDSE SHALL NOT create projects or guess locations. The user/AI MUST provide a Git repository.
 func (c *Coordinator) EnsureProject(ctx context.Context) (string, error) {
-	// Check if we're already in a Git repository
-	gitRoot, err := detection.NewGitResolver(c.repoPath).ResolveRoot()
+	// Use shared discovery to check for Git repository
+	runtimePaths, err := discover.Resolve(c.repoPath)
 	if err != nil {
 		// No Git repository found
 		log.Printf("[COORDINATOR] No Git repository found at: %s", c.repoPath)
@@ -308,8 +311,8 @@ func (c *Coordinator) EnsureProject(ctx context.Context) (string, error) {
 		}
 	}
 
-	log.Printf("[COORDINATOR] Git repository found at: %s", gitRoot)
-	return gitRoot, nil
+	log.Printf("[COORDINATOR] Git repository found at: %s", runtimePaths.RepositoryPath)
+	return runtimePaths.RepositoryPath, nil
 }
 
 // NoGitRepositoryError indicates the path is not within a Git repository.

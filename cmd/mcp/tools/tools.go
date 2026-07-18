@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kdse/runtime/internal/detection"
+	"github.com/kdse/runtime/internal/discover"
 	"github.com/kdse/runtime/internal/guard"
 	kdseruntime "github.com/kdse/runtime/internal/runtime"
 	"github.com/kdse/runtime/internal/orchestration"
@@ -21,40 +21,53 @@ import (
 
 // ToolHandler delegates to runtime packages for all engineering logic
 type ToolHandler struct {
-	repoPath   string // Always the Git repository root
+	repoPath   string // Always the Git repository root (resolved via discover)
 	ws         *workspace.Workspace
 	orch       *orchestration.Manager
 	guard      *guard.SessionGuard
-	gitRoot    string // The resolved Git root (may differ from repoPath if cwd is subdirectory)
+	gitRoot    string // The resolved Git root (same as repoPath)
 }
 
 // NewToolHandler creates a new ToolHandler
-func NewToolHandler() *ToolHandler {
-	cwd, _ := os.Getwd()
-
-	// Resolve to Git root - this is the fundamental change
-	// KDSE always operates at the Git repository root, like .github
-	gitRoot := cwd
-	resolver := detection.NewGitResolver(cwd)
-	if resolvedRoot, err := resolver.ResolveRoot(); err == nil {
-		gitRoot = resolvedRoot
-		log.Printf("[MCP] Git repository root: %s", gitRoot)
-	} else {
-		log.Printf("[MCP] No Git repository found, using cwd: %s", cwd)
+// Uses shared runtime discovery - project path comes from client request
+func NewToolHandler(projectPath string) *ToolHandler {
+	// Use shared discovery to resolve repository root
+	runtimePaths, err := discover.Resolve(projectPath)
+	if err != nil {
+		// Log warning but continue - tools will return appropriate errors
+		log.Printf("[MCP] Runtime discovery failed: %v", err)
+		log.Printf("[MCP] Falling back to project path: %s", projectPath)
+		return &ToolHandler{
+			repoPath: projectPath,
+			ws:       workspace.New(projectPath),
+			orch:     orchestration.NewManager(projectPath),
+			guard:    guard.NewSessionGuardWithAutoInit(projectPath),
+			gitRoot:  projectPath,
+		}
 	}
 
-	// Use the Git root as the repoPath
-	ws := workspace.New(gitRoot)
-	orch := orchestration.NewManager(gitRoot)
-	g := guard.NewSessionGuardWithAutoInit(gitRoot)
+	log.Printf("[MCP] Runtime discovered: %s", runtimePaths.RuntimePath)
+	log.Printf("[MCP] Repository root: %s", runtimePaths.RepositoryPath)
+
+	// Use the resolved Git root as the repoPath
+	ws := workspace.New(runtimePaths.RepositoryPath)
+	orch := orchestration.NewManager(runtimePaths.RepositoryPath)
+	g := guard.NewSessionGuardWithAutoInit(runtimePaths.RepositoryPath)
 
 	return &ToolHandler{
-		repoPath:   gitRoot,
+		repoPath:   runtimePaths.RepositoryPath,
 		ws:         ws,
 		orch:       orch,
 		guard:      g,
-		gitRoot:    gitRoot,
+		gitRoot:    runtimePaths.RepositoryPath,
 	}
+}
+
+// NewToolHandlerWithDefaults creates a ToolHandler using current working directory
+// DEPRECATED: Use NewToolHandler(projectPath) instead
+// This function is kept for backwards compatibility
+func NewToolHandlerWithDefaults() *ToolHandler {
+	return NewToolHandler("")
 }
 
 // Help returns information about available tools

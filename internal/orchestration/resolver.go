@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/kdse/runtime/internal/discover"
 )
 
 // WorkspaceResolver resolves workspace paths without hardcoding /app or /workspace
@@ -12,27 +14,67 @@ type WorkspaceResolver struct {
 	currentWD  string
 }
 
-// NewWorkspaceResolver creates a new workspace resolver
+// NewWorkspaceResolver creates a new workspace resolver using shared discovery
+// Uses shared discovery to resolve repository root from project path
 func NewWorkspaceResolver(config *EngineConfig) (*WorkspaceResolver, error) {
-	wd, err := os.Getwd()
+	// Use shared discovery to resolve from cwd
+	runtimePaths, err := discover.Resolve("")
 	if err != nil {
-		return nil, err
+		// Fallback to cwd if discovery fails
+		wd, err := os.Getwd()
+		if err != nil {
+			return nil, err
+		}
+		return &WorkspaceResolver{
+			config:    config,
+			currentWD: wd,
+		}, nil
 	}
 	return &WorkspaceResolver{
 		config:    config,
-		currentWD: wd,
+		currentWD: runtimePaths.RepositoryPath,
 	}, nil
 }
 
 // NewWorkspaceResolverWithPath creates a resolver with a specific working directory
+// Uses shared discovery to resolve to Git repository root
 func NewWorkspaceResolverWithPath(workingDir string, config *EngineConfig) *WorkspaceResolver {
 	if config == nil {
 		config = DefaultEngineConfig()
 	}
+
+	// Use shared discovery to resolve to Git repository root
+	runtimePaths, err := discover.Resolve(workingDir)
+	if err != nil {
+		// Fallback to provided path if discovery fails
+		return &WorkspaceResolver{
+			config:    config,
+			currentWD: workingDir,
+		}
+	}
+
 	return &WorkspaceResolver{
 		config:    config,
-		currentWD: workingDir,
+		currentWD: runtimePaths.RepositoryPath,
 	}
+}
+
+// NewWorkspaceResolverFromProject creates a resolver using shared discovery
+// projectPath is resolved to Git repository root via discover.Resolve()
+func NewWorkspaceResolverFromProject(projectPath string, config *EngineConfig) (*WorkspaceResolver, error) {
+	runtimePaths, err := discover.Resolve(projectPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if config == nil {
+		config = DefaultEngineConfig()
+	}
+
+	return &WorkspaceResolver{
+		config:    config,
+		currentWD: runtimePaths.RepositoryPath,
+	}, nil
 }
 
 // ResolveWorkspace resolves the workspace starting from the given path

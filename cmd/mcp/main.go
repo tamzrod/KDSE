@@ -25,6 +25,9 @@ const (
 
 	DefaultHTTPPort = "8080"
 	ProtocolVersion = "2024-11-05"
+
+	// Header for project path (HTTP transport)
+	HeaderProjectPath = "X-KDSE-Project-Path"
 )
 
 // Transport is selected via MCP_TRANSPORT environment variable or --transport flag
@@ -45,6 +48,16 @@ func getHTTPPort() string {
 		return port
 	}
 	return DefaultHTTPPort
+}
+
+// getProjectPath returns the project path from environment or falls back to empty
+// When empty, uses cwd as fallback for backwards compatibility
+func getProjectPath() string {
+	if path := os.Getenv("KDSE_PROJECT_PATH"); path != "" {
+		return path
+	}
+	// Fallback to empty string - NewToolHandler will use cwd
+	return ""
 }
 
 // =============================================================================
@@ -112,9 +125,9 @@ type KDSEService struct {
 	tools *tools.ToolHandler
 }
 
-func NewKDSEService() *KDSEService {
+func NewKDSEService(projectPath string) *KDSEService {
 	return &KDSEService{
-		tools: tools.NewToolHandler(),
+		tools: tools.NewToolHandler(projectPath),
 	}
 }
 
@@ -285,8 +298,9 @@ func (s *KDSEService) handleToolCall(req *MCPRequest) (interface{}, *MCPError) {
 // =============================================================================
 
 func runStdioServer() {
+	projectPath := getProjectPath()
 	server := &StdioTransport{
-		service: NewKDSEService(),
+		service: NewKDSEService(projectPath),
 	}
 	server.Run()
 }
@@ -358,11 +372,13 @@ func (t *StdioTransport) sendError(encoder *json.Encoder, id interface{}, code i
 // =============================================================================
 
 func runHTTPServer() {
+	projectPath := getProjectPath()
 	server := &HTTPTransport{
-		service: NewKDSEService(),
+		service: NewKDSEService(projectPath),
 		port:    getHTTPPort(),
 	}
 	log.Printf("HTTP server listening on port %s", server.port)
+	log.Printf("KDSE Project Path: %s", projectPath)
 	log.Fatal(http.ListenAndServe(":"+server.port, server))
 }
 
