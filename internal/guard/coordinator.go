@@ -321,4 +321,3 @@ type NoGitRepositoryError struct {
 func (e *NoGitRepositoryError) Error() string {
 	return e.Message
 }
-}
