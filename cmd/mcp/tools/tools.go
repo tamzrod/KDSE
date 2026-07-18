@@ -27,8 +27,31 @@ type ToolHandler struct {
 }
 
 // NewToolHandler creates a new ToolHandler
+// The repoPath is determined dynamically:
+// 1. First check KDSE_REPO_ROOT environment variable (set by docker-compose)
+// 2. Fall back to os.Getwd() for local development
+// This ensures the project root is always the actual engineering project,
+// never the container's working directory.
 func NewToolHandler() *ToolHandler {
-	repoPath, _ := os.Getwd()
+	// Priority 1: Use KDSE_REPO_ROOT if set (for container deployments)
+	repoPath := os.Getenv("KDSE_REPO_ROOT")
+	
+	// Priority 2: Fall back to current working directory
+	if repoPath == "" {
+		var err error
+		repoPath, err = os.Getwd()
+		if err != nil {
+			repoPath = "/tmp" // Fallback for safety
+			log.Printf("[TOOLS] Warning: Could not determine working directory: %v, using /tmp", err)
+		}
+	}
+	
+	// Validate the path exists and is accessible
+	if info, err := os.Stat(repoPath); err != nil || !info.IsDir() {
+		log.Printf("[TOOLS] Warning: KDSE_REPO_ROOT=%s is not accessible, falling back to cwd", repoPath)
+		repoPath, _ = os.Getwd()
+	}
+	
 	ws := workspace.New(repoPath)
 	orch := orchestration.NewManager(repoPath)
 	g := guard.NewSessionGuardWithAutoInit(repoPath)

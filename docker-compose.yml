@@ -1,0 +1,51 @@
+# KDSE MCP Server - Local Testing Docker Compose
+# Version: 2.0.0
+
+services:
+  # KDSE MCP Server - HTTP mode
+  kdse-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: kdse-mcp:local
+    container_name: kdse-mcp
+    environment:
+      - KDSE_REPO_ROOT=/repo
+      - MCP_TRANSPORT=http
+      - MCP_HTTP_PORT=18181
+    ports:
+      - "18181:18181"
+    volumes:
+      # Mount repository for testing at /repo
+      - .:/repo
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:18181/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # KDSE MCP Server - STDIO mode (for interactive testing)
+  kdse-mcp-stdio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: kdse-mcp:local
+    container_name: kdse-mcp-stdio
+    environment:
+      - KDSE_REPO_ROOT=/repo
+      - MCP_TRANSPORT=stdio
+    volumes:
+      # Mount repository for testing at /repo
+      - .:/repo
+    stdin_open: true
+    tty: true
+
+networks:
+  default:
+    name: kdse-local-network
