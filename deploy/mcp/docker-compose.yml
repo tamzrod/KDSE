@@ -2,14 +2,8 @@
 # Target: DigitalOcean with Nginx Proxy Manager
 # Network: nginx-proxy-manager_default (external)
 # Version: 2.0.0
-#
-# Notes:
-#   - Project root is determined by Git (git rev-parse --show-toplevel)
-#   - The .kdse directory is created beside .git in the repository root
-#   - No hard-coded paths like /app or /repo are used
 
 services:
-  # KDSE MCP Server - HTTP mode (production)
   kdse-mcp:
     build:
       context: ../..
@@ -22,8 +16,7 @@ services:
     ports:
       - "${MCP_HTTP_PORT:-18181}:${MCP_HTTP_PORT:-18181}"
     volumes:
-      # Mount repository - Git resolver finds the project root automatically
-      - ${KDSE_REPO_HOST_PATH:-../../..}:/workspace
+      - ${KDSE_REPO_HOST_PATH:-../../..}:/repo
     networks:
       - proxy
     restart: unless-stopped
@@ -39,7 +32,6 @@ services:
         max-size: "${LOG_MAX_SIZE:-10m}"
         max-file: "${LOG_MAX_FILES:-3}"
 
-  # KDSE MCP Server - STDIO mode (development)
   kdse-mcp-stdio:
     build:
       context: ../..
@@ -49,8 +41,7 @@ services:
     environment:
       - MCP_TRANSPORT=stdio
     volumes:
-      # Mount repository - Git resolver finds the project root automatically
-      - ${KDSE_REPO_HOST_PATH:-../../..}:/workspace
+      - ${KDSE_REPO_HOST_PATH:-../../..}:/repo
     stdin_open: true
     tty: true
     networks:
