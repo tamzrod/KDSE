@@ -1,5 +1,14 @@
 # KDSE MCP Server - Local Testing Docker Compose
 # Version: 2.0.0
+#
+# Usage:
+#   docker compose up -d           # Start HTTP server
+#   docker compose up kdse-mcp-stdio  # Start STDIO mode for AI integration
+#
+# Notes:
+#   - Project root is determined by Git (git rev-parse --show-toplevel)
+#   - The .kdse directory is created beside .git in the repository root
+#   - No hard-coded paths like /app or /repo are used
 
 services:
   # KDSE MCP Server - HTTP mode
@@ -10,14 +19,13 @@ services:
     image: kdse-mcp:local
     container_name: kdse-mcp
     environment:
-      - KDSE_REPO_ROOT=/repo
       - MCP_TRANSPORT=http
       - MCP_HTTP_PORT=18181
     ports:
       - "18181:18181"
     volumes:
-      # Mount repository for testing at /repo
-      - .:/repo
+      # Mount repository - Git resolver finds the project root automatically
+      - .:/workspace
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:18181/health"]
       interval: 30s
@@ -38,11 +46,10 @@ services:
     image: kdse-mcp:local
     container_name: kdse-mcp-stdio
     environment:
-      - KDSE_REPO_ROOT=/repo
       - MCP_TRANSPORT=stdio
     volumes:
-      # Mount repository for testing at /repo
-      - .:/repo
+      # Mount repository - Git resolver finds the project root automatically
+      - .:/workspace
     stdin_open: true
     tty: true
 

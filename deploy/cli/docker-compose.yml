@@ -1,6 +1,11 @@
 # KDSE CLI - Authoritative Production Docker Compose
 # Target: Isolated CLI runtime
 # Version: 2.0.0
+#
+# Notes:
+#   - Project root is determined by Git (git rev-parse --show-toplevel)
+#   - The .kdse directory is created beside .git in the repository root
+#   - No hard-coded paths like /app or /repo are used
 
 services:
   # KDSE Runtime CLI
@@ -10,11 +15,9 @@ services:
       dockerfile: Dockerfile
     image: kdse-cli:${IMAGE_TAG:-production}
     container_name: kdse-runtime
-    environment:
-      - KDSE_REPO_ROOT=/repo
     volumes:
-      # Mount repository for CLI operations
-      - ${KDSE_REPO_PATH:-../..}:/repo
+      # Mount repository - Git resolver finds the project root automatically
+      - ${KDSE_REPO_PATH:-../..}:/workspace
     command: ["status"]
     networks:
       - kdse-cli-network
