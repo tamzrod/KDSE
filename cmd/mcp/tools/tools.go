@@ -29,7 +29,6 @@ type ToolHandler struct {
 }
 
 // NewToolHandler creates a new ToolHandler
-// The repoPath is resolved to the Git repository root using git rev-parse --show-toplevel
 func NewToolHandler() *ToolHandler {
 	cwd, _ := os.Getwd()
 
