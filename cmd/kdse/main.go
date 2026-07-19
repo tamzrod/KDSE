@@ -20,6 +20,7 @@ import (
 	"github.com/kdse/runtime/internal/knowledge"
 	"github.com/kdse/runtime/internal/orchestration"
 	kdseruntime "github.com/kdse/runtime/internal/runtime"
+	"github.com/kdse/runtime/internal/selfhost"
 	somedaypkg "github.com/kdse/runtime/internal/someday"
 	"github.com/kdse/runtime/internal/workspace"
 )
@@ -33,6 +34,7 @@ func resolveRepoPath(args []string) string {
 	knownCommands := map[string]bool{
 		"init": true, "initialize": true, "install": true, "update": true,
 		"version": true, "help": true, "status": true, "validate": true,
+		"self-assess": true, "evolve": true,
 	}
 
 	// Check if project path is provided as first argument
@@ -162,6 +164,10 @@ func main() {
 		handleNotebook(repoPath, args)
 	case "promote":
 		handlePromote(repoPath, args)
+	case "self-assess":
+		handleSelfAssess(repoPath, args)
+	case "evolve":
+		handleEvolve(repoPath, args)
 	case "version", "--version", "-v":
 		fmt.Printf("KDSE Runtime v%s\n", version)
 	case "help", "--help", "-h":
@@ -201,6 +207,10 @@ Agreement Commands:
   kdse agreement show          Display current agreement
   kdse agreement phase <phase>  Update current phase
 
+Self-Hosting Commands:
+  self-assess    Analyze KDSE's own architecture
+  evolve         Self-evolution workflow (--dry-run, --approve, --promote)
+
 Other Commands:
   initialize   Full runtime initialization
   runtime     Runtime management (verify, invariant)
@@ -216,6 +226,10 @@ Examples:
   kdse status                           # Use current directory
   kdse /path/to/project status          # Use explicit project path
   kdse initialize /path/to/project      # Initialize specific project
+  kdse self-assess                      # Analyze KDSE's own architecture
+  kdse self-assess --output json        # Output as JSON
+  kdse evolve --dry-run                 # Preview evolution workflow
+  kdse evolve --approve --promote       # Approve and promote
 
 For more information, see https://github.com/kdse/runtime`)
 }
@@ -2031,4 +2045,70 @@ func handlePromoteList(mgr *knowledge.Manager, args []string) {
 	fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
 	fmt.Println()
 	fmt.Println("To review: kdse promote review <id> --accept/--reject")
+}
+
+// handleSelfAssess runs the self-assessment command
+func handleSelfAssess(repoPath string, args []string) {
+	opts := &selfhost.SelfAssessOptions{
+		Output: "markdown",
+	}
+
+	// Parse arguments
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--verbose", "-v":
+			opts.Verbose = true
+		case "--output", "-o":
+			if i+1 < len(args) {
+				opts.Output = args[i+1]
+				i++
+			}
+		case "--save", "-s":
+			opts.SaveReport = true
+			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
+				opts.ReportPath = args[i+1]
+				i++
+			}
+		default:
+			if !strings.HasPrefix(args[i], "-") {
+				opts.Component = args[i]
+			}
+		}
+	}
+
+	if err := selfhost.HandleSelfAssess(repoPath, opts); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+// handleEvolve runs the self-evolution command
+func handleEvolve(repoPath string, args []string) {
+	opts := &selfhost.SelfEvolveOptions{}
+
+	// Parse arguments
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--dry-run", "-n":
+			opts.DryRun = true
+		case "--approve", "-a":
+			opts.Approve = true
+		case "--force", "-f":
+			opts.Force = true
+		case "--promote", "-p":
+			opts.Promote = true
+		case "--stage":
+			if i+1 < len(args) {
+				opts.Stage = selfhost.PromotionStage(args[i+1])
+				i++
+			}
+		default:
+			// Skip unknown arguments
+		}
+	}
+
+	if err := selfhost.HandleEvolve(repoPath, opts); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
 }
