@@ -1,0 +1,166 @@
+{
+  "version": "1.0.0",
+  "created_at": "2026-07-19T02:51:04Z",
+  "directories": [
+    {
+      "path": "runtime",
+      "required": true,
+      "purpose": "Runtime execution state and logs"
+    },
+    {
+      "path": "foundation",
+      "required": true,
+      "purpose": "Project foundation documents"
+    },
+    {
+      "path": "knowledge",
+      "required": true,
+      "purpose": "Collected engineering knowledge"
+    },
+    {
+      "path": "laboratory",
+      "required": true,
+      "purpose": "Testing and experimentation"
+    },
+    {
+      "path": "evidence",
+      "required": true,
+      "purpose": "Evidence artifacts"
+    },
+    {
+      "path": "references",
+      "required": true,
+      "purpose": "Reference materials"
+    },
+    {
+      "path": "traceability",
+      "required": true,
+      "purpose": "Requirement traceability"
+    },
+    {
+      "path": "reports",
+      "required": true,
+      "purpose": "Generated reports"
+    },
+    {
+      "path": "config",
+      "required": true,
+      "purpose": "Runtime configuration"
+    },
+    {
+      "path": "state",
+      "required": true,
+      "purpose": "Session and runtime state"
+    },
+    {
+      "path": "artifacts",
+      "required": true,
+      "purpose": "Artifact inventory"
+    },
+    {
+      "path": "sessions",
+      "required": true,
+      "purpose": "Session history"
+    },
+    {
+      "path": "normalized",
+      "required": true,
+      "purpose": "Normalized documentation"
+    },
+    {
+      "path": "cache",
+      "required": true,
+      "purpose": "Cached computations"
+    },
+    {
+      "path": "someday",
+      "required": true,
+      "purpose": "Someday/Maybe knowledge repository"
+    }
+  ],
+  "files": [
+    {
+      "path": "manifest.yaml",
+      "required": true,
+      "purpose": "Runtime manifest definition"
+    },
+    {
+      "path": "session-state.yaml",
+      "required": true,
+      "purpose": "Current session state"
+    },
+    {
+      "path": "runtime.yaml",
+      "required": true,
+      "purpose": "Runtime configuration"
+    },
+    {
+      "path": "knowledge-index.yaml",
+      "required": true,
+      "purpose": "Knowledge artifact index"
+    },
+    {
+      "path": "artifact-index.yaml",
+      "required": true,
+      "purpose": "Artifact inventory"
+    }
+  ],
+  "invariants": [
+    {
+      "phase": "Problem",
+      "requires": [
+        "Runtime initialized"
+      ],
+      "description": "Runtime must be initialized before problem phase"
+    },
+    {
+      "phase": "Foundation",
+      "requires": [
+        "Runtime initialized"
+      ],
+      "description": "Foundation requires initialized runtime"
+    },
+    {
+      "phase": "Knowledge",
+      "requires": [
+        "Foundation exists"
+      ],
+      "description": "Knowledge collection requires foundation"
+    },
+    {
+      "phase": "Architecture",
+      "requires": [
+        "Knowledge collected"
+      ],
+      "description": "Architecture requires knowledge"
+    },
+    {
+      "phase": "Implementation",
+      "requires": [
+        "Architecture approved"
+      ],
+      "description": "Implementation requires approved architecture"
+    },
+    {
+      "phase": "Verification",
+      "requires": [
+        "Implementation complete"
+      ],
+      "description": "Verification requires implementation"
+    },
+    {
+      "phase": "Documentation",
+      "requires": [
+        "Verification complete"
+      ],
+      "description": "Documentation requires verification"
+    },
+    {
+      "phase": "Audit",
+      "requires": [
+        "All phases complete"
+      ],
+      "description": "Audit requires all phases complete"
+    }
+  ]
+}
