@@ -145,25 +145,25 @@ func DefaultDetectionOptions() *DetectionOptions {
 }
 
 // Detector classifies the workspace environment using evidence-based detection.
-type Detector struct {
+type EnvDetector struct {
 	repoPath string
 	options  *DetectionOptions
 }
 
 // NewDetector creates a new environment detector for the given repository path.
-func NewEnvironmentDetector(repoPath string) *Detector {
-	return &Detector{
+func NewEnvironmentDetector(repoPath string) *EnvDetector {
+	return &EnvDetector{
 		repoPath: repoPath,
 		options:  DefaultDetectionOptions(),
 	}
 }
 
 // NewDetectorWithOptions creates a new detector with custom options.
-func NewEnvironmentDetectorWithOptions(repoPath string, opts *DetectionOptions) *Detector {
+func NewEnvironmentDetectorWithOptions(repoPath string, opts *DetectionOptions) *EnvDetector {
 	if opts == nil {
 		opts = DefaultDetectionOptions()
 	}
-	return &Detector{
+	return &EnvDetector{
 		repoPath: repoPath,
 		options:  opts,
 	}
@@ -171,7 +171,7 @@ func NewEnvironmentDetectorWithOptions(repoPath string, opts *DetectionOptions) 
 
 // Detect classifies the workspace environment using evidence-based detection.
 // Returns the detected environment type and full evidence collected.
-func (d *Detector) Detect() *EvidenceResult {
+func (d *EnvDetector) Detect() *EvidenceResult {
 	result := &EvidenceResult{
 		Evidence:  Evidence{},
 		Warnings:  []string{},
@@ -201,7 +201,7 @@ func DetectEnvironment(repoPath string) EnvironmentType {
 }
 
 // collectEvidence gathers all evidence from the workspace.
-func (d *Detector) collectEvidence(repoPath string, result *EvidenceResult) {
+func (d *EnvDetector) collectEvidence(repoPath string, result *EvidenceResult) {
 	result.Evidence.RepoRoot = repoPath
 
 	// Collect Git evidence
@@ -218,7 +218,7 @@ func (d *Detector) collectEvidence(repoPath string, result *EvidenceResult) {
 }
 
 // collectGitEvidence gathers Git-related evidence.
-func (d *Detector) collectGitEvidence(repoPath string, result *EvidenceResult) {
+func (d *EnvDetector) collectGitEvidence(repoPath string, result *EvidenceResult) {
 	// Check for .git directory
 	gitPath := filepath.Join(repoPath, ".git")
 	if info, err := os.Stat(gitPath); err == nil && info.IsDir() {
@@ -234,14 +234,14 @@ func (d *Detector) collectGitEvidence(repoPath string, result *EvidenceResult) {
 }
 
 // getGitRemoteURL retrieves the Git remote URL using git commands.
-func (d *Detector) getGitRemoteURL(repoPath string) string {
+func (d *EnvDetector) getGitRemoteURL(repoPath string) string {
 	// Implementation uses git command - see git_resolver.go for reference
 	// This is a simplified version that checks for common patterns
 	return ""
 }
 
 // collectProjectEvidence gathers software project evidence.
-func (d *Detector) collectProjectEvidence(repoPath string, result *EvidenceResult) {
+func (d *EnvDetector) collectProjectEvidence(repoPath string, result *EvidenceResult) {
 	entries, err := os.ReadDir(repoPath)
 	if err != nil {
 		result.Warnings = append(result.Warnings, fmt.Sprintf("cannot read directory: %v", err))
@@ -293,7 +293,7 @@ func (d *Detector) collectProjectEvidence(repoPath string, result *EvidenceResul
 }
 
 // parseGoModuleName reads the module name from go.mod.
-func (d *Detector) parseGoModuleName(goModPath string) string {
+func (d *EnvDetector) parseGoModuleName(goModPath string) string {
 	data, err := os.ReadFile(goModPath)
 	if err != nil {
 		return ""
@@ -308,7 +308,7 @@ func (d *Detector) parseGoModuleName(goModPath string) string {
 }
 
 // detectProjectType determines the project type based on evidence.
-func (d *Detector) detectProjectType(evidence Evidence) string {
+func (d *EnvDetector) detectProjectType(evidence Evidence) string {
 	switch {
 	case evidence.HasGoMod:
 		return "go"
@@ -328,7 +328,7 @@ func (d *Detector) detectProjectType(evidence Evidence) string {
 }
 
 // collectKDSESpecificEvidence gathers KDSE-specific evidence.
-func (d *Detector) collectKDSESpecificEvidence(repoPath string, result *EvidenceResult) {
+func (d *EnvDetector) collectKDSESpecificEvidence(repoPath string, result *EvidenceResult) {
 	// Check for .kdse/ directory
 	kdseDir := filepath.Join(repoPath, ".kdse")
 	if info, err := os.Stat(kdseDir); err == nil && info.IsDir() {
@@ -378,27 +378,27 @@ func (d *Detector) collectKDSESpecificEvidence(repoPath string, result *Evidence
 }
 
 // dirExists checks if a directory exists at the given path.
-func (d *Detector) dirExists(path string) bool {
+func (d *EnvDetector) dirExists(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
 }
 
 // parseManifest parses a YAML manifest file.
-func (d *Detector) parseManifest(path string) (*ManifestInfo, bool) {
+func (d *EnvDetector) parseManifest(path string) (*ManifestInfo, bool) {
 	// Simple YAML parsing - in production, use a YAML library
 	// For now, just check if file exists and is readable
-	data, err := os.ReadFile(path)
+	_, err := os.ReadFile(path)
 	if err != nil {
 		return nil, false
 	}
 	return &ManifestInfo{
-		Schema:   "parsed",
+		Schema:   "yaml",
 		Version:  "1.0",
 	}, true
 }
 
 // parseManifestJSON parses a JSON manifest file.
-func (d *Detector) parseManifestJSON(path string) (*ManifestInfo, bool) {
+func (d *EnvDetector) parseManifestJSON(path string) (*ManifestInfo, bool) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, false
@@ -432,7 +432,7 @@ func (d *Detector) parseManifestJSON(path string) (*ManifestInfo, bool) {
 }
 
 // collectGenericIndicators gathers generic project indicators.
-func (d *Detector) collectGenericIndicators(repoPath string, result *EvidenceResult) {
+func (d *EnvDetector) collectGenericIndicators(repoPath string, result *EvidenceResult) {
 	entries, err := os.ReadDir(repoPath)
 	if err != nil {
 		return
@@ -457,7 +457,7 @@ func (d *Detector) collectGenericIndicators(repoPath string, result *EvidenceRes
 }
 
 // classify determines the environment type based on collected evidence.
-func (d *Detector) classify(result *EvidenceResult) EnvironmentType {
+func (d *EnvDetector) classify(result *EvidenceResult) EnvironmentType {
 	evidence := result.Evidence
 
 	// Detection order (priority): KDSE_RUNTIME > KDSE_PROJECT > SOFTWARE_PROJECT > BLANK_WORKSPACE
@@ -482,7 +482,7 @@ func (d *Detector) classify(result *EvidenceResult) EnvironmentType {
 }
 
 // isKDSERuntime checks if this is the KDSE runtime repository itself.
-func (d *Detector) isKDSERuntime(evidence Evidence) bool {
+func (d *EnvDetector) isKDSERuntime(evidence Evidence) bool {
 	// REQUIRED EVIDENCE for KDSE_RUNTIME:
 	// At least 2 of these markers must be present:
 	// 1. Module name is github.com/kdse/runtime
@@ -513,7 +513,7 @@ func (d *Detector) isKDSERuntime(evidence Evidence) bool {
 }
 
 // isKDSEProject checks if this is a KDSE-initialized project.
-func (d *Detector) isKDSEProject(evidence Evidence) bool {
+func (d *EnvDetector) isKDSEProject(evidence Evidence) bool {
 	// REQUIRED EVIDENCE for KDSE_PROJECT:
 	// 1. .kdse/ directory MUST exist
 	// 2. Either manifest.yaml or manifest.json MUST exist
@@ -540,7 +540,7 @@ func (d *Detector) isKDSEProject(evidence Evidence) bool {
 }
 
 // isSoftwareProject checks if this is a normal software project.
-func (d *Detector) isSoftwareProject(evidence Evidence) bool {
+func (d *EnvDetector) isSoftwareProject(evidence Evidence) bool {
 	// REQUIRED EVIDENCE for SOFTWARE_PROJECT:
 	// At least one project indicator MUST exist
 	// AND must not be a KDSE project
@@ -570,7 +570,7 @@ func (d *Detector) isSoftwareProject(evidence Evidence) bool {
 }
 
 // calculateConfidence calculates confidence in the classification.
-func (d *Detector) calculateConfidence(result *EvidenceResult) float64 {
+func (d *EnvDetector) calculateConfidence(result *EvidenceResult) float64 {
 	evidence := result.Evidence
 	env := result.Environment
 

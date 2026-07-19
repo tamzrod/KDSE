@@ -371,7 +371,7 @@ func TestProjectIndicators(t *testing.T) {
 				evidence.HasMakefile = true
 			}
 
-			detector := &Detector{}
+			detector := &EnvDetector{}
 			projectType := detector.detectProjectType(evidence)
 
 			if projectType != tt.expected {
@@ -402,7 +402,7 @@ func TestParseGoModuleName(t *testing.T) {
 				t.Fatalf("failed to create go.mod: %v", err)
 			}
 
-			detector := &Detector{}
+			detector := &EnvDetector{}
 			moduleName := detector.parseGoModuleName(goModPath)
 
 			if moduleName != tt.expected {
@@ -435,7 +435,7 @@ func TestParseManifestJSON(t *testing.T) {
 		t.Fatalf("failed to create manifest.json: %v", err)
 	}
 
-	detector := &Detector{}
+	detector := &EnvDetector{}
 	info, valid := detector.parseManifestJSON(manifestPath)
 
 	if !valid {
@@ -462,7 +462,7 @@ func TestInvalidManifestJSON(t *testing.T) {
 		t.Fatalf("failed to create manifest.json: %v", err)
 	}
 
-	detector := &Detector{}
+	detector := &EnvDetector{}
 	_, valid := detector.parseManifestJSON(manifestPath)
 
 	if valid {
@@ -537,7 +537,7 @@ func TestConfidenceCalculation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			detector := &Detector{}
+			detector := &EnvDetector{}
 			confidence := detector.calculateConfidence(&EvidenceResult{
 				Environment: tt.env,
 				Evidence:    tt.evidence,
