@@ -1,4 +1,4 @@
-# Knowledge-Driven Software Engineering (KDSE)
+# Knowledge-Driven Software Engineering (KDE)
 
 **KDSE** is an Engineering Runtime that **augments** software engineering practices. It never replaces them.
 
