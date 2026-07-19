@@ -29,8 +29,21 @@ const version = "2.0"
 // resolveRepoPath resolves the repository path using shared discovery.
 // Takes optional project path from args, falls back to cwd.
 func resolveRepoPath(args []string) string {
+	// Known commands that should not be treated as paths
+	knownCommands := map[string]bool{
+		"init": true, "initialize": true, "install": true, "update": true,
+		"version": true, "help": true, "status": true, "validate": true,
+	}
+
 	// Check if project path is provided as first argument
 	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		// If it's a known command, don't treat as path
+		if knownCommands[args[0]] {
+			// Fallback to current working directory
+			cwd, _ := os.Getwd()
+			return cwd
+		}
+		// Otherwise, assume it's a path
 		return args[0]
 	}
 	// Fallback to current working directory
@@ -49,26 +62,61 @@ func main() {
 		os.Exit(1)
 	}
 
-	cmd := os.Args[1]
+	// Parse arguments with support for both formats:
+	//   kdse <command> [path]
+	//   kdse [path] <command>
+	var cmd string
 	var args []string
-	if len(os.Args) > 2 {
-		args = os.Args[2:]
+	var projectPath string
+
+	// Check if first arg looks like a path (starts with /, ., or ~)
+	firstArg := os.Args[1]
+	if strings.HasPrefix(firstArg, "/") || strings.HasPrefix(firstArg, ".") || strings.HasPrefix(firstArg, "~") {
+		// Format: kdse [path] <command>
+		projectPath = firstArg
+		if len(os.Args) > 2 {
+			cmd = os.Args[2]
+			args = os.Args[3:]
+		} else {
+			cmd = "" // No command provided
+		}
+	} else {
+		// Format: kdse <command> [path]
+		cmd = firstArg
+		if len(os.Args) > 2 {
+			args = os.Args[2:]
+		}
+		projectPath = resolveRepoPath(args)
 	}
 
-	// Resolve project path using shared discovery
-	// If no path provided, uses cwd as fallback
-	projectPath := resolveRepoPath(args)
+	// If no command, show usage
+	if cmd == "" {
+		printUsage()
+		os.Exit(1)
+	}
 
-	// Resolve to Git repository root using shared discovery
+	// Resolve to project root using project-first discovery
 	runtimePaths, err := discover.Resolve(projectPath)
 	if err != nil {
-		// For commands that require git repo, show error and exit
+		// For commands that require a project, show error and exit
 		if cmd != "help" && cmd != "--help" && cmd != "-h" && cmd != "version" && cmd != "--version" && cmd != "-v" {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			fmt.Fprintln(os.Stderr, "")
-			fmt.Fprintln(os.Stderr, "KDSE requires a Git repository to function.")
-			fmt.Fprintln(os.Stderr, "Please ensure you are in a Git repository, or provide one:")
-			fmt.Fprintln(os.Stderr, "  kdse <command> /path/to/project")
+			fmt.Fprintln(os.Stderr, "No software project detected.")
+			fmt.Fprintln(os.Stderr, "")
+			fmt.Fprintln(os.Stderr, "KDSE requires a software project before initialization.")
+			fmt.Fprintln(os.Stderr, "KDSE does NOT create projects.")
+			fmt.Fprintln(os.Stderr, "")
+			fmt.Fprintln(os.Stderr, "Please initialize your project first:")
+			fmt.Fprintln(os.Stderr, "  - Go:       go mod init github.com/user/project")
+			fmt.Fprintln(os.Stderr, "  - Node.js:  npm init")
+			fmt.Fprintln(os.Stderr, "  - Python:   create pyproject.toml")
+			fmt.Fprintln(os.Stderr, "  - Rust:     cargo init")
+			fmt.Fprintln(os.Stderr, "  - Or create any project with source files")
+			fmt.Fprintln(os.Stderr, "")
+			fmt.Fprintln(os.Stderr, "Then run: kdse initialize")
+			fmt.Fprintln(os.Stderr, "")
+			fmt.Fprintln(os.Stderr, "Git is optional - KDSE works with or without it.")
 			os.Exit(1)
 		}
 	}
@@ -195,38 +243,60 @@ func handleInitialize(repoPath string) {
 	fmt.Println("╔═══════════════════════════════════════════════════════════════╗")
 	fmt.Println("║     KDSE Evidence-Driven Runtime Initialization               ║")
 	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
-	fmt.Printf("║ Repository: %s\n", repoPath)
+	fmt.Printf("║ Project: %s\n", repoPath)
 	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
 
-	// Use the Guard Coordinator to resolve Git repository root
-	// KDSE always determines project root via Git (like .github)
+	// Use the Guard Coordinator to verify project exists
+	// KDSE uses project-first detection (language-specific files)
+	// Git is only optional evidence
 	coordinator := guard.NewCoordinator(repoPath)
 
-	// Step 0: Verify Git repository exists
-	fmt.Println("║ PHASE 0: Verify Git Repository                              ║")
-	projectPath, err := coordinator.EnsureProject(nil)
+	// Step 0: Verify software project exists
+	fmt.Println("║ PHASE 0: Verify Software Project                          ║")
+	projectInfo, err := coordinator.EnsureProject(nil)
 	if err != nil {
-		fmt.Println("║ Status: NO GIT REPOSITORY FOUND                            ║")
+		fmt.Println("║ Status: NO PROJECT DETECTED                              ║")
 		fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
-		fmt.Println("║ KDSE requires a Git repository to function.                ║")
+		fmt.Println("║                                                         ║")
+		fmt.Println("║ No software project detected.                            ║")
+		fmt.Println("║                                                         ║")
+		fmt.Println("║ KDSE requires a software project before initialization.  ║")
+		fmt.Println("║ KDSE does NOT create projects.                           ║")
 		fmt.Println("║                                                         ║")
 		fmt.Println("║ To initialize KDSE:                                     ║")
-		fmt.Println("║   1. Create or navigate to a Git repository               ║")
-		fmt.Println("║   2. Run: git init (if no repository exists)                ║")
-		fmt.Println("║   3. Run: kdse initialize                               ║")
+		fmt.Println("║   1. First create your project:                          ║")
+		fmt.Println("║      - Go:       go mod init github.com/user/project      ║")
+		fmt.Println("║      - Node.js:  npm init                                ║")
+		fmt.Println("║      - Python:   create pyproject.toml or requirements.txt║")
+		fmt.Println("║      - Rust:     cargo init                               ║")
+		fmt.Println("║      - Java:     create pom.xml or build.gradle           ║")
+		fmt.Println("║      - .NET:     dotnet new                              ║")
+		fmt.Println("║   2. Then run: kdse initialize                          ║")
+		fmt.Println("║                                                         ║")
+		fmt.Println("║ Git is optional - KDSE works with or without it.         ║")
 		fmt.Println("╚═══════════════════════════════════════════════════════════════╝")
 		os.Exit(1)
 	}
 
-	// Show the resolved Git root
-	fmt.Printf("║ Git Repository: %s\n", projectPath)
+	// Show the detected project info
+	projectTypeStr := string(projectInfo.ProjectType)
+	if projectInfo.ProjectType == "" {
+		projectTypeStr = "unknown"
+	}
+	gitStatus := "optional"
+	if projectInfo.IsGitRepo {
+		gitStatus = "detected"
+	}
+	fmt.Printf("║ Project: %s\n", projectInfo.ProjectName)
+	fmt.Printf("║ Type: %s\n", projectTypeStr)
+	fmt.Printf("║ Git: %s\n", gitStatus)
 	fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
 
 	// Step 1: Create workspace using kdseruntime
 	fmt.Println("║ PHASE 1: Execute                                              ║")
 	fmt.Println("║ Creating operational runtime structure...")
 
-	kdse := kdseruntime.New(projectPath)
+	kdse := kdseruntime.New(projectInfo.ProjectPath)
 
 	// Execute: Create all directories and files
 	directories := []string{
@@ -273,8 +343,8 @@ func handleInitialize(repoPath string) {
 			fmt.Printf("║ ✓ %s\n", e)
 		}
 		fmt.Println("╠═══════════════════════════════════════════════════════════════╣")
-		fmt.Printf("║ Project: %s\n", projectPath)
-		fmt.Printf("║ Workspace: %s/.kdse/\n", projectPath)
+		fmt.Printf("║ Project: %s\n", projectInfo.ProjectPath)
+		fmt.Printf("║ Workspace: %s/.kdse/\n", projectInfo.ProjectPath)
 	} else {
 		fmt.Println("║ Status: INITIALIZATION FAILED                                 ║")
 		if len(result.Errors) > 0 {

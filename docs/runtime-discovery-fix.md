@@ -1,197 +1,144 @@
-# KDSE Runtime Discovery Bug Fix
+# KDSE Runtime Discovery Fix - Project-First Architecture
 
-## Root Cause Analysis
+## Overview
 
-### The Problem
-KDSE was resolving the runtime location from the server's execution environment (e.g., `/app`) instead of the user's Git repository. This caused `.kdse` to be created in the wrong location.
+KDSE has been redesigned to use a **project-first** architecture. KDSE is an engineering runtime that **attaches** to existing software projects instead of creating them.
 
-### Root Cause
-Multiple locations in the codebase used `os.Getwd()` to determine the project path:
+## The Problem
 
-1. **CLI (`cmd/kdse/main.go:40`)**: Used `os.Getwd()` directly
-   ```go
-   repoPath, _ := os.Getwd()
-   ```
+The previous architecture assumed:
+1. KDSE should initialize first
+2. A Git repository must exist
+3. KDSE might need to create project structures
 
-2. **MCP Tools (`cmd/mcp/tools/tools.go:33`)**: Used `os.Getwd()` before resolving to Git root
-   ```go
-   cwd, _ := os.Getwd()
-   gitRoot := cwd
-   resolver := detection.NewGitResolver(cwd)
-   ```
-
-3. **Orchestration Resolver (`internal/orchestration/resolver.go:17`)**: Used `os.Getwd()` to initialize
-   ```go
-   wd, err := os.Getwd()
-   ```
-
-When the KDSE server runs in a Docker container or MCP environment, `os.Getwd()` returns the container's working directory (like `/app`), not the user's project path. Even though the code tried to resolve to Git root, it was starting from the wrong location.
-
-### The Fundamental Issue
-The architecture violated the principle that **KDSE is repository-centric**. The runtime MUST always live at `<git root>/.kdse`, exactly beside `.git` and `.github`.
-
----
-
-## Solution
-
-### Created Shared Runtime Discovery Package
-
-**File**: `internal/discover/discover.go`
-
-```go
-// Resolve discovers the KDSE runtime paths from a project path.
-// This function implements the core KDSE runtime discovery rules:
-// 1. If projectPath is provided, start from there
-// 2. If projectPath is empty, use current working directory
-// 3. Resolve to Git repository root
-// 4. Runtime path = <git root>/.kdse
-func Resolve(projectPath string) (*RuntimePaths, error)
-
-// ResolveRuntime is a convenience function that returns only the runtime path.
-func ResolveRuntime(projectPath string) (string, error)
-
-// ResolveRepository is a convenience function that returns only the repository path.
-func ResolveRepository(projectPath string) (string, error)
+This led to failure scenarios:
+```
+Blank Workspace → KDSE Initialize → Fail → Create Git → Fail → Create .kdse → Fail → Abandon KDSE
 ```
 
-### Updated All Components to Use Shared Discovery
+## New Architecture
 
-| Component | File | Changes |
-|-----------|------|---------|
-| CLI | `cmd/kdse/main.go` | Uses `discover.Resolve()` with optional project path argument |
-| MCP Tools | `cmd/mcp/tools/tools.go` | `NewToolHandler(projectPath)` accepts project path |
-| MCP Server | `cmd/mcp/main.go` | Supports `KDSE_PROJECT_PATH` env var |
-| Orchestration | `internal/orchestration/resolver.go` | Uses `discover.Resolve()` in constructors |
-| Guard | `internal/guard/coordinator.go` | Uses `discover.Resolve()` in `NewCoordinator()` |
+KDSE now follows this lifecycle:
 
----
+```
+Workspace
+    ↓
+Project Discovery
+    ↓
+Project Exists?
+    ├── YES → KDSE Initialization → Continue
+    └── NO  → Request Project Initialization → Wait → Retry Discovery
+```
+
+### Key Principles
+
+1. **KDSE never creates the project** - The project must exist first
+2. **Git is only optional evidence** - Not a requirement
+3. **KDSE detects via language-specific files** - go.mod, package.json, pyproject.toml, etc.
+
+## Project Discovery
+
+### Detection Order
+1. Scan for language-specific project files
+2. Optionally detect Git repository (as evidence)
+3. Resolve to project root
+
+### Supported Project Types
+
+| Language/Framework | Indicators |
+|---------------------|------------|
+| Go | `go.mod`, `go.sum`, `main.go`, `cmd/`, `internal/` |
+| Node.js | `package.json`, `package-lock.json`, `node_modules/` |
+| Python | `pyproject.toml`, `setup.py`, `requirements.txt`, `venv/` |
+| Rust | `Cargo.toml`, `Cargo.lock`, `src/` |
+| Java | `pom.xml`, `build.gradle`, `src/main/java/` |
+| .NET | `.sln`, `.csproj`, `Program.cs` |
+| PHP | `composer.json`, `artisan`, `public/index.php` |
+| C/C++ | `Makefile`, `CMakeLists.txt`, `*.c`, `*.h` |
+
+## Blank Workspace Behavior
+
+When no project exists:
+
+**DO NOT:**
+- Create `.git`
+- Initialize Git
+- Create `.kdse`
+- Fabricate project files
+- Fabricate runtime metadata
+
+**INSTEAD:**
+Return a clear message:
+```
+No software project detected.
+
+KDSE requires a software project before initialization.
+
+Please initialize your project first:
+  - Go:       go mod init github.com/user/project
+  - Node.js:  npm init
+  - Python:   create pyproject.toml or requirements.txt
+  - Rust:     cargo init
+  - Java:     create pom.xml or build.gradle
+  - .NET:     dotnet new
+
+Then run kdse initialize.
+```
 
 ## Files Modified
 
-### New Files Created
-1. `internal/discover/discover.go` - Shared runtime discovery package
-2. `internal/discover/discover_test.go` - Comprehensive test suite
+### Core Changes
 
-### Modified Files
-1. `cmd/kdse/main.go` - Updated to use `discover.Resolve()`
-2. `cmd/mcp/main.go` - Added `KDSE_PROJECT_PATH` support
-3. `cmd/mcp/tools/tools.go` - Updated `NewToolHandler()` signature
-4. `internal/orchestration/resolver.go` - Updated constructors
-5. `internal/guard/coordinator.go` - Updated to use discover package
+1. **`internal/discover/discover.go`** - Project-first detection
+   - `Resolve()` now uses `detectProject()` first
+   - Git is detected as optional evidence via `hasGitRepository()`
+   - Returns `RuntimePaths` with `ProjectType` and `ProjectIndicators`
 
----
+2. **`internal/guard/project_guard.go`** - Uses discover package
+   - `Validate()` now uses `discover.Resolve()` for project detection
+   - Removed Git as requirement
 
-## Test Coverage
+3. **`internal/guard/coordinator.go`** - Updated initialization
+   - `EnsureProject()` returns `ProjectInfo` with project details
+   - `NoProjectError` provides actionable message
 
-### Test Cases Added
+4. **`internal/guard/types.go`** - Updated error messages
+   - `ErrNoProjectDetected` with clear hint
 
-| Test | Description | Status |
-|------|-------------|--------|
-| `TestResolveFromRepoRoot` | Resolution from repository root | ✓ |
-| `TestResolveFromNestedDirectory` | Resolution from nested dir (`repo/cmd/server/internal`) | ✓ |
-| `TestResolveFromEmptyPath` | Empty path uses cwd | ✓ |
-| `TestResolveNoGitRepository` | Error when no git repo | ✓ |
-| `TestResolveRuntime` | Convenience function | ✓ |
-| `TestResolveRepository` | Convenience function | ✓ |
-| `TestMustResolvePanics` | Panic on error | ✓ |
-| `TestEnsureRuntime` | Runtime directory creation | ✓ |
-| `TestRuntimePathsString` | String method | ✓ |
-| `TestInvalidProjectPath` | Invalid path handling | ✓ |
-| `TestHasGitRepository` | Helper function | ✓ |
-| `TestSubmoduleGitRepo` | Git submodule support | ✓ |
-| `TestDifferentCwdThanProject` | CWD independence | ✓ |
-| `TestRepositoryWithGitHub` | Repository with `.github` | ✓ |
-| `TestRepositoryAlreadyHasKDSE` | Pre-existing `.kdse` | ✓ |
-| `TestRuntimeIndependentOfServerCwd` | **CRITICAL: Server cwd independence** | ✓ |
-
-### Critical Test: `TestRuntimeIndependentOfServerCwd`
-This test proves the bug is fixed by:
-1. Creating a Git repo at `/tmp/kdse-test-xxx`
-2. Changing working directory to `/tmp` (simulating server at `/app`)
-3. Resolving runtime with explicit project path
-4. Asserting that `RuntimePath` resolves to `<repo>/.kdse`, NOT `/tmp/.kdse`
-
----
-
-## Initialization Rules
-
-When `kdse initialize` runs:
-
-1. ✓ Resolve Git repository root using `discover.Resolve()`
-2. ✓ Runtime path = `<repo>/.kdse`
-3. ✓ If missing, create `.kdse`
-4. ✓ Never create runtime outside the repository
-
-### Failure Conditions
-
-If no Git repository exists:
-- ✓ Returns explicit error: `ErrNoGitRepository`
-- ✓ **DO NOT** create `/app/.kdse`, `/repo/.kdse`, `~/.kdse`, `/workspace/.kdse`
-- ✓ Runtime must never exist outside a Git repository
-
----
-
-## Success Criteria Met
-
-### All Commands Now Resolve the Same Runtime
-
-| Command | Resolution Method |
-|---------|------------------|
-| `kdse initialize` | `discover.Resolve()` → `<git root>/.kdse` |
-| `kdse status` | `discover.Resolve()` → `<git root>/.kdse` |
-| `kdse collect` | `discover.Resolve()` → `<git root>/.kdse` |
-| `kdse assess` | `discover.Resolve()` → `<git root>/.kdse` |
-| `kdse report` | `discover.Resolve()` → `<git root>/.kdse` |
-| `kdse run` | `discover.Resolve()` → `<git root>/.kdse` |
-
-### Independent of Execution Environment
-
-| Environment | Resolution |
-|-------------|------------|
-| Server cwd | ✓ Uses project path instead |
-| Docker | ✓ Uses project path instead |
-| MCP | ✓ Uses project path instead |
-| HTTP server | ✓ Uses project path instead |
-| OpenHands | ✓ Uses project path instead |
-| VS Code | ✓ Uses project path instead |
-| Claude Code | ✓ Uses project path instead |
-| Terminal location | ✓ Uses project path or cwd |
-
----
+5. **`cmd/kdse/main.go`** - Updated CLI
+   - Shows project type and Git status on initialization
+   - Displays clear message when no project detected
 
 ## Usage Examples
 
-### CLI
+### Existing Project (Go)
 ```bash
-# Use current directory (resolves via Git)
-kdse status
-
-# Use explicit project path (ignores cwd)
-kdse /path/to/project status
-kdse initialize /path/to/project
+cd my-go-project
+kdse initialize
+# Output shows:
+#   Project: my-go-project
+#   Type: go
+#   Git: detected
 ```
 
-### MCP Server
+### Existing Project (Node.js)
 ```bash
-# Set project path via environment variable
-export KDSE_PROJECT_PATH=/path/to/project
-kdse-mcp
-
-# For HTTP transport, use header
-curl -H "X-KDSE-Project-Path: /path/to/project" http://localhost:8080/status
+cd my-react-app
+kdse initialize
+# Output shows:
+#   Project: my-react-app
+#   Type: node
+#   Git: optional
 ```
 
----
+### Blank Workspace
+```bash
+cd empty-workspace
+kdse initialize
+# Output shows clear message to initialize project first
+```
 
-## Backwards Compatibility
-
-- CLI: Falls back to cwd if no project path provided
-- MCP: Falls back to cwd if `KDSE_PROJECT_PATH` not set
-- All internal packages handle resolution failures gracefully
-
----
-
-## Architecture Summary
+## Architecture Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -201,34 +148,47 @@ curl -H "X-KDSE-Project-Path: /path/to/project" http://localhost:8080/status
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              discover.Resolve(projectPath)                   │
+│              detectProject(projectPath)                      │
 │                                                              │
-│  1. If projectPath is empty, use cwd                       │
-│  2. Resolve to Git repository root                         │
-│  3. Runtime path = <git root>/.kdse                        │
+│  1. Scan for language-specific files                       │
+│  2. Match against ProjectIndicators                       │
+│  3. Require at least 2 indicators for valid project        │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────┐
+│              hasGitRepository(projectRoot)                   │
+│                                                              │
+│  OPTIONAL - Git is only evidence, not required              │
 └─────────────────────┬───────────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
 │              RuntimePaths                                   │
 │                                                              │
-│  - RepositoryPath: /path/to/project                        │
+│  - ProjectPath: /path/to/project                           │
+│  - ProjectRoot: /path/to/project                           │
 │  - RuntimePath: /path/to/project/.kdse                      │
-│  - GitRoot: /path/to/project                               │
-│  - IsGitRepo: true                                         │
+│  - ProjectType: go                                          │
+│  - ProjectIndicators: [go.mod, main.go, cmd/]              │
+│  - IsGitRepo: true/false (optional)                        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
----
-
 ## Verification
 
-To verify the fix works, run the tests:
+Run tests:
 ```bash
 go test ./internal/discover/... -v
+go test ./internal/guard/... -v
 ```
 
-The critical test `TestRuntimeIndependentOfServerCwd` will pass, proving that:
-1. Runtime resolution is independent of server's working directory
-2. Project path provided by client takes precedence
-3. `.kdse` is always created at `<git root>/.kdse`
+## Acceptance Criteria
+
+- ✅ KDSE no longer attempts to initialize inside an empty workspace
+- ✅ KDSE never creates Git repositories
+- ✅ KDSE treats Git only as optional evidence
+- ✅ KDSE initializes only after a valid software project exists
+- ✅ Blank workspaces produce a clear "project required" response
+- ✅ Existing projects initialize normally
+- ✅ Recovery logic no longer loops creating Git or .kdse

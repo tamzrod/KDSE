@@ -77,8 +77,9 @@ var (
 	ErrNoProjectDetected = NewRuntimeGuardError(
 		GuardTypeProject,
 		"NO_PROJECT",
-		"No engineering project detected",
-		"Ensure you are in a directory containing source code or project files",
+		"No software project detected",
+		"KDSE requires a software project before initialization. "+
+			"Please initialize your project first (e.g., go mod init, npm init, etc.)",
 		StateNoProject,
 	)
 
@@ -93,8 +94,9 @@ var (
 	ErrGenericDirectory = NewRuntimeGuardError(
 		GuardTypeProject,
 		"GENERIC_DIRECTORY",
-		"Directory does not appear to be an engineering project",
-		"Ensure you are in a valid project directory with source code or documentation",
+		"Directory does not appear to be a software project",
+		"Ensure you are in a valid project directory with source code or documentation. "+
+			"KDSE does not create projects - please initialize your project first.",
 		StateNoProject,
 	)
 

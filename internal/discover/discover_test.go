@@ -7,7 +7,8 @@ import (
 	"testing"
 )
 
-// Helper to create a temp git repo for testing
+// Helper to create a temp git repo with a Go project for testing
+// Project files are now required for discovery, not just Git
 func setupTestRepo(tb testing.TB) (string, func()) {
 	tb.Helper()
 
@@ -33,6 +34,26 @@ func setupTestRepo(tb testing.TB) (string, func()) {
 	cmd = exec.Command("git", "config", "user.name", "Test User")
 	cmd.Dir = tmpDir
 	_ = cmd.Run() // Ignore errors for config
+
+	// Create a minimal Go project structure (project files required for discovery)
+	projectFiles := []string{
+		"go.mod",
+		"main.go",
+		"README.md",
+	}
+	for _, file := range projectFiles {
+		path := filepath.Join(tmpDir, file)
+		content := "package main\n"
+		if file == "go.mod" {
+			content = "module github.com/test/project\n\ngo 1.21\n"
+		} else if file == "README.md" {
+			content = "# Test Project\n"
+		}
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			os.RemoveAll(tmpDir)
+			tb.Fatalf("Failed to create file %s: %v", file, err)
+		}
+	}
 
 	cleanup := func() {
 		os.RemoveAll(tmpDir)
@@ -123,10 +144,11 @@ func TestResolveFromEmptyPath(t *testing.T) {
 	}
 }
 
-// TestResolveNoGitRepository tests that resolution fails without git repo
-func TestResolveNoGitRepository(t *testing.T) {
-	// Create a temp directory that is NOT a git repo
-	tmpDir, err := os.MkdirTemp("", "kdse-no-git-*")
+// TestResolveNoProject tests that resolution fails without a software project
+// Note: Git is now OPTIONAL - the test verifies project detection, not Git detection
+func TestResolveNoProject(t *testing.T) {
+	// Create a temp directory that is NOT a software project (no language files)
+	tmpDir, err := os.MkdirTemp("", "kdse-no-project-*")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
@@ -134,10 +156,50 @@ func TestResolveNoGitRepository(t *testing.T) {
 
 	_, err = Resolve(tmpDir)
 	if err == nil {
-		t.Error("Expected error for non-git directory")
+		t.Error("Expected error for non-project directory")
 	}
-	if err != ErrNoGitRepository {
-		t.Errorf("Expected ErrNoGitRepository, got %v", err)
+	if err != ErrNoProject {
+		t.Errorf("Expected ErrNoProject, got %v", err)
+	}
+}
+
+// TestResolveWithProjectButNoGit tests that resolution succeeds with a project
+// even if there's no Git repository (Git is now optional)
+func TestResolveWithProjectButNoGit(t *testing.T) {
+	// Create a temp directory with project files but NO git repo
+	tmpDir, err := os.MkdirTemp("", "kdse-project-no-git-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Create project indicators (Go project)
+	projectFiles := []string{"go.mod", "main.go"}
+	for _, file := range projectFiles {
+		path := filepath.Join(tmpDir, file)
+		if err := os.WriteFile(path, []byte("package main\n"), 0644); err != nil {
+			t.Fatalf("Failed to create file %s: %v", file, err)
+		}
+	}
+
+	paths, err := Resolve(tmpDir)
+	if err != nil {
+		t.Fatalf("Expected success for project without git, got: %v", err)
+	}
+
+	// Should succeed with project detection
+	if paths.RepositoryPath != tmpDir {
+		t.Errorf("Expected RepositoryPath to be %s, got %s", tmpDir, paths.RepositoryPath)
+	}
+
+	// Git should be false (we didn't create a git repo)
+	if paths.IsGitRepo {
+		t.Error("Expected IsGitRepo to be false")
+	}
+
+	// Project type should be detected
+	if paths.ProjectType != ProjectTypeGo {
+		t.Errorf("Expected ProjectType to be %s, got %s", ProjectTypeGo, paths.ProjectType)
 	}
 }
 
@@ -149,12 +211,9 @@ func TestResolveFromAnotherGitRepo(t *testing.T) {
 		t.Skip("git not available")
 	}
 
-	// Create two temp directories with git repos
+	// Create a temp git repo
 	tmpDir1, cleanup1 := setupTestRepo(t)
 	defer cleanup1()
-
-	tmpDir2, cleanup2 := setupTestRepo(t)
-	defer cleanup2()
 
 	// Create a nested directory in tmpDir1
 	nestedDir := filepath.Join(tmpDir1, "submodule", "nested")
@@ -168,7 +227,7 @@ func TestResolveFromAnotherGitRepo(t *testing.T) {
 		t.Fatalf("Resolve failed: %v", err)
 	}
 
-	// Should resolve to tmpDir1's git root, not tmpDir2
+	// Should resolve to tmpDir1's git root
 	if paths.RepositoryPath != tmpDir1 {
 		t.Errorf("Expected RepositoryPath to be %s, got %s", tmpDir1, paths.RepositoryPath)
 	}

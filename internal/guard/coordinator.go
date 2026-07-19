@@ -7,9 +7,11 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/kdse/runtime/internal/discover"
+	"github.com/kdse/runtime/internal/toolchain"
 )
 
 // Coordinator provides a high-level interface for runtime initialization.
@@ -20,9 +22,9 @@ type Coordinator struct {
 }
 
 // NewCoordinator creates a new Coordinator for the given repository path.
-// Uses shared discovery to resolve to Git repository root.
+// Uses shared discovery to resolve to project root.
 func NewCoordinator(projectPath string) *Coordinator {
-	// Use shared discovery to resolve to Git repository root
+	// Use shared discovery to resolve to project root
 	runtimePaths, err := discover.Resolve(projectPath)
 	if err != nil {
 		// Fallback to provided path if discovery fails
@@ -50,38 +52,28 @@ func NewCoordinatorWithRepository(repoPath string) *Coordinator {
 // This is the primary method for setting up KDSE for the first time.
 //
 // Before creating the workspace, this method ensures:
-// 1. A valid engineering project exists at the target path
-// 2. If no project exists, a minimal project is created
-// 3. The .kdse workspace is always created inside the project
+// 1. A valid software project exists at the target path (via language-specific files)
+// 2. KDSE NEVER creates the project or Git repository
+// 3. The .kdse workspace is always created inside the existing project
 func (c *Coordinator) Initialize(ctx context.Context) error {
 	log.Printf("[COORDINATOR] Starting initialization...")
 
-	// Step 0: Ensure a valid project exists before creating workspace
-	log.Printf("[COORDINATOR] Step 0: Ensuring valid project exists...")
-	projectPath, err := c.EnsureProject(ctx)
+	// Step 0: Verify a valid project exists
+	log.Printf("[COORDINATOR] Step 0: Verifying project exists...")
+	projectResult, err := c.EnsureProject(ctx)
 	if err != nil {
-		return fmt.Errorf("[COORDINATOR] Failed to ensure project: %w", err)
+		return fmt.Errorf("[COORDINATOR] No project detected: %w", err)
 	}
-	// Update repoPath if project was created in a subdirectory
-	if projectPath != c.repoPath {
-		log.Printf("[COORDINATOR] Project created in subdirectory: %s", projectPath)
-		log.Printf("[COORDINATOR] Updating working directory to project root...")
-		if err := os.Chdir(projectPath); err != nil {
-			return fmt.Errorf("[COORDINATOR] Failed to change to project directory: %w", err)
-		}
-		c.repoPath = projectPath
-		// Re-create guard with new path
-		c.guard = NewRuntimeGuard(c.repoPath)
-	}
+	log.Printf("[COORDINATOR] Project verified: %s", projectResult.ProjectName)
 
 	// Step 1: Validate project (should now pass)
 	log.Printf("[COORDINATOR] Step 1: Validating project...")
-	projectResult := c.guard.projectGuard.Validate(ctx)
-	if !projectResult.Valid {
+	projectValidation := c.guard.projectGuard.Validate(ctx)
+	if !projectValidation.Valid {
 		return fmt.Errorf("[COORDINATOR] Project validation failed: %s. %s",
-			projectResult.Error.Message, projectResult.Error.Hint)
+			projectValidation.Error.Message, projectValidation.Error.Hint)
 	}
-	log.Printf("[COORDINATOR] Project validated: %s", projectResult.ProjectName)
+	log.Printf("[COORDINATOR] Project validated: %s", projectValidation.ProjectName)
 
 	// Step 2: Create workspace
 	log.Printf("[COORDINATOR] Step 2: Creating workspace...")
@@ -289,38 +281,149 @@ func (c *Coordinator) Status() string {
 	return fmt.Sprintf("Runtime State: %s\nStatus: %s", state, msg)
 }
 
-// EnsureProject ensures the path is within a valid Git repository.
-// KDSE requires a Git repository to function. This method:
-// 1. Verifies the path is within a Git repository (resolved via Git root)
-// 2. Returns the Git repository root
-// 3. If not in a Git repository, returns an error instructing the caller to create one
+// ProjectInfo contains information about a detected project
+type ProjectInfo struct {
+	ProjectPath  string
+	ProjectName  string
+	ProjectType  discover.ProjectType
+	IsGitRepo    bool
+	Indicators   []string
+}
+
+// EnsureProject verifies a valid software project exists at the path.
+// KDSE does NOT create projects - it only attaches to existing ones.
 //
-// KDSE SHALL NOT create projects or guess locations. The user/AI MUST provide a Git repository.
-func (c *Coordinator) EnsureProject(ctx context.Context) (string, error) {
-	// Use shared discovery to check for Git repository
+// This method:
+// 1. Uses project-first discovery (detects via language-specific files)
+// 2. Optionally checks for Git repository (as evidence only)
+// 3. Returns project info if found
+// 4. Returns error if no project exists
+//
+// Error message clearly instructs user to initialize their project first.
+func (c *Coordinator) EnsureProject(ctx context.Context) (*ProjectInfo, error) {
+	// Use shared discovery to check for software project
 	runtimePaths, err := discover.Resolve(c.repoPath)
 	if err != nil {
-		// No Git repository found
-		log.Printf("[COORDINATOR] No Git repository found at: %s", c.repoPath)
-		return "", &NoGitRepositoryError{
+		// No software project found
+		log.Printf("[COORDINATOR] No software project detected at: %s", c.repoPath)
+		return nil, &NoProjectError{
 			Path: c.repoPath,
-			Message: "KDSE requires a Git repository. Please create one first:\n" +
-				"  1. Initialize Git: git init\n" +
-				"  2. Or ensure you are in an existing repository\n" +
-				"  3. Then run kdse initialize",
+			Message: "No software project detected.\n\n" +
+				"KDSE requires a software project before initialization.\n\n" +
+				"Please initialize your project first:\n" +
+				"  - Go:       go mod init\n" +
+				"  - Node.js:  npm init\n" +
+				"  - Python:   python -m pip freeze > requirements.txt (or create pyproject.toml)\n" +
+				"  - Rust:     cargo init\n" +
+				"  - Java:     mvn archetype:generate or create pom.xml\n" +
+				"  - .NET:     dotnet new\n" +
+				"  - Or create any project structure with source files\n\n" +
+				"Then run kdse initialize.",
 		}
 	}
 
-	log.Printf("[COORDINATOR] Git repository found at: %s", runtimePaths.RepositoryPath)
-	return runtimePaths.RepositoryPath, nil
+	log.Printf("[COORDINATOR] Project detected at: %s (type: %s, git: %v)",
+		runtimePaths.RepositoryPath, runtimePaths.ProjectType, runtimePaths.IsGitRepo)
+
+	return &ProjectInfo{
+		ProjectPath: runtimePaths.RepositoryPath,
+		ProjectName: filepath.Base(runtimePaths.RepositoryPath),
+		ProjectType: runtimePaths.ProjectType,
+		IsGitRepo:   runtimePaths.IsGitRepo,
+		Indicators:  runtimePaths.ProjectIndicators,
+	}, nil
 }
 
-// NoGitRepositoryError indicates the path is not within a Git repository.
-type NoGitRepositoryError struct {
+// NoProjectError indicates no software project was found.
+type NoProjectError struct {
 	Path    string
 	Message string
 }
 
-func (e *NoGitRepositoryError) Error() string {
+func (e *NoProjectError) Error() string {
 	return e.Message
+}
+
+// VerifyToolchains verifies that all required development toolchains are available.
+// This is a critical verification step that must pass before implementation can begin.
+//
+// KDSE never silently skips verification due to missing tooling.
+// If toolchains are missing, this method returns an error with actionable instructions.
+func (c *Coordinator) VerifyToolchains() (*ToolchainVerificationResult, error) {
+	log.Printf("[COORDINATOR] Verifying development toolchains...")
+
+	result := &ToolchainVerificationResult{
+		ProjectPath: c.repoPath,
+		Success:     true,
+	}
+
+	// Perform runtime verification
+	verification := toolchain.VerifyRuntime(c.repoPath, toolchain.VerificationLevelRequired)
+
+	result.Verification = verification
+	result.RequiredTools = verification.RequiredTools
+	result.MissingTools = verification.MissingTools
+	result.InstallBase = verification.InstallBase
+
+	if !verification.Success {
+		result.Success = false
+		log.Printf("[COORDINATOR] Toolchain verification FAILED: %d missing toolchains", len(verification.MissingTools))
+
+		// Build error message with actionable instructions
+		var errMsg strings.Builder
+		errMsg.WriteString("Required toolchains are missing:\n\n")
+		for _, tcType := range verification.MissingTools {
+			errMsg.WriteString(fmt.Sprintf("  %s:\n", tcType))
+			errMsg.WriteString(getToolchainInstructions(tcType))
+			errMsg.WriteString("\n")
+		}
+		errMsg.WriteString("\nPlease install the missing toolchains and re-run kdse initialize.\n")
+		errMsg.WriteString("Toolchains will be verified automatically.\n")
+
+		result.ErrorMessage = errMsg.String()
+		return result, fmt.Errorf(result.ErrorMessage)
+	}
+
+	log.Printf("[COORDINATOR] Toolchain verification PASSED: all required toolchains available")
+	return result, nil
+}
+
+// ToolchainVerificationResult contains the result of toolchain verification
+type ToolchainVerificationResult struct {
+	ProjectPath   string
+	Success       bool
+	RequiredTools  []toolchain.ToolchainType
+	MissingTools  []toolchain.ToolchainType
+	InstallBase   string
+	Verification  *toolchain.RuntimeVerification
+	ErrorMessage  string
+}
+
+// getToolchainInstructions returns installation instructions for a toolchain
+func getToolchainInstructions(tcType toolchain.ToolchainType) string {
+	switch tcType {
+	case toolchain.ToolchainGo:
+		return `    Download from: https://go.dev/dl/
+    Extract to: /workspace/.tools/go
+    Add to PATH: export PATH=/workspace/.tools/go/bin:$PATH`
+	case toolchain.ToolchainNode:
+		return `    Download from: https://nodejs.org/
+    Extract to: /workspace/.tools/node
+    Add to PATH: export PATH=/workspace/.tools/node/bin:$PATH`
+	case toolchain.ToolchainPython:
+		return `    Linux:   apt install python3 python3-pip
+    macOS:   brew install python3
+    Windows: Download from python.org`
+	case toolchain.ToolchainJava:
+		return `    Download from: https://adoptium.net/ or https://aws.amazon.com/corretto/
+    Set JAVA_HOME: export JAVA_HOME=/path/to/java`
+	case toolchain.ToolchainDotNet:
+		return `    Download from: https://dotnet.microsoft.com/download
+    Add to PATH: export PATH=/path/to/dotnet:$PATH`
+	case toolchain.ToolchainRust:
+		return `    Install: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    Toolchain will be installed to ~/.cargo/bin`
+	default:
+		return `    Installation instructions not available`
+	}
 }

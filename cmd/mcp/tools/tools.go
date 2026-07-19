@@ -200,34 +200,34 @@ func (h *ToolHandler) loadToolsFromRegistry() []map[string]interface{} {
 func (h *ToolHandler) Initialize() map[string]interface{} {
 	result := map[string]interface{}{}
 
-	// Use the Guard Coordinator to verify Git repository exists
-	// KDSE requires a Git repository - project root is always determined by Git
+	// Use the Guard Coordinator to verify project exists
+	// KDSE uses project-first detection (language-specific files)
+	// Git is only optional evidence
 	coordinator := guard.NewCoordinator(h.repoPath)
 
-	// Step 1: Verify Git repository exists
-	projectPath, err := coordinator.EnsureProject(nil)
+	// Step 1: Verify project exists
+	projectInfo, err := coordinator.EnsureProject(nil)
 	if err != nil {
 		result["success"] = false
-		result["action"] = "no_git_repository"
+		result["action"] = "no_project"
 		result["error"] = err.Error()
 		result["project_path"] = ""
 		result["workspace_path"] = ""
 		result["git_root"] = ""
-		result["message"] = "KDSE requires a Git repository. Please:\n" +
-			"  1. Create a Git repository: git init\n" +
-			"  2. Then run initialize again"
+		result["message"] = "No software project detected. Please initialize your project first."
 		return result
 	}
 
-	// Step 2: Create workspace in the Git repository root
-	kdse := kdseruntime.New(projectPath)
+	// Step 2: Create workspace in the project root
+	kdse := kdseruntime.New(projectInfo.ProjectPath)
 	initResult := kdse.Initialize()
 
 	result["success"] = initResult.Success
 	result["confidence"] = initResult.Confidence
-	result["project_path"] = projectPath
-	result["workspace_path"] = projectPath + "/.kdse"
-	result["git_root"] = projectPath // Explicitly show Git root
+	result["project_path"] = projectInfo.ProjectPath
+	result["workspace_path"] = projectInfo.ProjectPath + "/.kdse"
+	result["git_root"] = projectInfo.ProjectPath
+	result["project_type"] = string(projectInfo.ProjectType)
 
 	if !initResult.Success {
 		result["action"] = "initialization_failed"
